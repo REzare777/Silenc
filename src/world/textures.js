@@ -1,0 +1,469 @@
+import * as THREE from 'three';
+
+/* ------------------------------------------------------------------ *
+ *  Процедурные текстуры — всё рисуется на canvas, никаких внешних файлов
+ * ------------------------------------------------------------------ */
+
+function makeCanvas(size) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  return c;
+}
+
+function hash2(x, y, seed) {
+  let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(seed, 1274126177);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+}
+const smooth = (t) => t * t * (3 - 2 * t);
+
+function valueNoise(x, y, seed) {
+  const xi = Math.floor(x), yi = Math.floor(y);
+  const xf = x - xi, yf = y - yi;
+  const u = smooth(xf), v = smooth(yf);
+  const a = hash2(xi, yi, seed), b = hash2(xi + 1, yi, seed);
+  const c = hash2(xi, yi + 1, seed), d = hash2(xi + 1, yi + 1, seed);
+  return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
+}
+
+function fbm(x, y, seed = 1, oct = 4, lac = 2.03, gain = 0.5) {
+  let amp = 1, freq = 1, sum = 0, norm = 0;
+  for (let i = 0; i < oct; i++) {
+    sum += amp * valueNoise(x * freq, y * freq, seed + i * 37);
+    norm += amp;
+    amp *= gain; freq *= lac;
+  }
+  return sum / norm;
+}
+
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp01 = (v) => Math.min(1, Math.max(0, v));
+
+function mixHex(a, b, t) {
+  const ar = (a >> 16) & 255, ag = (a >> 8) & 255, ab = a & 255;
+  const br = (b >> 16) & 255, bg = (b >> 8) & 255, bb = b & 255;
+  return ((lerp(ar, br, t) | 0) << 16) | ((lerp(ag, bg, t) | 0) << 8) | (lerp(ab, bb, t) | 0);
+}
+
+function tex(canvas, repeat = 1, aniso = 8) {
+  const t = new THREE.CanvasTexture(canvas);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(repeat, repeat);
+  t.anisotropy = aniso;
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.needsUpdate = true;
+  return t;
+}
+
+/* ---------- трава ---------- */
+function grassCanvas(size = 512) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  const img = g.createImageData(size, size);
+  const d = img.data;
+  const dark = 0x3c5a24, mid = 0x597c31, light = 0x86a44a, dry = 0x9a9a4e;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const n = fbm(x / 26, y / 26, 11, 4);
+      const n2 = fbm(x / 6.5, y / 6.5, 77, 3);
+      const patch = fbm(x / 60, y / 60, 5, 3);
+      let col = mixHex(dark, mid, clamp01(n * 1.5));
+      col = mixHex(col, light, clamp01((n2 - 0.55) * 2.2));
+      col = mixHex(col, dry, clamp01((patch - 0.62) * 1.6));
+      const speck = hash2(x, y, 3) > 0.9955 ? 0.22 : 0;
+      const i = (y * size + x) * 4;
+      d[i] = Math.min(255, ((col >> 16) & 255) + speck * 255);
+      d[i + 1] = Math.min(255, ((col >> 8) & 255) + speck * 190);
+      d[i + 2] = Math.min(255, (col & 255) + speck * 120);
+      d[i + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  // редкие травинки
+  g.globalAlpha = 0.35;
+  for (let i = 0; i < 2600; i++) {
+    const x = hash2(i, 7, 9) * size, y = hash2(i, 13, 4) * size;
+    const l = 2 + hash2(i, 3, 1) * 4;
+    g.strokeStyle = hash2(i, 21, 6) > 0.5 ? '#7d9b3f' : '#33501f';
+    g.lineWidth = 1;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + (hash2(i, 5, 2) - 0.5) * 2, y - l); g.stroke();
+  }
+  g.globalAlpha = 1;
+  return c;
+}
+
+/* ---------- земляная дорога ---------- */
+function dirtCanvas(size = 512) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  const img = g.createImageData(size, size);
+  const d = img.data;
+  const a = 0x6d5236, b = 0x8a6a45;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const n = fbm(x / 18, y / 18, 21, 4);
+      const gr = fbm(x / 4, y / 4, 33, 2);
+      let col = mixHex(a, b, clamp01(n * 1.25 - 0.1));
+      const shade = (gr - 0.5) * 26;
+      const i = (y * size + x) * 4;
+      d[i] = clamp01(((col >> 16) & 255) / 255 + shade / 255) * 255;
+      d[i + 1] = clamp01(((col >> 8) & 255) / 255 + shade / 255) * 255;
+      d[i + 2] = clamp01((col & 255) / 255 + shade / 255) * 255;
+      d[i + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  // камешки
+  for (let i = 0; i < 700; i++) {
+    const x = hash2(i, 17, 8) * size, y = hash2(i, 23, 2) * size;
+    const r = 0.6 + hash2(i, 29, 5) * 2.1;
+    const v = 120 + Math.floor(hash2(i, 31, 3) * 70);
+    g.fillStyle = `rgba(${v},${v - 12},${v - 26},0.75)`;
+    g.beginPath(); g.ellipse(x, y, r, r * 0.72, hash2(i, 11, 7) * 3, 0, 7); g.fill();
+  }
+  return c;
+}
+
+/* ---------- булыжник ---------- */
+function cobbleCanvas(size = 512, cells = 16) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  const rnd = (i, j, s) => hash2(i * 31 + j * 7, j * 17, s);
+  g.fillStyle = '#4a443c'; g.fillRect(0, 0, size, size);
+  const cell = size / cells;
+  for (let j = -1; j < cells + 1; j++) {
+    for (let i = -1; i < cells + 1; i++) {
+      const jx = (rnd(i, j, 1) - 0.5) * cell * 0.8;
+      const jy = (rnd(i, j, 2) - 0.5) * cell * 0.8;
+      const cx = (i + 0.5) * cell + jx;
+      const cy = (j + 0.5) * cell + jy;
+      const rx = cell * (0.3 + rnd(i, j, 3) * 0.19);
+      const ry = rx * (0.72 + rnd(i, j, 4) * 0.24);
+      const v = 88 + rnd(i, j, 5) * 62;
+      const warm = rnd(i, j, 7);
+      g.save();
+      g.translate(cx, cy);
+      g.rotate((rnd(i, j, 6) - 0.5) * 1.3);
+      g.fillStyle = `rgb(${(v * (1 + warm * 0.09)) | 0},${v | 0},${(v * (1.05 - warm * 0.09)) | 0})`;
+      g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 0, 7); g.fill();
+      g.fillStyle = 'rgba(255,248,236,0.11)';
+      g.beginPath(); g.ellipse(-rx * 0.18, -ry * 0.28, rx * 0.62, ry * 0.5, 0, 0, 7); g.fill();
+      g.fillStyle = 'rgba(28,22,16,0.16)';
+      g.beginPath(); g.ellipse(rx * 0.22, ry * 0.3, rx * 0.55, ry * 0.45, 0, 0, 7); g.fill();
+      g.restore();
+    }
+  }
+  // мох между камнями
+  g.globalAlpha = 0.24;
+  for (let i = 0; i < 1100; i++) {
+    const x = hash2(i, 41, 2) * size, y = hash2(i, 43, 3) * size;
+    g.fillStyle = hash2(i, 47, 5) > 0.5 ? '#54682f' : '#38422a';
+    g.fillRect(x, y, 1 + hash2(i, 51, 7) * 3, 1 + hash2(i, 53, 9) * 2);
+  }
+  g.globalAlpha = 1;
+  return c;
+}
+
+/* ---------- штукатурка ---------- */
+function plasterCanvas(size = 256, base = 0xd9c9ac, seed = 3) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  const img = g.createImageData(size, size);
+  const d = img.data;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const n = fbm(x / 30, y / 30, seed, 4);
+      const fine = fbm(x / 3.2, y / 3.2, seed + 13, 2);
+      const k = 0.86 + n * 0.22 + (fine - 0.5) * 0.08;
+      const i = (y * size + x) * 4;
+      d[i] = clamp01((((base >> 16) & 255) / 255) * k) * 255;
+      d[i + 1] = clamp01((((base >> 8) & 255) / 255) * k) * 255;
+      d[i + 2] = clamp01(((base & 255) / 255) * k) * 255;
+      d[i + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  // трещины
+  g.strokeStyle = 'rgba(90,72,54,0.20)'; g.lineWidth = 1;
+  for (let i = 0; i < 26; i++) {
+    let x = hash2(i, 61, 3) * size, y = hash2(i, 67, 5) * size;
+    g.beginPath(); g.moveTo(x, y);
+    for (let s = 0; s < 12; s++) {
+      x += (hash2(i, s, 7) - 0.5) * 26; y += (hash2(i, s, 9) - 0.5) * 26;
+      g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+  // потёки у низа
+  const grd = g.createLinearGradient(0, size * 0.72, 0, size);
+  grd.addColorStop(0, 'rgba(110,88,60,0)');
+  grd.addColorStop(1, 'rgba(96,78,54,0.26)');
+  g.fillStyle = grd; g.fillRect(0, size * 0.72, size, size * 0.28);
+  return c;
+}
+
+/* ---------- дерево (брёвна) ---------- */
+function woodCanvas(size = 256, base = 0x5a3d26, seed = 5) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  const img = g.createImageData(size, size);
+  const d = img.data;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const ring = fbm(x / 40, y / 3.4, seed, 4);
+      const grain = Math.sin((y / size) * 90 + ring * 12) * 0.5 + 0.5;
+      const k = 0.72 + ring * 0.34 + grain * 0.16;
+      const i = (y * size + x) * 4;
+      d[i] = clamp01((((base >> 16) & 255) / 255) * k) * 255;
+      d[i + 1] = clamp01((((base >> 8) & 255) / 255) * k) * 255;
+      d[i + 2] = clamp01(((base & 255) / 255) * k) * 255;
+      d[i + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  return c;
+}
+
+/* ---------- доски ---------- */
+function plankCanvas(size = 256) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  const planks = 6, h = size / planks;
+  for (let p = 0; p < planks; p++) {
+    const v = 0.72 + hash2(p, 3, 5) * 0.4;
+    const r = (118 * v) | 0, gg = (84 * v) | 0, b = (52 * v) | 0;
+    g.fillStyle = `rgb(${r},${gg},${b})`;
+    g.fillRect(0, p * h, size, h);
+    g.globalAlpha = 0.25;
+    for (let i = 0; i < 34; i++) {
+      const y = p * h + hash2(i, p, 9) * h;
+      g.strokeStyle = hash2(i, p, 11) > 0.5 ? '#3d2818' : '#a07a4f';
+      g.lineWidth = 0.8 + hash2(i, p, 13) * 1.1;
+      g.beginPath();
+      g.moveTo(0, y);
+      for (let x = 0; x <= size; x += 32) g.lineTo(x, y + Math.sin(x / 40 + i) * 1.6);
+      g.stroke();
+    }
+    g.globalAlpha = 1;
+    // тень в зазоре
+    const grd = g.createLinearGradient(0, p * h, 0, p * h + 5);
+    grd.addColorStop(0, 'rgba(0,0,0,0.42)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grd; g.fillRect(0, p * h, size, 5);
+  }
+  // гвозди
+  g.fillStyle = 'rgba(40,32,26,0.65)';
+  for (let p = 0; p < planks; p++)
+    for (let i = 0; i < 4; i++)
+      g.beginPath(), g.arc(size * (0.12 + i * 0.25), p * h + h * 0.5, 1.6, 0, 7), g.fill();
+  return c;
+}
+
+/* ---------- солома (кровля) ---------- */
+function thatchCanvas(size = 512) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  const img = g.createImageData(size, size);
+  const d = img.data;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const n = fbm(x / 14, y / 5, 17, 4);
+      const st = Math.sin(x * 0.9 + n * 6) * 0.5 + 0.5;
+      const k = 0.68 + n * 0.3 + st * 0.24;
+      const i = (y * size + x) * 4;
+      d[i] = clamp01((0.72 * k)) * 255;
+      d[i + 1] = clamp01((0.55 * k)) * 255;
+      d[i + 2] = clamp01((0.28 * k)) * 255;
+      d[i + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  // соломинки
+  for (let i = 0; i < 2200; i++) {
+    const x = hash2(i, 71, 1) * size, y = hash2(i, 73, 2) * size;
+    const l = 5 + hash2(i, 79, 4) * 16;
+    const a = (hash2(i, 83, 6) - 0.5) * 0.5;
+    g.strokeStyle = hash2(i, 89, 8) > 0.6 ? 'rgba(214,178,96,0.55)' : 'rgba(110,80,36,0.45)';
+    g.lineWidth = 0.9 + hash2(i, 97, 10) * 1.2;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.sin(a) * l * 0.4, y + l); g.stroke();
+  }
+  // тёмные полосы у краёв (тень)
+  const grd = g.createLinearGradient(0, 0, 0, size);
+  grd.addColorStop(0, 'rgba(40,26,10,0.30)');
+  grd.addColorStop(0.35, 'rgba(0,0,0,0)');
+  grd.addColorStop(1, 'rgba(40,26,10,0.22)');
+  g.fillStyle = grd; g.fillRect(0, 0, size, size);
+  return c;
+}
+
+/* ---------- черепица ---------- */
+function tileCanvas(size = 512, base = 0x8e4632) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  g.fillStyle = `rgb(${((base >> 16) & 255) * 0.7 | 0},${((base >> 8) & 255) * 0.7 | 0},${(base & 255) * 0.7 | 0})`;
+  g.fillRect(0, 0, size, size);
+  const rows = 10, rh = size / rows, tw = size / 9;
+  for (let r = 0; r < rows; r++) {
+    const off = (r % 2) * tw * 0.5;
+    for (let i = -1; i < 10; i++) {
+      const x = i * tw + off, y = r * rh;
+      const v = 0.78 + hash2(i, r, 3) * 0.42;
+      const rr = clamp01(((base >> 16) & 255) / 255 * v) * 255;
+      const gg = clamp01(((base >> 8) & 255) / 255 * v) * 255;
+      const bb = clamp01((base & 255) / 255 * v) * 255;
+      g.fillStyle = `rgb(${rr | 0},${gg | 0},${bb | 0})`;
+      g.beginPath();
+      g.moveTo(x + 1, y + rh);
+      g.lineTo(x + 1, y + rh * 0.3);
+      g.quadraticCurveTo(x + tw * 0.5, y - rh * 0.22, x + tw - 1, y + rh * 0.3);
+      g.lineTo(x + tw - 1, y + rh);
+      g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(40,20,12,0.35)'; g.lineWidth = 1.2; g.stroke();
+    }
+  }
+  // мох
+  g.globalAlpha = 0.2;
+  for (let i = 0; i < 240; i++) {
+    const x = hash2(i, 101, 5) * size, y = hash2(i, 103, 7) * size;
+    g.fillStyle = '#5c6b34';
+    g.beginPath(); g.ellipse(x, y, 3 + hash2(i, 107, 9) * 9, 2 + hash2(i, 109, 11) * 5, 0, 0, 7); g.fill();
+  }
+  g.globalAlpha = 1;
+  return c;
+}
+
+/* ---------- камень (цоколь, колоннада) ---------- */
+function stoneCanvas(size = 256) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  g.fillStyle = '#6e6a63'; g.fillRect(0, 0, size, size);
+  const rows = 6, rh = size / rows;
+  for (let r = 0; r < rows; r++) {
+    const off = (r % 2) * size / 8;
+    for (let i = -1; i < 5; i++) {
+      const x = i * (size / 4) + off, y = r * rh;
+      const v = 108 + hash2(i, r, 9) * 70;
+      g.fillStyle = `rgb(${v | 0},${(v * 0.98) | 0},${(v * 0.92) | 0})`;
+      g.fillRect(x + 2, y + 2, size / 4 - 4, rh - 4);
+      g.fillStyle = 'rgba(255,255,255,0.10)';
+      g.fillRect(x + 2, y + 2, size / 4 - 4, 2);
+      g.fillStyle = 'rgba(0,0,0,0.18)';
+      g.fillRect(x + 2, y + rh - 5, size / 4 - 4, 3);
+    }
+  }
+  // мох
+  g.globalAlpha = 0.24;
+  for (let i = 0; i < 200; i++) {
+    const x = hash2(i, 111, 3) * size, y = hash2(i, 113, 5) * size;
+    g.fillStyle = hash2(i, 117, 7) > 0.5 ? '#566b31' : '#3d4426';
+    g.beginPath(); g.ellipse(x, y, 2 + hash2(i, 119, 9) * 8, 1 + hash2(i, 121, 11) * 4, 0, 0, 7); g.fill();
+  }
+  g.globalAlpha = 1;
+  return c;
+}
+
+/* ---------- тёплое окно ---------- */
+function windowCanvas(size = 128, warm = true) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  g.fillStyle = warm ? '#ffbe63' : '#1d1a17';
+  g.fillRect(0, 0, size, size);
+  const grd = g.createRadialGradient(size * 0.5, size * 0.55, size * 0.05, size * 0.5, size * 0.5, size * 0.75);
+  grd.addColorStop(0, warm ? 'rgba(255,236,190,1)' : 'rgba(60,60,70,1)');
+  grd.addColorStop(1, warm ? 'rgba(255,168,66,1)' : 'rgba(18,18,24,1)');
+  g.fillStyle = grd; g.fillRect(0, 0, size, size);
+  g.strokeStyle = warm ? 'rgba(70,40,14,0.85)' : 'rgba(10,10,12,0.9)';
+  g.lineWidth = size * 0.07;
+  g.beginPath();
+  g.moveTo(size / 2, 0); g.lineTo(size / 2, size);
+  g.moveTo(0, size / 2); g.lineTo(size, size / 2);
+  g.stroke();
+  g.lineWidth = size * 0.1;
+  g.strokeRect(size * 0.05, size * 0.05, size * 0.9, size * 0.9);
+  return c;
+}
+
+/* ---------- ткань (навесы) ---------- */
+function fabricCanvas(size = 128, a = '#a8453c', b = '#e3d3b4') {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  g.fillStyle = a; g.fillRect(0, 0, size, size);
+  g.fillStyle = b;
+  for (let i = 0; i < 4; i++) if (i % 2 === 0) g.fillRect(0, i * size / 4, size, size / 8);
+  g.globalAlpha = 0.12;
+  for (let i = 0; i < 900; i++) {
+    g.fillStyle = hash2(i, 131, 3) > 0.5 ? '#000' : '#fff';
+    g.fillRect(hash2(i, 133, 5) * size, hash2(i, 137, 7) * size, 2, 2);
+  }
+  g.globalAlpha = 1;
+  return c;
+}
+
+/* ---------- вода ---------- */
+function waterCanvas(size = 256) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  const img = g.createImageData(size, size);
+  const d = img.data;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const n = fbm(x / 22, y / 22, 61, 4);
+      const n2 = Math.sin((x * 0.2 + n * 8)) * 0.5 + 0.5;
+      const i = (y * size + x) * 4;
+      d[i] = 62 + n * 26 + n2 * 14;
+      d[i + 1] = 118 + n * 38 + n2 * 18;
+      d[i + 2] = 142 + n * 34 + n2 * 20;
+      d[i + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  return c;
+}
+
+/* ---------- мята / листва деревьев ---------- */
+function leafCanvas(size = 256, base = 0x4c7a33) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  const img = g.createImageData(size, size);
+  const d = img.data;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const n = fbm(x / 16, y / 16, 81, 4);
+      const l = fbm(x / 4, y / 4, 91, 2);
+      const k = 0.6 + n * 0.55 + (l - 0.5) * 0.2;
+      const i = (y * size + x) * 4;
+      d[i] = clamp01((((base >> 16) & 255) / 255) * k) * 255;
+      d[i + 1] = clamp01((((base >> 8) & 255) / 255) * k) * 255;
+      d[i + 2] = clamp01(((base & 255) / 255) * k) * 255;
+      d[i + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  return c;
+}
+
+/* ------------------------------------------------------------------ */
+
+export function buildTextures() {
+  const grassCanvasImage = grassCanvas(512);
+  const T = {
+    grass: tex(grassCanvasImage, 26),
+    grassFar: tex(grassCanvasImage, 90),
+    dirt: tex(dirtCanvas(512), 8),
+    cobble: tex(cobbleCanvas(512, 16), 10),
+    plaster: tex(plasterCanvas(256, 0xd9c9ac, 3), 1),
+    plasterWarm: tex(plasterCanvas(256, 0xd8bf95, 9), 1),
+    plasterGrey: tex(plasterCanvas(256, 0xc2bdb0, 15), 1),
+    wood: tex(woodCanvas(256, 0x53381f, 5), 1),
+    woodLight: tex(woodCanvas(256, 0x8a6238, 17), 1),
+    plank: tex(plankCanvas(256), 1),
+    thatch: tex(thatchCanvas(512), 1),
+    tile: tex(tileCanvas(512, 0x8e4632), 1),
+    tileSlate: tex(tileCanvas(512, 0x7c848c), 1),
+    stone: tex(stoneCanvas(256), 1),
+    windowLit: tex(windowCanvas(128, true), 1),
+    windowDark: tex(windowCanvas(128, false), 1),
+    fabric: tex(fabricCanvas(128, '#a8453c', '#e3d3b4'), 1),
+    fabric2: tex(fabricCanvas(128, '#3f6b6a', '#ded0ad'), 1),
+    water: tex(waterCanvas(256), 4),
+    leaf: tex(leafCanvas(256, 0x4c7a33), 1),
+    leafAutumn: tex(leafCanvas(256, 0x7a6a28), 1),
+    leafPine: tex(leafCanvas(256, 0x2f5230), 1),
+  };
+  // Анизотропия для всех текстур. Без неё мипмапы «кипят» на больших
+  // плоскостях (пол, стены, настил) при движении камеры — это и читалось
+  // как мерцание текстур в интерьере.
+  for (const key of Object.keys(T)) {
+    if (T[key] && T[key].isTexture) T[key].anisotropy = 16;
+  }
+  T.grass.anisotropy = 16;
+  T.cobble.anisotropy = 16;
+  T.dirt.anisotropy = 16;
+  return T;
+}

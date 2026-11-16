@@ -1,0 +1,22 @@
+{
+  "name": "whispervale",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5173",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 4173",
+    "build:single": "node scripts/build-single.mjs",
+    "release": "node scripts/release.mjs",
+    "serve": "python3 dev/serve.py",
+    "test": "node dev/run-tests.mjs",
+    "test:quick": "node dev/run-tests.mjs --quick"
+  },
+  "dependencies": {
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.7"
+  }
+}

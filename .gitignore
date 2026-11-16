@@ -1,0 +1,23 @@
+# зависимости
+node_modules/
+
+# сборка (генерируется заново: npm run build)
+dist/
+
+# генерируемые артефакты релиза
+whispervale.html
+/Шёпот-Долина.html
+
+# скриншоты и отладочные кадры (весят сотни мегабайт)
+shots/
+
+# логи автотестов
+.testlogs/
+
+# служебное
+*.log
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/

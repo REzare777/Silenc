@@ -1,0 +1,24 @@
+{
+  "//": "Конфигурация для Visual Studio и редакторов кода: подсказки, переходы и проверка модулей. Проект обычный JavaScript + Vite — TypeScript-файлов здесь нет.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "checkJs": false,
+    "allowJs": true,
+    "noEmit": true,
+    "strict": false,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "useDefineForClassFields": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  "include": ["src/**/*.js", "scripts/**/*.mjs", "vite.config.js"],
+  "exclude": ["node_modules", "dist", "dev"]
+}
