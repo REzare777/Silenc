@@ -22,8 +22,14 @@
 git clone <адрес-репозитория> whispervale-village
 cd whispervale-village
 npm install
+npx playwright install chromium   # один раз: браузер для автотестов
+npm run build
 npm run serve        # локальный сервер сборки на :4205
 ```
+
+Если Chromium уже стоит в нестандартном месте, укажите путь переменной окружения
+`CHROME_PATH` — тесты подхватят его сами (иначе ищут браузер в системном кэше
+Playwright).
 
 В Visual Studio 2022 откройте папку проекта (File → Open → Folder) — это обычный
 JavaScript-проект, `.sln`/`.csproj` здесь не нужны. В VS Code — `code .`,
@@ -61,6 +67,9 @@ Personal access tokens → Fine-grained, доступ `Contents: read and write`
 npm test             # 18 автотестов (--jobs=2, --quick, --only=имя)
 npm run release      # сборка → Шёпот-Долина.html + архив исходников
 ```
+
+Тестам нужен запущенный локальный сервер: `npm run serve` в отдельном окне
+(он отдаёт папку `dist`, поэтому после правок кода сначала `npm run build`).
 
 ### Автоматика
 

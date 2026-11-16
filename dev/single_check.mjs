@@ -1,9 +1,7 @@
 // Проверка однофайловой версии: открыть file:// и дождаться готовности
 import { chromium } from 'playwright';
-const browser = await chromium.launch({
-  executablePath: '/root/.cache/ms-playwright/chromium-1243/chrome-linux/chrome',
-  args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--disable-dev-shm-usage'],
-});
+import { LAUNCH } from './browser.mjs';
+const browser = await chromium.launch(LAUNCH);
 const page = await browser.newPage({ viewport: { width: 900, height: 600 } });
 page.setDefaultTimeout(240000);
 const errs = [];

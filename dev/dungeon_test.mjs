@@ -3,12 +3,10 @@
  * Запуск: cd dev && node dungeon_test.mjs
  */
 import { chromium } from 'playwright';
+import { LAUNCH } from './browser.mjs';
 
 const URL = process.env.LIVE_URL || 'http://127.0.0.1:4205/';
-const browser = await chromium.launch({
-  executablePath: '/root/.cache/ms-playwright/chromium-1243/chrome-linux/chrome',
-  args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--disable-dev-shm-usage'],
-});
+const browser = await chromium.launch(LAUNCH);
 const page = await browser.newPage({ viewport: { width: 900, height: 560 } });
 page.setDefaultTimeout(240000);
 const errs = [];

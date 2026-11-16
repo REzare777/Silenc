@@ -1,10 +1,8 @@
 import { chromium } from 'playwright';
+import { LAUNCH } from './browser.mjs';
 
 const BASE = process.env.TEST_URL || 'http://127.0.0.1:4205';
-const browser = await chromium.launch({
-  executablePath: '/root/.cache/ms-playwright/chromium-1243/chrome-linux/chrome',
-  args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--disable-dev-shm-usage'],
-});
+const browser = await chromium.launch(LAUNCH);
 const page = await browser.newPage({ viewport: { width: 1000, height: 700 } });
 page.setDefaultTimeout(180000);
 const errs = [];
