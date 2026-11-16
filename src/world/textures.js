@@ -324,6 +324,71 @@ function tileCanvas(size = 512, base = 0x8e4632) {
 }
 
 /* ---------- камень (цоколь, колоннада) ---------- */
+/**
+ * Порода пещеры: грубый камень с крапинами и трещинами.
+ * Отдельная текстура, потому что кирпичная кладка смотрится в пещере
+ * как заброшенный подвал, а не как скала.
+ *
+ * @param {number} size размер текстуры в пикселях
+ * @returns {HTMLCanvasElement} готовая текстура
+ */
+function caveRockCanvas(size = 256) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  g.fillStyle = '#4a4d5e';
+  g.fillRect(0, 0, size, size);
+  // крупные пятна породы разного оттенка
+  for (let i = 0; i < 140; i++) {
+    const x = hash2(i, 211, 3) * size, y = hash2(i, 223, 5) * size;
+    const r = 10 + hash2(i, 227, 7) * 34;
+    const v = 58 + hash2(i, 229, 11) * 42;
+    g.fillStyle = `rgba(${v | 0},${(v * 1.02) | 0},${(v * 1.18) | 0},0.5)`;
+    g.beginPath();
+    g.ellipse(x, y, r, r * (0.6 + hash2(i, 233, 13) * 0.6), hash2(i, 239, 17) * 3, 0, 6.3);
+    g.fill();
+  }
+  // трещины
+  g.strokeStyle = 'rgba(18,20,30,0.55)';
+  for (let i = 0; i < 26; i++) {
+    g.lineWidth = 0.8 + hash2(i, 241, 19) * 1.8;
+    g.beginPath();
+    let x = hash2(i, 251, 23) * size, y = hash2(i, 257, 29) * size;
+    g.moveTo(x, y);
+    const steps = 4 + Math.floor(hash2(i, 263, 31) * 5);
+    for (let k = 0; k < steps; k++) {
+      x += (hash2(i + k, 269, 37) - 0.5) * 46;
+      y += (hash2(i + k, 271, 41) - 0.5) * 46;
+      g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+  // крапины — мелкие вкрапления
+  for (let i = 0; i < 900; i++) {
+    const x = hash2(i, 277, 43) * size, y = hash2(i, 281, 47) * size;
+    const v = hash2(i, 283, 53);
+    g.fillStyle = v > 0.6 ? 'rgba(120,126,150,0.28)' : 'rgba(30,32,44,0.30)';
+    g.fillRect(x, y, 1 + (v > 0.9 ? 1 : 0), 1 + (v > 0.85 ? 1 : 0));
+  }
+  return c;
+}
+
+/**
+ * Кость: светлая тёплая поверхность с тёмными вкраплениями.
+ *
+ * @param {number} size размер текстуры
+ * @returns {HTMLCanvasElement} текстура
+ */
+function boneCanvas(size = 64) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  g.fillStyle = '#e2d7ba';
+  g.fillRect(0, 0, size, size);
+  for (let i = 0; i < 90; i++) {
+    const x = hash2(i, 313, 3) * size, y = hash2(i, 317, 5) * size;
+    g.fillStyle = 'rgba(120,102,72,0.22)';
+    g.fillRect(x, y, 1 + (hash2(i, 331, 7) > 0.8 ? 1 : 0), 1);
+  }
+  return c;
+}
+
 function stoneCanvas(size = 256) {
   const c = makeCanvas(size), g = c.getContext('2d');
   g.fillStyle = '#6e6a63'; g.fillRect(0, 0, size, size);
@@ -447,6 +512,8 @@ export function buildTextures() {
     tile: tex(tileCanvas(512, 0x8e4632), 1),
     tileSlate: tex(tileCanvas(512, 0x7c848c), 1),
     stone: tex(stoneCanvas(256), 1),
+    cave: tex(caveRockCanvas(256), 1),
+    bone: tex(boneCanvas(64), 1),
     windowLit: tex(windowCanvas(128, true), 1),
     windowDark: tex(windowCanvas(128, false), 1),
     fabric: tex(fabricCanvas(128, '#a8453c', '#e3d3b4'), 1),

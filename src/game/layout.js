@@ -81,12 +81,58 @@ export function tavernDoor() {
 /**
  * Точка входа в подземелье: тёмный проём в скале.
  *
- * @returns {{x: number, z: number, ry: number}} точка и поворот
+ * Локальные оси скалы: `+Z` — вглубь скалы, `−Z` — наружу, к деревне.
+ * `foot` — подножие каменной лестницы, где стоит игрок перед входом.
+ *
+ * @returns {{x: number, z: number, ry: number, foot: {x: number, z: number}}} точка, поворот и подножие
  */
 export function dungeonGate() {
   const { x, z } = LAYOUT.dungeon;
   // скала стоит фасадом к деревне — так вход видно с дороги
-  return { x, z, ry: ryToFace([x, z], [0, 0]) };
+  const ry = ryToFace([x, z], [0, 0]);
+  const foot = facadePos(x, z, ry, 0, -5.6, 0);
+  return { x, z, ry, foot: { x: foot.x, z: foot.z } };
+}
+
+/**
+ * Дорога от деревни к скале. Идёт по северо-западной стороне села,
+ * обходя трактир и амбар, — а не напролом через строения.
+ */
+export const DUNGEON_TRAIL = [
+  [-2.5, -14], [-7, -25], [-16, -32], [-26, -37],
+  [-36, -41], [-46, -45.5], [-55, -50.5], [-64, -56],
+];
+
+/**
+ * Полная дорога к скале — от площади до подножия лестницы.
+ *
+ * @returns {number[][]} точки дороги в мировых координатах
+ */
+export function dungeonTrail() {
+  const gate = dungeonGate();
+  return [...DUNGEON_TRAIL, [gate.foot.x, gate.foot.z]];
+}
+
+/**
+ * Расстояние от точки до дороги к скале.
+ *
+ * @param {number} x мировая X
+ * @param {number} z мировая Z
+ * @returns {number} расстояние в метрах
+ */
+export function distToDungeonTrail(x, z) {
+  const pts = dungeonTrail();
+  let best = Infinity;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [ax, az] = pts[i];
+    const [bx, bz] = pts[i + 1];
+    const dx = bx - ax, dz = bz - az;
+    const L2 = dx * dx + dz * dz;
+    let t = L2 > 0 ? ((x - ax) * dx + (z - az) * dz) / L2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    best = Math.min(best, Math.hypot(x - (ax + dx * t), z - (az + dz * t)));
+  }
+  return best;
 }
 
 /**

@@ -24,6 +24,8 @@ export function buildMaterials(T) {
     tile: two(T.tile),
     tileSlate: two(T.tileSlate),
     stone: two(T.stone),
+    bone: std(T.bone, { color: 0xe8e0c8, roughness: 0.75 }),
+    cave: two(T.cave),
     stoneDark: two(T.stone, { color: 0x9a958c }),
     fabric: std(T.fabric, { side: THREE.DoubleSide, roughness: 0.85, emissive: 0x2a1a10, emissiveIntensity: 0.5 }),
     fabric2: std(T.fabric2, { side: THREE.DoubleSide, roughness: 0.85, emissive: 0x2a1a10, emissiveIntensity: 0.5 }),

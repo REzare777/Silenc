@@ -27,7 +27,9 @@ import {
 } from '../world/props.js';
 import { Embers } from '../world/particles.js';
 import { Builder, box, cyl, sphere, cone, mat } from '../world/geo.js';
-import { LAYOUT, ryToFace, facadePos, tavernDoor, dungeonGate } from './layout.js';
+import {
+  LAYOUT, ryToFace, facadePos, tavernDoor, dungeonGate, dungeonTrail, distToDungeonTrail,
+} from './layout.js';
 
 /**
  * Создаёт систему деревни.
@@ -408,6 +410,9 @@ export function createVillage(ctx) {
       const x = Math.cos(a) * r, z = Math.sin(a) * r;
       if (Math.abs(x) < 9 && Math.abs(z) < 95) continue;
       if (x > 32 && x < 70 && z > -32 && z < 4) continue;   // лужайка у пруда
+      // дорога к скале и площадка перед входом — без деревьев
+      if (distToDungeonTrail(x, z) < 4.5) continue;
+      if (Math.hypot(x - LAYOUT.dungeon.x, z - LAYOUT.dungeon.z) < 11) continue;
       const type = ctx.rng() > 0.45 ? 'pine' : (ctx.rng() > 0.6 ? 'birch' : 'oak');
       trees.push({ x, z, type, s: 0.8 + ctx.rng() * 0.75, autumn: ctx.rng() > 0.86 });
     }
@@ -428,79 +433,180 @@ export function createVillage(ctx) {
     const B = new Builder();
     const M = ctx.M;
 
-    // ---- скала: глыба из валунов, а не ровные блоки ----
-    // тёмное «ядро» — ЗА проёмом, чтобы сквозь валуны не было видно поля,
-    // но сам проём оставался открытым ходом вглубь скалы
-    B.put('stoneDark', 6.4, 6.6, 2.2, 0, 3.2, 2.4, 1.2);
-    B.put('stoneDark', 7.6, 5.2, 2.0, 0, 2.6, 3.8, 1.2);
-    // перекрытие над проёмом
-    B.put('stoneDark', 3.8, 1.6, 1.6, 0, 4.4, 0.2, 1.2);
+    /* ================================================================
+     *  СКАЛА С ПРОЁМОМ
+     *
+     *  Локальные оси скалы: `+Z` — вглубь глыбы, `−Z` — наружу, к
+     *  деревне. Проём выходит на фасад, то есть прямо на дорогу.
+     *  За проёмом — короткий тоннель вглубь скалы.
+     * ================================================================ */
+    const PROEM_HW = 1.55;          // половина ширины проёма
+    const PROEM_H = 3.1;            // высота проёма
+
+    /** Валун в скале. */
     const boulder = (x, y, z, r, key) => {
       B.add(sphere(r, 7, 5), key, mat(x, y, z, ctx.rng() * 3, ctx.rng(), ctx.rng()));
     };
+
+    // «тело» глыбы — сплошной массив за проёмом: на нём стоят верхние
+    // валуны, поэтому скала не выглядит набором висящих камней
+    B.put('cave', 10.5, 6.4, 3.4, 0, 3.2, 3.3, 1.2);
+    B.put('caveDark', 7.0, 7.0, 2.6, 0, 3.4, 4.4, 1.2);
+    B.put('caveDark', 7.8, 5.4, 2.2, 0, 2.6, 5.4, 1.2);
+    // перемычка над проёмом — на неё опирается арка
+    B.put('caveDark', 4.4, 1.5, 2.1, 0, 3.55, 0.6, 1.2);
+
     // боковые «столбы» скалы по краям проёма
     for (const sx of [-1, 1]) {
-      for (let i = 0; i < 5; i++) {
-        boulder(sx * (1.9 + ctx.rng() * 1.4), 0.9 + i * 1.15, 0.4 + ctx.rng() * 0.8,
-          1.0 + ctx.rng() * 0.7, ctx.rng() > 0.5 ? 'stone' : 'stoneDark');
+      for (let i = 0; i < 6; i++) {
+        boulder(sx * (PROEM_HW + 0.7 + ctx.rng() * 1.3), 0.8 + i * 1.05,
+          0.9 + ctx.rng() * 1.4, 0.95 + ctx.rng() * 0.7,
+          ctx.rng() > 0.5 ? 'cave' : 'caveDark');
       }
     }
-    // перекрытие проёма — арка из камней
-    for (let i = 0; i < 5; i++) {
-      const t = (i / 4 - 0.5) * 2.6;
-      boulder(t, 4.5 + Math.cos(t * 0.8) * 0.5, 0.2 + ctx.rng() * 0.7,
-        0.85 + ctx.rng() * 0.4, ctx.rng() > 0.5 ? 'stone' : 'stoneDark');
+    // арка над проёмом
+    for (let i = 0; i < 7; i++) {
+      const t = (i / 6 - 0.5) * 2 * (PROEM_HW + 0.5);
+      boulder(t, PROEM_H + 0.35 + Math.cos(t * 0.9) * 0.55, 0.5 + ctx.rng() * 0.5,
+        0.8 + ctx.rng() * 0.35, ctx.rng() > 0.5 ? 'cave' : 'caveDark');
     }
-    // массив скалы сверху и по бокам — проём остаётся открытым
-    for (let i = 0; i < 18; i++) {
+    // массив скалы сверху и по бокам — валуны лежат на теле глыбы
+    for (let i = 0; i < 22; i++) {
       const a = ctx.rng() * Math.PI * 2;
-      const rr = 3.4 + ctx.rng() * 2.6;
+      const rr = 3.2 + ctx.rng() * 2.8;
       const bx = Math.cos(a) * rr;
-      const by = 3.6 + ctx.rng() * 3.6;
-      if (Math.abs(bx) < 2.6 && by < 5.0) continue;      // не заваливать вход
-      boulder(bx, by, 1.4 + Math.sin(a) * rr * 0.5,
-        0.9 + ctx.rng() * 1.1, ctx.rng() > 0.5 ? 'stone' : 'stoneDark');
+      const by = 4.6 + ctx.rng() * 3.0;
+      if (Math.abs(bx) < PROEM_HW + 0.8 && by < PROEM_H + 1.4) continue;   // не заваливать вход
+      boulder(bx, by, 2.4 + Math.sin(a) * rr * 0.4,
+        0.9 + ctx.rng() * 1.1, ctx.rng() > 0.5 ? 'cave' : 'caveDark');
     }
     // цоколь скалы — чтобы глыба не «висела» над землёй (проём остаётся чистым)
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 14; i++) {
       const a = ctx.rng() * Math.PI * 2;
-      const rr = 2.4 + ctx.rng() * 2.8;
-      const bx = Math.cos(a) * rr, bz = 0.8 + Math.sin(a) * rr * 0.5;
-      if (Math.abs(bx) < 2.3 && bz < 0.9) continue;      // не заваливать вход
-      boulder(bx, 0.5 + ctx.rng() * 0.5, bz, 0.8 + ctx.rng() * 0.6, 'stoneDark');
+      const rr = 2.2 + ctx.rng() * 2.8;
+      const bx = Math.cos(a) * rr, bz = 0.7 + Math.sin(a) * rr * 0.5;
+      if (Math.abs(bx) < PROEM_HW + 0.2 && bz < 0.8) continue;            // не заваливать вход
+      boulder(bx, 0.45 + ctx.rng() * 0.5, bz, 0.75 + ctx.rng() * 0.6, 'caveDark');
     }
-    // ---- проём: тёмный ход вглубь, косяки и ступени вниз ----
-    B.put('oakDoor', 2.5, 3.4, 0.4, 0, 1.7, 1.35, 1.2);
-    B.put('timber', 0.3, 3.6, 0.7, -1.3, 1.8, -0.8, 1.2);
-    B.put('timber', 0.3, 3.6, 0.7, 1.3, 1.8, -0.8, 1.2);
-    B.put('timber', 2.9, 0.3, 0.7, 0, 3.6, -0.8, 1.2);
-    for (let i = 0; i < 3; i++) {
-      B.put('stone', 2.3, 0.28, 0.7, 0, 0.14 + i * 0.28, -1.45 - i * 0.62, 1.2);
-    }
-    // ---- щит с предупреждением ----
-    B.put('timber', 0.16, 1.5, 0.16, -3.6, 0.75, -1.4, 1.2);
-    B.put('plank', 1.5, 0.9, 0.1, -3.6, 1.35, -1.4, 1.2);
-    B.put('iron', 0.5, 0.1, 0.06, -3.6, 1.55, -1.47, 1.2);
 
-    const group = B.build(M, null, { name: 'dungeonGate' });
+    /* ================================================================
+     *  ТОННЕЛЬ ЗА ПРОЁМОМ — уходит вглубь скалы
+     * ================================================================ */
+    for (const sx of [-1, 1]) {
+      for (let i = 0; i < 3; i++) {
+        boulder(sx * (PROEM_HW + 0.25), 0.9 + i * 1.0, 1.6 + i * 0.9,
+          0.72 + ctx.rng() * 0.2, 'caveDark');
+      }
+    }
+    // свод тоннеля
+    for (let i = 0; i < 4; i++) {
+      boulder((ctx.rng() - 0.5) * 1.6, PROEM_H + 0.5, 1.4 + i * 0.8,
+        0.68 + ctx.rng() * 0.18, 'caveDark');
+    }
+    // ступени, уходящие вниз в темноту
+    for (let i = 0; i < 4; i++) {
+      B.put('stone', 2.6, 0.26, 0.7, 0, 0.13 - i * 0.26, 1.2 + i * 0.62, 1.2);
+    }
+
+    /* ================================================================
+     *  КАМЕННАЯ ЛЕСТНИЦА К ПРОЁМУ
+     *
+     *  Ступени стоят на земле и ведут от подножия к порогу (y = 1.6).
+     *  Ничего не висит в воздухе: каждая ступень — камень на земле.
+     * ================================================================ */
+    const STEPS = 6;
+    const STEP_Y = 1.6 / STEPS;
+    const STEP_Z = 0.78;
+    for (let i = 0; i < STEPS; i++) {
+      const y = STEP_Y * (i + 1);
+      const lz = -5.0 + i * STEP_Z;
+      B.put('stone', 3.2, y + 0.16, STEP_Z + 0.14, 0, (y + 0.16) / 2 - 0.08, lz, 1.2);
+      // подступенок — ступенька видна сбоку
+      B.put('stoneDark', 3.2, 0.16, 0.22, 0, 0.08, lz + STEP_Z / 2, 1.2);
+      const w = facadePos(gate.x, gate.z, gate.ry, 0, lz, y);
+      ctx.platforms.push({ cx: w.x, cz: w.z, hx: 1.6, hz: STEP_Z / 2 + 0.14, ang: gate.ry, y });
+    }
+    // парапеты по бокам лестницы
+    for (const sx of [-1, 1]) {
+      for (let i = 0; i < STEPS; i++) {
+        const y = STEP_Y * (i + 1);
+        const lz = -5.0 + i * STEP_Z;
+        B.put('stoneDark', 0.34, 0.9, STEP_Z + 0.1, sx * 1.72, y + 0.45, lz, 1.2);
+        const w = facadePos(gate.x, gate.z, gate.ry, sx * 1.72, lz, y + 0.45);
+        ctx.colliders.boxes.push({
+          cx: w.x, cz: w.z, hx: 0.17, hz: STEP_Z / 2 + 0.05,
+          ang: gate.ry, y0: y, y1: y + 0.9,
+        });
+      }
+    }
+    // площадка перед проёмом
+    {
+      const lz = -0.35;
+      B.put('stoneDark', 3.6, 0.4, 1.8, 0, 1.4, lz, 1.2);
+      const w = facadePos(gate.x, gate.z, gate.ry, 0, lz, 1.6);
+      ctx.platforms.push({ cx: w.x, cz: w.z, hx: 1.8, hz: 0.9, ang: gate.ry, y: 1.6 });
+      for (const sx of [-1, 1]) {
+        B.put('stone', 0.3, 1.0, 1.8, sx * 1.75, 2.1, lz, 1.2);
+        const r = facadePos(gate.x, gate.z, gate.ry, sx * 1.75, lz, 2.1);
+        ctx.colliders.boxes.push({
+          cx: r.x, cz: r.z, hx: 0.15, hz: 0.9, ang: gate.ry, y0: 1.6, y1: 2.6,
+        });
+      }
+    }
+    // косяки проёма
+    for (const sx of [-1, 1]) {
+      B.put('timber', 0.34, PROEM_H + 0.2, 0.5, sx * (PROEM_HW + 0.1), (PROEM_H + 0.2) / 2, 0.1, 1.2);
+    }
+    B.put('timber', PROEM_HW * 2 + 0.9, 0.36, 0.5, 0, PROEM_H + 0.2, 0.1, 1.2);
+
+    /* ================================================================
+     *  ЩИТ С ПРЕДУПРЕЖДЕНИЕМ У ПОДНОЖИЯ
+     *
+     *  На доске — костяная эмблема: оленьей череп с рогами.
+     * ================================================================ */
+    B.put('timber', 0.2, 1.7, 0.2, -2.9, 0.85, -4.9, 1.2);
+    B.put('plank', 1.7, 1.0, 0.12, -2.9, 1.5, -4.9, 1.2);
+    B.put('iron', 0.6, 0.13, 0.07, -2.9, 1.74, -4.97, 1.2);
+    B.put('iron', 1.35, 0.08, 0.07, -2.9, 1.3, -4.97, 1.2);
+    // рога
+    for (const sx of [-1, 1]) {
+      for (let i = 0; i < 3; i++) {
+        B.add(cone(0.075, 0.42, 5), 'bone',
+          mat(-2.9 + sx * (0.42 + i * 0.09), 1.72 + i * 0.17, -4.98,
+            0, 0, sx * (0.55 + i * 0.16)));
+      }
+    }
+    // череп
+    B.add(sphere(0.24, 8, 6), 'bone', mat(-2.9, 1.6, -4.99));
+    B.add(sphere(0.15, 7, 5), 'bone', mat(-2.9, 1.42, -5.02));
+    // глазницы
+    for (const sx of [-1, 1]) {
+      B.add(sphere(0.075, 6, 4), 'iron', mat(-2.9 + sx * 0.09, 1.63, -5.16));
+    }
+
+    // скала — из той же породы, что и стены пещеры
+    const caveDark = new THREE.MeshStandardMaterial({
+      map: M.cave.map, color: 0x9a9ab2, roughness: 1.0, metalness: 0.0,
+    });
+    const group = B.build({ ...M, cave: M.cave, caveDark }, null, { name: 'dungeonGate' });
     group.position.set(gate.x, 0, gate.z);
     group.rotation.y = gate.ry;
     ctx.scene.add(group);
 
-    // ---- фонари по сторонам входа ----
+    /* ---------------- фонари по сторонам лестницы ---------------- */
     for (const sx of [-1, 1]) {
       const l = lantern(M, ctx.glowTex, {
-        height: 2.4, lit: true, intensity: 2.6, distance: 15,
+        height: 2.6, lit: true, intensity: 2.6, distance: 15,
       });
-      const p = facadePos(gate.x, gate.z, gate.ry, sx * 2.3, -1.6, 0);
+      const p = facadePos(gate.x, gate.z, gate.ry, sx * 2.35, -4.4, 0);
       ctx.scene.add(l.group);
       l.place(p.x, p.z, gate.ry);
       ctx.lanterns.push(l);
     }
 
-    // ---- из проёма светит холодным светом пещеры ----
+    /* ---------------- из проёма светит холодным светом пещеры ---------------- */
     {
-      const p = facadePos(gate.x, gate.z, gate.ry, 0, -0.5, 1.7);
+      const p = facadePos(gate.x, gate.z, gate.ry, 0, 0.9, 1.7);
       const glow = makeGlow(ctx.glowTex, 4.2, 0x6f9bff, 0.55);
       glow.position.copy(p);
       ctx.scene.add(glow);
@@ -509,39 +615,76 @@ export function createVillage(ctx) {
       ctx.scene.add(l);
     }
 
-    // ---- каменная тропа от деревни к скале ----
-    const dx = gate.x, dz = gate.z;
-    const len = Math.hypot(dx, dz);
-    const ux = dx / len, uz = dz / len;
+    /* ================================================================
+     *  ДОРОГА ОТ ДЕРЕВНИ К СКАЛЕ
+     *
+     *  Идёт по северо-западной стороне села — обходя трактир и амбар,
+     *  — и приходит к подножию лестницы.
+     * ================================================================ */
+    const trailPts = dungeonTrail();
     const trail = new Builder();
-    for (let i = 0; i < 26; i++) {
-      const t = 0.28 + (i / 26) * 0.66;          // от 28% до 94% пути
-      const px = ux * len * t + (ctx.rng() - 0.5) * 1.6;
-      const pz = uz * len * t + (ctx.rng() - 0.5) * 1.6;
-      trail.add(box(1.1 + ctx.rng() * 0.5, 0.14, 0.9 + ctx.rng() * 0.4), 'stoneDark',
-        mat(px, 0.06, pz, ctx.rng() * 3));
+    const stones = [];
+    for (let i = 0; i < trailPts.length - 1; i++) {
+      const [ax, az] = trailPts[i];
+      const [bx, bz] = trailPts[i + 1];
+      const dx = bx - ax, dz = bz - az;
+      const len = Math.hypot(dx, dz);
+      const n = Math.max(2, Math.round(len / 1.5));
+      const ang = Math.atan2(dx, dz);
+      for (let k = 0; k < n; k++) {
+        const t = (k + 0.5) / n;
+        const px = ax + dx * t + (ctx.rng() - 0.5) * 0.5;
+        const pz = az + dz * t + (ctx.rng() - 0.5) * 0.5;
+        trail.add(box(1.5 + ctx.rng() * 0.7, 0.12, 1.1 + ctx.rng() * 0.4), 'stoneDark',
+          mat(px, 0.05, pz, ang + (ctx.rng() - 0.5) * 0.3));
+        stones.push([px, pz]);
+      }
+      // бордюр по краям дороги
+      for (let k = 0; k <= n; k += 2) {
+        const t = k / n;
+        const px = ax + dx * t, pz = az + dz * t;
+        const nx = -dz / len, nz = dx / len;
+        for (const s of [-1, 1]) {
+          trail.add(box(0.5, 0.22, 0.5), 'stone',
+            mat(px + nx * s * 1.35, 0.1, pz + nz * s * 1.35, ang));
+        }
+      }
     }
-    // редкие пни-указатели вдоль тропы
-    for (let i = 0; i < 6; i++) {
-      const t = 0.34 + (i / 6) * 0.56;
-      const px = ux * len * t + (ctx.rng() - 0.5) * 5.5;
-      const pz = uz * len * t + (ctx.rng() - 0.5) * 5.5;
-      trail.add(cyl(0.22, 0.26, 1.0, 6), 'timber', mat(px, 0.5, pz));
-      trail.add(box(0.1, 0.42, 0.5), 'plank', mat(px, 0.95, pz, ctx.rng() * 3));
+    // пни-указатели вдоль дороги — с доской, смотрящей в сторону скалы
+    for (let i = 1; i < trailPts.length - 1; i += 2) {
+      const [px, pz] = trailPts[i];
+      const side = ctx.rng() > 0.5 ? 1 : -1;
+      const ox = px + 2.1 * side, oz = pz + 0.8;
+      trail.add(cyl(0.24, 0.28, 1.05, 6), 'timber', mat(ox, 0.52, oz));
+      const [nx, nz] = trailPts[i + 1] || trailPts[i];
+      const a = Math.atan2(nx - px, nz - pz);
+      trail.add(box(0.12, 0.44, 0.56), 'plank', mat(ox, 1.02, oz, a));
     }
     ctx.scene.add(trail.build(M, null, { name: 'dungeonTrail' }));
 
-    // ---- коллайдеры скалы (проём остаётся свободным) ----
+    // указатель на выезде из села — «в скалу» показывает на северо-запад
+    {
+      const a = trailPts[1], b = trailPts[2];
+      const ry = Math.atan2(-(b[0] - a[0]), -(b[1] - a[1]));
+      ctx.scene.add(signpost(M, { x: -4.8, z: -14.2, ry }));
+    }
+
+    /* ================================================================
+     *  КОЛЛАЙДЕРЫ СКАЛЫ
+     *
+     *  Угол прямоугольников — `gate.ry`: локальная ось X прямоугольника
+     *  должна совпадать с локальной осью X скалы.
+     * ================================================================ */
     const toWorld = (lx, lz) => facadePos(gate.x, gate.z, gate.ry, lx, lz, 0);
-    for (const lx of [-2.7, 2.7]) {
-      const w = toWorld(lx, 0.6);
+    for (const lx of [-(PROEM_HW + 1.5), PROEM_HW + 1.5]) {
+      const w = toWorld(lx, 1.2);
       ctx.colliders.boxes.push({
-        cx: w.x, cz: w.z, hx: 1.6, hz: 1.9, ang: -gate.ry, y0: 0, y1: 4.8,
+        cx: w.x, cz: w.z, hx: 1.5, hz: 1.9, ang: gate.ry, y0: 0, y1: 4.8,
       });
     }
-    const back = toWorld(0, 2.6);
+    const back = toWorld(0, 4.4);
     ctx.colliders.boxes.push({
-      cx: back.x, cz: back.z, hx: 2.4, hz: 1.2, ang: -gate.ry, y0: 0, y1: 3.6,
+      cx: back.x, cz: back.z, hx: 2.6, hz: 1.1, ang: gate.ry, y0: 0, y1: 3.8,
     });
   }
 

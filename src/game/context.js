@@ -58,6 +58,7 @@ export function createContext() {
     /* ---------------- Геометрия мира ---------------- */
     colliders: { boxes: [], circles: [] },  // препятствия для игрока
     platforms: [],           // поверхности, на которые можно встать (крыльца, настилы)
+    floors: [],              // уровни пола локации (в деревне один, на уровне 0)
     animalCircles: [],       // движущиеся препятствия (животные)
     critters: { hens: [], sheep: [], ducks: [], dog: null, cat: null },
     interactables: [],       // реестр действий по клавише E

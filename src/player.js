@@ -36,6 +36,7 @@ export class Player {
     this.circles = [];
     this.dynamicCircles = [];
     this.platforms = [];      // ступени, крыльца, пороги
+    this.floors = [];         // уровни пола локации: [{x0,x1,z0,z1,y}]
     this.climbs = [];         // вертикальные лестницы (зоны подъёма)
     this.climb = null;        // активный подъём { zone, feetY, phase, t }
     this.groundY = 0;        // высота поверхности под ногами
@@ -138,9 +139,28 @@ export class Player {
     return y;
   }
 
+  /**
+   * Уровни пола локации — прямоугольники с базовой высотой земли.
+   * Нужны там, где в одной сцене есть несколько этажей (например,
+   * подземелье: верхний ярус и зал Врат на 4.6 м ниже).
+   *
+   * @param {Array<{x0:number,x1:number,z0:number,z1:number,y:number}>} list
+   */
+  setFloors(list) {
+    this.floors = list || [];
+  }
+
+  /** Базовый уровень земли под точкой. */
+  floorAt(x, z) {
+    for (const f of this.floors) {
+      if (x >= f.x0 && x <= f.x1 && z >= f.z0 && z <= f.z1) return f.y;
+    }
+    return 0;
+  }
+
   /** Высота поверхности под точкой (ступени, крыльца). */
   groundAt(x, z) {
-    let g = 0;
+    let g = this.floorAt(x, z);
     const cur = this.groundY;
     for (const p of this.platforms) {
       // винтовая лестница — непрерывная поверхность

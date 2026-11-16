@@ -66,13 +66,16 @@ export function createLocations(ctx) {
    * Свет не зависит от времени суток — под землёй всегда темно.
    */
   const sceneDungeon = new THREE.Scene();
-  sceneDungeon.fog = new THREE.FogExp2(0x0a1024, 0.032);
+  sceneDungeon.fog = new THREE.FogExp2(0x0a1024, 0.016);
   const DUNGEON_BG = new THREE.Color(0x05070e);
   const dungeonLoc = buildDungeon(ctx.M, ctx.glowTex);
   sceneDungeon.add(dungeonLoc.group);
   sceneDungeon.background = DUNGEON_BG;
   const dungeonGatePoint = dungeonGate();
-  ctx.doors.dungeon = { x: dungeonGatePoint.x, z: dungeonGatePoint.z, ry: dungeonGatePoint.ry };
+  // игрок стоит у подножия лестницы — на земле, перед входом в скалу
+  ctx.doors.dungeon = {
+    x: dungeonGatePoint.foot.x, z: dungeonGatePoint.foot.z, ry: dungeonGatePoint.ry,
+  };
 
   /* ---------------- бармен ----------------
    *
@@ -122,6 +125,7 @@ export function createLocations(ctx) {
     ctx.player.setColliders(L ? L.colliders.boxes : ctx.colliders.boxes,
       L ? L.colliders.circles : ctx.colliders.circles);
     ctx.player.setPlatforms(L ? L.platforms : ctx.platforms);
+    ctx.player.setFloors(L ? (L.floors || []) : ctx.floors);
     ctx.player.setClimbs(L ? (L.climbs || []) : []);
     ctx.player.dynamicCircles = L ? [] : ctx.animalCircles;
 
@@ -129,7 +133,7 @@ export function createLocations(ctx) {
       ctx.player.teleport(L.spawn.x, L.spawn.z, L.spawn.yaw);
       ctx.player.y = 0.02; ctx.player.groundY = 0.02; ctx.player.vy = 0;
       ctx.ui.toast(inDungeon
-        ? 'Подземелье. Холодный свет кристаллов и полная тишина.'
+        ? 'Подземелье. Холодный свет кристаллов и полная тишина. Вглубь — по лестнице в шахте.'
         : inTavern
           ? '«Уставший вепрь». Тепло, пахнет дымом и элем.'
           : 'Амбар. Тут пахнет сеном и зерном.', 2600);
@@ -219,7 +223,7 @@ export function createLocations(ctx) {
     () => ctx.ui.toast('Дуб крепкий, скола на нём по кругу. Хорошее место.'), 'tavern');
 
   /* ---- подземелье: вход и выход ---- */
-  add(new THREE.Vector3(dungeonGatePoint.x, 1.4, dungeonGatePoint.z), 3.2,
+  add(new THREE.Vector3(dungeonGatePoint.foot.x, 1.4, dungeonGatePoint.foot.z), 3.4,
     'Спуститься в подземелье', () => setLocation('dungeon'));
 
   add(new THREE.Vector3(dungeonLoc.exit.x, dungeonLoc.exit.y, dungeonLoc.exit.z), 3.0,
@@ -230,17 +234,29 @@ export function createLocations(ctx) {
     'Врата в глубине: огромный синий самоцвет, в котором будто движется туман.',
     'Колонны из тёмного камня держат свод. Кто и зачем их поставил — неизвестно.',
     'У пола ползёт сизоватый туман. Звуки здесь гаснут, будто пещера слушает.',
+    'Знаки на стене горят синим. Их рисуют чем-то жидким, а не высекают.',
+    'Самоцвет лежит в пыли, будто его положили только что. Рядом никого.',
   ];
   const dungeonSpots = [
     [dungeonLoc.spots.crystal, 'Осмотреть кристалл'],
     [dungeonLoc.spots.gate, 'Осмотреть Врата'],
     [dungeonLoc.spots.pillar, 'Осмотреть колонну'],
     [dungeonLoc.spots.fog, 'Прислушаться к туману'],
+    [dungeonLoc.spots.runes, 'Прочитать руны на стене'],
+    [dungeonLoc.spots.gems[0], 'Осмотреть самоцвет'],
+    [dungeonLoc.spots.gems[1], 'Осмотреть самоцвет'],
   ];
   dungeonSpots.forEach(([v, label], i) => {
     add(new THREE.Vector3(v.x, v.y, v.z), 2.6, label,
       () => ctx.ui.toast(dungeonLines[i % dungeonLines.length], 3600), 'dungeon');
   });
+
+  // прикосновение к Вратам — самый мрачный момент локации
+  add(new THREE.Vector3(dungeonLoc.gateHall.x, dungeonLoc.gateHall.y + 1.6, dungeonLoc.gateHall.z - 3.2), 3.0,
+    'Прикоснуться к Вратам', () => {
+      ctx.ui.toast('Самоцвет холодит ладонь, и на миг кажется, что из глубины '
+        + 'кто-то дотронулся в ответ. Потом всё стихает.', 5200);
+    }, 'dungeon');
 
   // ---- комнаты второго этажа: переночевать ----
   const nightLines = [

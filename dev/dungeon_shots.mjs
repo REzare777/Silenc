@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 import { LAUNCH } from './browser.mjs';
 import fs from 'fs';
 
-const TAG = process.argv[2] || 'D1';
+const TAG = process.argv[2] || 'D2';
 const OUT = '/workspace/village/shots';
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -38,26 +38,34 @@ const shot = async (name, pos, look) => {
 
 // --- вход в подземелье в деревне ---
 const gate = await page.evaluate(() => window.__dbg.ctx.doors.dungeon);
-// направление «лицом» скалы (наружу, к деревне)
 const face = await page.evaluate(() => {
   const d = window.__dbg, g = d.ctx.doors.dungeon;
   return { x: -Math.sin(g.ry), z: -Math.cos(g.ry) };
 });
 await page.evaluate(() => window.__dbg.setLocation('village'));
 await page.waitForTimeout(600);
-await shot('gate_far', [gate.x + face.x * 16, 3.0, gate.z + face.z * 16], [gate.x, 2.2, gate.z]);
-await shot('gate_near', [gate.x + face.x * 6.5, 1.8, gate.z + face.z * 6.5], [gate.x, 1.7, gate.z]);
-await shot('gate_side', [gate.x + face.x * 8 - face.z * 8, 2.2, gate.z + face.z * 8 + face.x * 8], [gate.x, 2.0, gate.z]);
+// подножие лестницы — точка, куда игрока ставит выход из подземелья
+const foot = await page.evaluate(() => {
+  const d = window.__dbg, g = d.ctx.doors.dungeon;
+  return { x: g.x, z: g.z, ry: g.ry };
+});
+await shot('gate_foot', [foot.x + face.x * 7, 2.0, foot.z + face.z * 7], [foot.x - face.x * 4, 1.6, foot.z - face.z * 4]);
+await shot('gate_stairs', [foot.x + face.x * 5.2, 1.8, foot.z + face.z * 5.2 - 2.4], [foot.x - face.x * 2, 1.4, foot.z - face.z * 2]);
+// дорога от деревни
+await shot('trail_far', [-24, 2.6, -16], [-50, 1.5, -38]);
+await shot('trail_mid', [-38, 2.4, -34], [-60, 1.6, -50]);
 
 // --- пещера ---
 await page.evaluate(() => window.__dbg.setLocation('dungeon'));
 await page.waitForTimeout(800);
-await shot('cave_portal', [0, 1.7, -14.5], [0, 1.5, 4]);
-await shot('cave_hall', [0, 1.7, -4], [0, 1.7, 12]);
-await shot('cave_gate', [0, 1.9, 8], [0, 3.2, 14.5]);
-await shot('cave_crystals', [5.5, 1.6, -3], [-8, 2.6, 4]);
-await shot('cave_pillar', [-4.5, 1.7, 5], [7, 1.8, 1]);
-await shot('cave_low', [0, 0.55, 3], [0, 0.6, 13]);
+await shot('cave_entry', [0, 1.7, -25], [0, 1.5, -6]);          // входной зал, вид на проёмы
+await shot('cave_portal', [0, 1.9, -29], [0, 2.2, -34]);       // портал наружу
+await shot('cave_hall', [0, 1.7, -14], [0, 1.7, 4]);           // кристальный зал
+await shot('cave_shaft', [0, 1.7, 1.5], [0, -1.5, 10]);        // шахта и лестница вниз
+await shot('cave_deep', [0, -2.9, 18], [0, -3.2, 30]);         // зал Врат
+await shot('cave_crystals', [7.5, 1.6, -3], [-9, 2.6, 2]);      // кристаллы у колонн
+await shot('cave_gate', [0, -3.1, 22], [0, -2.4, 31.5]);       // алтарь Врат
+await shot('cave_pillar', [-8, 1.7, -6], [4, 1.8, -2]);        // колоннада
 
 console.log('ошибки:', errs.length, errs.slice(0, 3));
 await browser.close();
