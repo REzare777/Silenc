@@ -37,7 +37,7 @@ const ALL = [
   'regress', 'regress_file', 'barn_test', 'tavern_test', 'interiors_test',
   'volume_test', 'mill_test', 'roof_test', 'stair_smooth', 'animals_test',
   'animals_collide', 'dog_test', 'fish_test', 'inv_test', 'broken_normals',
-  'npc_test', 'single_check',
+  'npc_test', 'dungeon_test', 'single_check',
 ];
 
 /** Быстрый набор — для проверки «ничего не сломалось» после правки. */

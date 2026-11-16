@@ -189,7 +189,7 @@ export function buildBarnInterior(M, glowTex) {
       const step = (x1 - x0) / n;
       for (let i = 0; i < n; i++) {
         const cx = x0 + step * (i + 0.5);
-        const w = step - 0.02;
+        const w = step + 0.012;    // внахлёст: сквозь щель не видно наружу
         const zz = z - dir * (bt / 2 + 0.01);
         if (Math.abs(cx) < winX) {
           // доска разрезана окном: часть снизу и часть сверху
@@ -207,7 +207,7 @@ export function buildBarnInterior(M, glowTex) {
       const step = (z1 - z0) / n;
       for (let i = 0; i < n; i++) {
         const cz = z0 + step * (i + 0.5);
-        B.put('oakDoor', bt, sH, step - 0.02, x + dir * (bt / 2 + 0.01), (sy0 + sy1) / 2, cz, 1.4);
+        B.put('oakDoor', bt, sH, step + 0.012, x + dir * (bt / 2 + 0.01), (sy0 + sy1) / 2, cz, 1.4);
       }
     };
     runX(-fz, 1);          // передняя стена (ворота) — с проёмом под окно

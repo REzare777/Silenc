@@ -21,9 +21,10 @@
 import * as THREE from 'three';
 import { buildBarnInterior } from '../world/barn.js';
 import { buildTavernInterior } from '../world/tavern.js';
+import { buildDungeon } from '../world/dungeon.js';
 import { barkeep } from '../world/npc.js';
 import { createNpc } from './npc.js';
-import { tavernDoor, barnExitPoint } from './layout.js';
+import { tavernDoor, barnExitPoint, dungeonGate } from './layout.js';
 
 /**
  * Создаёт подсистему локаций.
@@ -58,6 +59,20 @@ export function createLocations(ctx) {
   const tavernLoc = buildTavernInterior(ctx.M, ctx.glowTex);
   sceneTavern.add(tavernLoc.group);
   sceneTavern.background = TAVERN_BG;
+
+  /* ---------------- подземелье ----------------
+   *
+   * Пещера под долиной: своя сцена, свой мрачный свет, свои коллайдеры.
+   * Свет не зависит от времени суток — под землёй всегда темно.
+   */
+  const sceneDungeon = new THREE.Scene();
+  sceneDungeon.fog = new THREE.FogExp2(0x0a1024, 0.032);
+  const DUNGEON_BG = new THREE.Color(0x05070e);
+  const dungeonLoc = buildDungeon(ctx.M, ctx.glowTex);
+  sceneDungeon.add(dungeonLoc.group);
+  sceneDungeon.background = DUNGEON_BG;
+  const dungeonGatePoint = dungeonGate();
+  ctx.doors.dungeon = { x: dungeonGatePoint.x, z: dungeonGatePoint.z, ry: dungeonGatePoint.ry };
 
   /* ---------------- бармен ----------------
    *
@@ -98,9 +113,12 @@ export function createLocations(ctx) {
 
     const inBarn = current === 'barn';
     const inTavern = current === 'tavern';
-    const L = inBarn ? barnLoc : inTavern ? tavernLoc : null;
+    const inDungeon = current === 'dungeon';
+    const L = inBarn ? barnLoc : inTavern ? tavernLoc : inDungeon ? dungeonLoc : null;
 
-    ctx.renderPass.scene = inBarn ? sceneBarn : inTavern ? sceneTavern : ctx.scene;
+    ctx.renderPass.scene = inBarn ? sceneBarn
+      : inTavern ? sceneTavern
+        : inDungeon ? sceneDungeon : ctx.scene;
     ctx.player.setColliders(L ? L.colliders.boxes : ctx.colliders.boxes,
       L ? L.colliders.circles : ctx.colliders.circles);
     ctx.player.setPlatforms(L ? L.platforms : ctx.platforms);
@@ -110,12 +128,17 @@ export function createLocations(ctx) {
     if (L) {
       ctx.player.teleport(L.spawn.x, L.spawn.z, L.spawn.yaw);
       ctx.player.y = 0.02; ctx.player.groundY = 0.02; ctx.player.vy = 0;
-      ctx.ui.toast(inTavern
-        ? '«Уставший вепрь». Тепло, пахнет дымом и элем.'
-        : 'Амбар. Тут пахнет сеном и зерном.', 2600);
+      ctx.ui.toast(inDungeon
+        ? 'Подземелье. Холодный свет кристаллов и полная тишина.'
+        : inTavern
+          ? '«Уставший вепрь». Тепло, пахнет дымом и элем.'
+          : 'Амбар. Тут пахнет сеном и зерном.', 2600);
     } else {
       // назад — к той двери, откуда вошли
-      if (prev === 'tavern') {
+      if (prev === 'dungeon') {
+        const gate = ctx.doors.dungeon;
+        ctx.player.teleport(gate.x, gate.z, gate.ry);
+      } else if (prev === 'tavern') {
         const door = ctx.doors.tavern;
         ctx.player.teleport(door.x, door.z, ctx.doors.tavernRy);
       } else {
@@ -195,6 +218,30 @@ export function createLocations(ctx) {
   add(new THREE.Vector3(-2.6, 1.0, 2.0), 2.2, 'Сесть за стол',
     () => ctx.ui.toast('Дуб крепкий, скола на нём по кругу. Хорошее место.'), 'tavern');
 
+  /* ---- подземелье: вход и выход ---- */
+  add(new THREE.Vector3(dungeonGatePoint.x, 1.4, dungeonGatePoint.z), 3.2,
+    'Спуститься в подземелье', () => setLocation('dungeon'));
+
+  add(new THREE.Vector3(dungeonLoc.exit.x, dungeonLoc.exit.y, dungeonLoc.exit.z), 3.0,
+    'Подняться на поверхность', () => setLocation('village'), 'dungeon');
+
+  const dungeonLines = [
+    'Кристаллы растут прямо из камня и холодят ладонь. Таких в долине не водится.',
+    'Врата в глубине: огромный синий самоцвет, в котором будто движется туман.',
+    'Колонны из тёмного камня держат свод. Кто и зачем их поставил — неизвестно.',
+    'У пола ползёт сизоватый туман. Звуки здесь гаснут, будто пещера слушает.',
+  ];
+  const dungeonSpots = [
+    [dungeonLoc.spots.crystal, 'Осмотреть кристалл'],
+    [dungeonLoc.spots.gate, 'Осмотреть Врата'],
+    [dungeonLoc.spots.pillar, 'Осмотреть колонну'],
+    [dungeonLoc.spots.fog, 'Прислушаться к туману'],
+  ];
+  dungeonSpots.forEach(([v, label], i) => {
+    add(new THREE.Vector3(v.x, v.y, v.z), 2.6, label,
+      () => ctx.ui.toast(dungeonLines[i % dungeonLines.length], 3600), 'dungeon');
+  });
+
   // ---- комнаты второго этажа: переночевать ----
   const nightLines = [
     'Вы устроились на ночь. Свеча догорела, за окном запел петух.',
@@ -224,10 +271,13 @@ export function createLocations(ctx) {
     setLocation,
     WARM_OUT,
     TAVERN_BG,
+    DUNGEON_BG,
     barnLoc,
     tavernLoc,
+    dungeonLoc,
     sceneBarn,
     sceneTavern,
+    sceneDungeon,
     /** Персонажи по идентификатору — их находит диалог. */
     npcs: { barkeep: barkeepNpc },
     /** Обновление персонажей (вызывается из игрового цикла). */

@@ -29,6 +29,8 @@ export const LAYOUT = {
   blacksmith: { x: 14.5, z: -8 },         // кузня
   well: { x: 0, z: 0 },                   // колодец на площади
   campfire: { x: -9, z: 8.5 },            // костёр
+  // вход в подземелье — примерно в ста метрах от деревни, на северо-западе
+  dungeon: { x: -72, z: -66 },
 };
 
 /**
@@ -74,6 +76,17 @@ export function tavernDoor() {
   // локальные координаты фасада таверны: x = -w*0.3, z = -d/2 - 0.5
   // (w = 13, d = 12 — как в buildings.js, функция tavern)
   return { pos: facadePos(x, z, ry, -13 * 0.3, -12 / 2 - 0.5, 1.4), ry };
+}
+
+/**
+ * Точка входа в подземелье: тёмный проём в скале.
+ *
+ * @returns {{x: number, z: number, ry: number}} точка и поворот
+ */
+export function dungeonGate() {
+  const { x, z } = LAYOUT.dungeon;
+  // скала стоит фасадом к деревне — так вход видно с дороги
+  return { x, z, ry: ryToFace([x, z], [0, 0]) };
 }
 
 /**

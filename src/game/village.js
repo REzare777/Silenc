@@ -26,7 +26,8 @@ import {
   trough, signpost, makeGlow,
 } from '../world/props.js';
 import { Embers } from '../world/particles.js';
-import { LAYOUT, ryToFace, facadePos, tavernDoor } from './layout.js';
+import { Builder, box, cyl, sphere, cone, mat } from '../world/geo.js';
+import { LAYOUT, ryToFace, facadePos, tavernDoor, dungeonGate } from './layout.js';
 
 /**
  * Создаёт систему деревни.
@@ -416,6 +417,134 @@ export function createVillage(ctx) {
     }
   }
 
+  /* ================================================================
+   *  ВХОД В ПОДЗЕМЕЛЬЕ
+   *
+   *  Примерно в ста метрах от деревни, на северо-западе: скала с тёмным
+   *  проёмом, ступени вниз, факелы по сторонам и каменная тропа от села.
+   * ================================================================ */
+  function buildDungeonGate() {
+    const gate = dungeonGate();
+    const B = new Builder();
+    const M = ctx.M;
+
+    // ---- скала: глыба из валунов, а не ровные блоки ----
+    // тёмное «ядро» — ЗА проёмом, чтобы сквозь валуны не было видно поля,
+    // но сам проём оставался открытым ходом вглубь скалы
+    B.put('stoneDark', 6.4, 6.6, 2.2, 0, 3.2, 2.4, 1.2);
+    B.put('stoneDark', 7.6, 5.2, 2.0, 0, 2.6, 3.8, 1.2);
+    // перекрытие над проёмом
+    B.put('stoneDark', 3.8, 1.6, 1.6, 0, 4.4, 0.2, 1.2);
+    const boulder = (x, y, z, r, key) => {
+      B.add(sphere(r, 7, 5), key, mat(x, y, z, ctx.rng() * 3, ctx.rng(), ctx.rng()));
+    };
+    // боковые «столбы» скалы по краям проёма
+    for (const sx of [-1, 1]) {
+      for (let i = 0; i < 5; i++) {
+        boulder(sx * (1.9 + ctx.rng() * 1.4), 0.9 + i * 1.15, 0.4 + ctx.rng() * 0.8,
+          1.0 + ctx.rng() * 0.7, ctx.rng() > 0.5 ? 'stone' : 'stoneDark');
+      }
+    }
+    // перекрытие проёма — арка из камней
+    for (let i = 0; i < 5; i++) {
+      const t = (i / 4 - 0.5) * 2.6;
+      boulder(t, 4.5 + Math.cos(t * 0.8) * 0.5, 0.2 + ctx.rng() * 0.7,
+        0.85 + ctx.rng() * 0.4, ctx.rng() > 0.5 ? 'stone' : 'stoneDark');
+    }
+    // массив скалы сверху и по бокам — проём остаётся открытым
+    for (let i = 0; i < 18; i++) {
+      const a = ctx.rng() * Math.PI * 2;
+      const rr = 3.4 + ctx.rng() * 2.6;
+      const bx = Math.cos(a) * rr;
+      const by = 3.6 + ctx.rng() * 3.6;
+      if (Math.abs(bx) < 2.6 && by < 5.0) continue;      // не заваливать вход
+      boulder(bx, by, 1.4 + Math.sin(a) * rr * 0.5,
+        0.9 + ctx.rng() * 1.1, ctx.rng() > 0.5 ? 'stone' : 'stoneDark');
+    }
+    // цоколь скалы — чтобы глыба не «висела» над землёй (проём остаётся чистым)
+    for (let i = 0; i < 12; i++) {
+      const a = ctx.rng() * Math.PI * 2;
+      const rr = 2.4 + ctx.rng() * 2.8;
+      const bx = Math.cos(a) * rr, bz = 0.8 + Math.sin(a) * rr * 0.5;
+      if (Math.abs(bx) < 2.3 && bz < 0.9) continue;      // не заваливать вход
+      boulder(bx, 0.5 + ctx.rng() * 0.5, bz, 0.8 + ctx.rng() * 0.6, 'stoneDark');
+    }
+    // ---- проём: тёмный ход вглубь, косяки и ступени вниз ----
+    B.put('oakDoor', 2.5, 3.4, 0.4, 0, 1.7, 1.35, 1.2);
+    B.put('timber', 0.3, 3.6, 0.7, -1.3, 1.8, -0.8, 1.2);
+    B.put('timber', 0.3, 3.6, 0.7, 1.3, 1.8, -0.8, 1.2);
+    B.put('timber', 2.9, 0.3, 0.7, 0, 3.6, -0.8, 1.2);
+    for (let i = 0; i < 3; i++) {
+      B.put('stone', 2.3, 0.28, 0.7, 0, 0.14 + i * 0.28, -1.45 - i * 0.62, 1.2);
+    }
+    // ---- щит с предупреждением ----
+    B.put('timber', 0.16, 1.5, 0.16, -3.6, 0.75, -1.4, 1.2);
+    B.put('plank', 1.5, 0.9, 0.1, -3.6, 1.35, -1.4, 1.2);
+    B.put('iron', 0.5, 0.1, 0.06, -3.6, 1.55, -1.47, 1.2);
+
+    const group = B.build(M, null, { name: 'dungeonGate' });
+    group.position.set(gate.x, 0, gate.z);
+    group.rotation.y = gate.ry;
+    ctx.scene.add(group);
+
+    // ---- фонари по сторонам входа ----
+    for (const sx of [-1, 1]) {
+      const l = lantern(M, ctx.glowTex, {
+        height: 2.4, lit: true, intensity: 2.6, distance: 15,
+      });
+      const p = facadePos(gate.x, gate.z, gate.ry, sx * 2.3, -1.6, 0);
+      ctx.scene.add(l.group);
+      l.place(p.x, p.z, gate.ry);
+      ctx.lanterns.push(l);
+    }
+
+    // ---- из проёма светит холодным светом пещеры ----
+    {
+      const p = facadePos(gate.x, gate.z, gate.ry, 0, -0.5, 1.7);
+      const glow = makeGlow(ctx.glowTex, 4.2, 0x6f9bff, 0.55);
+      glow.position.copy(p);
+      ctx.scene.add(glow);
+      const l = new THREE.PointLight(0x5c8cff, 2.6, 13, 1.8);
+      l.position.copy(p);
+      ctx.scene.add(l);
+    }
+
+    // ---- каменная тропа от деревни к скале ----
+    const dx = gate.x, dz = gate.z;
+    const len = Math.hypot(dx, dz);
+    const ux = dx / len, uz = dz / len;
+    const trail = new Builder();
+    for (let i = 0; i < 26; i++) {
+      const t = 0.28 + (i / 26) * 0.66;          // от 28% до 94% пути
+      const px = ux * len * t + (ctx.rng() - 0.5) * 1.6;
+      const pz = uz * len * t + (ctx.rng() - 0.5) * 1.6;
+      trail.add(box(1.1 + ctx.rng() * 0.5, 0.14, 0.9 + ctx.rng() * 0.4), 'stoneDark',
+        mat(px, 0.06, pz, ctx.rng() * 3));
+    }
+    // редкие пни-указатели вдоль тропы
+    for (let i = 0; i < 6; i++) {
+      const t = 0.34 + (i / 6) * 0.56;
+      const px = ux * len * t + (ctx.rng() - 0.5) * 5.5;
+      const pz = uz * len * t + (ctx.rng() - 0.5) * 5.5;
+      trail.add(cyl(0.22, 0.26, 1.0, 6), 'timber', mat(px, 0.5, pz));
+      trail.add(box(0.1, 0.42, 0.5), 'plank', mat(px, 0.95, pz, ctx.rng() * 3));
+    }
+    ctx.scene.add(trail.build(M, null, { name: 'dungeonTrail' }));
+
+    // ---- коллайдеры скалы (проём остаётся свободным) ----
+    const toWorld = (lx, lz) => facadePos(gate.x, gate.z, gate.ry, lx, lz, 0);
+    for (const lx of [-2.7, 2.7]) {
+      const w = toWorld(lx, 0.6);
+      ctx.colliders.boxes.push({
+        cx: w.x, cz: w.z, hx: 1.6, hz: 1.9, ang: -gate.ry, y0: 0, y1: 4.8,
+      });
+    }
+    const back = toWorld(0, 2.6);
+    ctx.colliders.boxes.push({
+      cx: back.x, cz: back.z, hx: 2.4, hz: 1.2, ang: -gate.ry, y0: 0, y1: 3.6,
+    });
+  }
+
   /**
    * Собрать деревню целиком: здания, пропсы и животных.
    *
@@ -424,8 +553,9 @@ export function createVillage(ctx) {
   function build(buildAnimals) {
     buildBuildings();
     buildProps();
+    buildDungeonGate();
     buildAnimals();
   }
 
-  return { build, buildBuildings, buildProps };
+  return { build, buildBuildings, buildProps, buildDungeonGate };
 }

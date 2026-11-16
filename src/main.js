@@ -250,6 +250,7 @@ buildTerrain(ctx);
 // здания и уличные пропсы
 village.buildBuildings();
 village.buildProps();
+village.buildDungeonGate();      // вход в подземелье — примерно в 100 м от села
 
 // сетка проходимости — для пса (и других, кто ходит по карте)
 const nav = new NavGrid({ minX: -78, minZ: -78, size: 168, cell: 1.0, radius: 0.42 });
@@ -580,6 +581,11 @@ function loop() {
       locations.sceneBarn.fog.color.copy(fc).lerp(locations.WARM_OUT, 0.3).multiplyScalar(0.5);
     }
   }
+  if (ctx.loc === 'dungeon') {
+    // подземелье: свой мрачный свет, свой туман, кристаллы пульсируют
+    locations.dungeonLoc.update(dt, t);
+    locations.sceneDungeon.background.copy(locations.DUNGEON_BG);
+  }
   if (ctx.loc === 'tavern') {
     // внутри таверны свет ПОСТОЯННЫЙ: своя палитра, не зависит от часов улицы
     locations.tavernLoc.update(dt, t);
@@ -738,6 +744,7 @@ window.__dbg = {
   get loc() { return ctx.loc; },
   setLocation: locations.setLocation,
   barnLoc: locations.barnLoc, tavernLoc: locations.tavernLoc,
+  dungeonLoc: locations.dungeonLoc, sceneDungeon: locations.sceneDungeon,
   npcs: locations.npcs, updateNpc: locations.updateNpc,
   sceneTavern: locations.sceneTavern, dialog: ctx.systems.dialog,
   teleport: (x, z, yaw) => player.teleport(x, z, yaw),
