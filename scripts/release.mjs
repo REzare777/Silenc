@@ -101,5 +101,18 @@ for (const i of items) {
 }
 console.log(`\n✓ ${SRC_PKG} — исходники для деплоя (${mb(SRC_PKG)})`);
 
+/* 6. пакет для itch.io: однофайловая игра + обложка (в корне — index.html) */
+const PUBLISH = path.join(ROOT, 'publish');
+if (fs.existsSync(PUBLISH)) {
+  fs.mkdirSync(PUBLISH, { recursive: true });
+  fs.copyFileSync(single, path.join(PUBLISH, 'index.html'));
+  const itchZip = path.join(PUBLISH, 'itch-upload.zip');
+  fs.rmSync(itchZip, { force: true });
+  run('zip', ['-q', '-j', itchZip, path.join(PUBLISH, 'index.html'),
+    path.join(PUBLISH, 'cover-itch.png')]);
+  run('unzip', ['-t', itchZip]);
+  console.log(`\n✓ ${itchZip} — пакет для itch.io (${mb(itchZip)})`);
+}
+
 console.log('\n=== Готово ===');
 console.log(`Онлайн: задеплойте папку dist (path) и исходники (source_path: ${SRC_PKG})`);
