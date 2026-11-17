@@ -10,11 +10,11 @@
 
 | Где | Ссылка |
 |---|---|
-| **Онлайн (работает сразу)** | https://o0c1e8mvufhqs.space.mcode.io/ |
-| **GitHub Pages (свой домен проекта)** | https://rezare777.github.io/Silenc/ — включается вручную: Settings → Pages → Source = GitHub Actions |
+| **Онлайн (основная)** | https://rezare777.github.io/Silenc/ |
+| **Зеркало** | https://o0c1e8mvufhqs.space.mcode.io/ |
 | **itch.io** | https://rezare777.itch.io/ (страница создаётся вручную, см. ниже) |
-| **Однофайловая версия** | `Шёпот-Долина.html` — скачать и открыть двойным щелчком |
-| **Сырьё в GitHub** | https://github.com/REzare777/Silenc (однофайловая сборка: `raw.githubusercontent.com/REzare777/Silenc/main/whispervale.html`) |
+| **Однофайловая версия** | `Шёпот-Долина.html` в архиве `whispervale-game.zip` — распаковать и открыть двойным щелчком |
+| **Исходники** | https://github.com/REzare777/Silenc (ветка `main`) |
 
 Игра полностью бесплатна, без регистрации и без установки: нужен только браузер
 с поддержкой WebGL (Chrome, Edge, Firefox, Яндекс.Браузер).
