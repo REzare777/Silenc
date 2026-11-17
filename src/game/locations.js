@@ -22,6 +22,7 @@ import * as THREE from 'three';
 import { buildBarnInterior } from '../world/barn.js';
 import { buildTavernInterior } from '../world/tavern.js';
 import { buildDungeon } from '../world/dungeon.js';
+import { buildHomeInterior, HOME_NAMES } from '../world/homes.js';
 import { barkeep } from '../world/npc.js';
 import { createNpc } from './npc.js';
 import { tavernDoor, barnExitPoint, dungeonGate } from './layout.js';
@@ -77,6 +78,18 @@ export function createLocations(ctx) {
     x: dungeonGatePoint.foot.x, z: dungeonGatePoint.foot.z, ry: dungeonGatePoint.ry,
   };
 
+  /* ---------------- дома ----------------
+   *
+   * У каждого дома своя сцена, свой свет и своя мебель. В дом пускают только
+   * утром и днём: ночью хозяева спят, а вечером дом уже заперт.
+   */
+  const homeLocs = [];
+  for (let i = 0; i < HOME_NAMES.length; i++) {
+    homeLocs.push(buildHomeInterior(ctx.M, ctx.glowTex, i));
+  }
+  // двери домов в деревне (чтобы вернуться к своей двери)
+  ctx.doors.homes = ctx.doors.homes || [];
+
   /* ---------------- бармен ----------------
    *
    * Живёт за стойкой: ходит вдоль неё, протирает кружку, останавливается.
@@ -117,11 +130,15 @@ export function createLocations(ctx) {
     const inBarn = current === 'barn';
     const inTavern = current === 'tavern';
     const inDungeon = current === 'dungeon';
-    const L = inBarn ? barnLoc : inTavern ? tavernLoc : inDungeon ? dungeonLoc : null;
+    const homeIdx = current.startsWith('home') ? parseInt(current.slice(4), 10) : -1;
+    const inHome = homeIdx >= 0 && homeIdx < homeLocs.length;
+    const L = inBarn ? barnLoc : inTavern ? tavernLoc : inDungeon ? dungeonLoc
+      : inHome ? homeLocs[homeIdx] : null;
 
     ctx.renderPass.scene = inBarn ? sceneBarn
       : inTavern ? sceneTavern
-        : inDungeon ? sceneDungeon : ctx.scene;
+        : inDungeon ? sceneDungeon
+          : inHome ? homeLocs[homeIdx].scene : ctx.scene;
     ctx.player.setColliders(L ? L.colliders.boxes : ctx.colliders.boxes,
       L ? L.colliders.circles : ctx.colliders.circles);
     ctx.player.setPlatforms(L ? L.platforms : ctx.platforms);
@@ -136,10 +153,18 @@ export function createLocations(ctx) {
         ? 'Подземелье. Холодный свет кристаллов и полная тишина. Вглубь — по лестнице в шахте.'
         : inTavern
           ? '«Уставший вепрь». Тепло, пахнет дымом и элем.'
-          : 'Амбар. Тут пахнет сеном и зерном.', 2600);
+          : inHome
+            ? `${homeLocs[homeIdx].name}. Внутри пахнет дымом и сушёными травами.`
+            : 'Амбар. Тут пахнет сеном и зерном.', 2600);
     } else {
       // назад — к той двери, откуда вошли
-      if (prev === 'dungeon') {
+      if (prev.startsWith('home')) {
+        const idx = parseInt(prev.slice(4), 10);
+        const door = (ctx.doors.homes || [])[idx];
+        if (door) {
+          ctx.player.teleport(door.x, door.z, door.ry);
+        }
+      } else if (prev === 'dungeon') {
         const gate = ctx.doors.dungeon;
         ctx.player.teleport(gate.x, gate.z, gate.ry);
       } else if (prev === 'tavern') {
@@ -222,6 +247,17 @@ export function createLocations(ctx) {
   add(new THREE.Vector3(-2.6, 1.0, 2.0), 2.2, 'Сесть за стол',
     () => ctx.ui.toast('Дуб крепкий, скола на нём по кругу. Хорошее место.'), 'tavern');
 
+  /* ---- дома: выход и детали ---- */
+  homeLocs.forEach((loc, i) => {
+    add(new THREE.Vector3(loc.exitDoor.x, 1.3, loc.exitDoor.z), 2.4,
+      'Выйти из дома', () => setLocation('village'), `home${i}`);
+    loc.spots.forEach((spot, k) => {
+      add(spot[0], 2.1, spot[1], () => {
+        ctx.ui.toast(loc.lines[k % loc.lines.length], 3600);
+      }, `home${i}`);
+    });
+  });
+
   /* ---- подземелье: вход и выход ---- */
   add(new THREE.Vector3(dungeonGatePoint.foot.x, 1.4, dungeonGatePoint.foot.z), 3.4,
     'Спуститься в подземелье', () => setLocation('dungeon'));
@@ -291,6 +327,7 @@ export function createLocations(ctx) {
     barnLoc,
     tavernLoc,
     dungeonLoc,
+    homeLocs,
     sceneBarn,
     sceneTavern,
     sceneDungeon,

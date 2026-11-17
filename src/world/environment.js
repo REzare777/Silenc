@@ -168,7 +168,13 @@ export class Environment {
     this.from = PRESETS.golden;
     this.to = PRESETS.golden;
     this.t = 1;
-    this.duration = 2.6;
+    // Каждый период дня живёт 10 минут, переход между периодами — 2,5 минуты.
+    // Время идёт всегда: игрок может стоять на месте — солнце всё равно ползёт.
+    this.periodSeconds = 600;
+    this.transitionSeconds = 150;
+    this.phaseTime = 0;
+    this.autoCycle = true;
+    this.duration = this.transitionSeconds;
     this.apply(PRESETS.golden);
   }
 
@@ -213,6 +219,7 @@ export class Environment {
 
   setTimeOfDay(name, instant = false) {
     if (!PRESETS[name] || name === this.target) return;
+    this.phaseTime = 0;
     if (instant) {
       this.from = PRESETS[name]; this.to = PRESETS[name];
       this.target = name; this.current = name; this.t = 1;
@@ -238,6 +245,14 @@ export class Environment {
   }
 
   update(dt, focus) {
+    // Сутки идут сами: каждый период — 10 минут реального времени.
+    if (this.autoCycle) {
+      this.phaseTime += dt;
+      if (this.phaseTime >= this.periodSeconds) {
+        this.phaseTime -= this.periodSeconds;
+        this.cycle();
+      }
+    }
     if (this.t < 1) {
       this.t = Math.min(1, this.t + dt / this.duration);
       const e = this.t < 0.5 ? 2 * this.t * this.t : 1 - Math.pow(-2 * this.t + 2, 2) / 2;
@@ -256,6 +271,13 @@ export class Environment {
         bloom: lerp(this.from.bloom, this.to.bloom, e),
       });
       if (this.t >= 1) this.current = this.target;
+    } else if (this.autoCycle) {
+      // «Живая» смена дня: даже внутри периода свет и солнце медленно ползут
+      // к следующему периоду, поэтому смена выглядит непрерывной.
+      const i = TIME_ORDER.indexOf(this.current);
+      const nxt = PRESETS[TIME_ORDER[(i + 1) % TIME_ORDER.length]];
+      const k = 0.16 * Math.min(1, this.phaseTime / this.periodSeconds);
+      this.apply(mixPresets(PRESETS[this.current], nxt, k));
     }
 
     // движение солнца по небу (плавно)
@@ -321,3 +343,23 @@ export class Environment {
 }
 
 function lerp(a, b, t) { return a + (b - a) * t; }
+
+/** Поля-цвета: их нельзя смешивать как числа — нужен честный mix по RGB. */
+const COLOR_KEYS = new Set([
+  'skyTop', 'skyHorizon', 'skyGround', 'sunColor', 'hemiSky', 'hemiGround',
+  'ambient', 'fog',
+]);
+
+/** Смешивание двух пресетов погоды — для непрерывного хода времени суток. */
+function mixPresets(a, b, k) {
+  const out = {};
+  for (const key in a) {
+    const va = a[key], vb = b[key];
+    if (COLOR_KEYS.has(key) && typeof va === 'number' && typeof vb === 'number') {
+      out[key] = new THREE.Color(va).lerp(new THREE.Color(vb), k).getHex();
+    } else if (typeof va === 'number' && typeof vb === 'number') {
+      out[key] = lerp(va, vb, k);
+    } else out[key] = va;
+  }
+  return out;
+}

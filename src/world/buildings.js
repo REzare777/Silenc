@@ -768,8 +768,6 @@ export function windmill(M, opts = {}) {
   const SEG = 14;             // сегментов в круге
   const GAP = (2 * Math.PI) / SEG;
   const BACK = Math.PI;       // проёмы смотрят назад (-z)
-  // сектор ступеней на соломенной крыше: сбоку от выхода лестницы
-  const STEPS_A0 = 1.82, STEPS_A1 = 2.62;
   /** угол рядом с проёмом (выход с настила) — там забор прерывается */
   const nearDoor = (a) => {
     let da = a - BACK;
@@ -948,8 +946,8 @@ export function windmill(M, opts = {}) {
   // крылья, а их ступица крепится к самой шапке — всё вращающееся живёт
   // на здании, ничего не висит рядом отдельной палкой.
   const CAP_H = 3.4, CAP_R = RT + 0.12, CAP_T = 0.3;
-  // шапка сплошная: люк убран — крыша мельницы должна быть цельной и твёрдой
-  const capSt = 0, capLen = 2 * Math.PI;
+  const HATCH = 0.52;                       // половина раствора люка (рад)
+  const capSt = BACK + HATCH, capLen = 2 * Math.PI - 2 * HATCH;
   const CB = new Builder();
   // внешний конус
   CB.add(new THREE.CylinderGeometry(0.06, CAP_R, CAP_H, SEG, 1, true, capSt, capLen),
@@ -991,26 +989,6 @@ export function windmill(M, opts = {}) {
       // горизонтальная связь-распорка у края
       strut(new THREE.Vector3(sx * wallR, h - 0.34, cz * wallR),
         new THREE.Vector3(sx * edgeR, h - 0.34, cz * edgeR), 0.12);
-    }
-  }
-
-  // ---------- ступени на соломенной крыше ----------
-  // Обручи-ступени по внешней стороне конуса: по ним можно подняться на
-  // жёлтую крышу мельницы снаружи башни.
-  {
-    const LEVELS = 9;
-    for (let k = 0; k < LEVELS; k++) {
-      const t = k / (LEVELS - 1);
-      const r = CAP_R * (1 - t * 0.82) + 0.42;
-      const y = h + CAP_H * t;
-      // ступени идут по дуге сбоку от выхода лестницы, чтобы подъём
-      // по винтовой лестнице ничем не перехватывался
-      const N = 6;
-      for (let i = 0; i < N; i++) {
-        const a = STEPS_A0 + (STEPS_A1 - STEPS_A0) * (i + 0.5) / N;
-        B.add(box(0.42, 0.1, 0.3, 1), 'timber',
-          mat(Math.sin(a) * r * 0.95, y, Math.cos(a) * r * 0.95, a + Math.PI / 2));
-      }
     }
   }
 
@@ -1125,6 +1103,20 @@ export function windmill(M, opts = {}) {
     group.add(l3);
   }
 
+  // кромки люка: два бруса вдоль среза
+  for (const sgn of [-1, 1]) {
+    const a = BACK + sgn * HATCH;
+    const bx = Math.sin(a) * (CAP_R - 0.05), bz = Math.cos(a) * (CAP_R - 0.05);
+    const apex = new THREE.Vector3(0, CAP_H - 0.12, 0);
+    const p0 = new THREE.Vector3(bx, 0.05, bz);
+    const dir = new THREE.Vector3().subVectors(apex, p0);
+    const len = dir.length();
+    const q = new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+    const m = new THREE.Matrix4().compose(
+      new THREE.Vector3().addVectors(p0, apex).multiplyScalar(0.5), q, new THREE.Vector3(1, 1, 1));
+    CB.add(box(0.14, len, 0.2, 1), 'timber', m);
+  }
   // подшипник и вал крепятся к вращающейся шапке (выше), а не висят в воздухе
 
   out.place = (px, pz, ry = 0) => {
@@ -1167,32 +1159,6 @@ export function windmill(M, opts = {}) {
     const lp2 = localOriented(px, pz, ry,
       Math.sin(exitA) * landR2, Math.cos(exitA) * landR2, landW2, landD2, exitA, h);
     out.platforms.push(lp2);
-    // ЖЁЛТАЯ КРЫША МЕЛЬНИЦЫ — твёрдая: ступени по внешней стороне соломенного
-    // конуса шапки. Это единственная твёрдая поверхность наверху: пола в
-    // башне нет, поэтому подъём по винтовой лестнице ничем не перехватывается.
-    {
-      const LEVELS = 9;
-      for (let k = 0; k < LEVELS; k++) {
-        const t = k / (LEVELS - 1);
-        const r = CAP_R * (1 - t * 0.82) + 0.42;     // радиус кольца ступеней
-        const y = h + CAP_H * t;
-        // ступени — «дольки» по дуге сбоку от лестницы: на них можно
-        // подняться на крышу, и винтовая лестница при этом свободна
-        const N = 6;
-        for (let i = 0; i < N; i++) {
-          const a = STEPS_A0 + (STEPS_A1 - STEPS_A0) * (i + 0.5) / N;
-          // долька: центр на локальном радиусе, длинная сторона — по касательной
-          out.platforms.push(localOriented(px, pz, ry,
-            Math.sin(a) * r * 0.95, Math.cos(a) * r * 0.95,
-            r * 1.24, r * 0.5, a, y));
-        }
-        // макушка — сплошная площадка, чтобы с крыши нельзя было провалиться
-        if (k === LEVELS - 1) {
-          out.platforms.push(localOriented(px, pz, ry, 0, 0, r * 2.2, r * 0.9, 0, y));
-          out.platforms.push(localOriented(px, pz, ry, 0, 0, r * 0.9, r * 2.2, 0, y));
-        }
-      }
-    }
     // ограждение по краю башни: без него игрок проваливался бы внутрь
     {
       const RTOP = rIn(h) - 0.08;

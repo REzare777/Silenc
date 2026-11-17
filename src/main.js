@@ -222,6 +222,7 @@ const cine = new CinematicCam(camera);
 cine.active = true;
 
 const clock = new THREE.Clock();
+let clockAccum = 0;
 let started = false;     // игрок нажал «Начать»
 let photo = false;       // фото-режим
 
@@ -552,6 +553,13 @@ function loop() {
   const focus = started ? player.pos : new THREE.Vector3(0, 0, 0);
   env.update(dtEnv, focus);
   gradePass.uniforms.uTime.value = t;
+
+  // часы: текущий период и время до следующего (обновляем раз в полсекунды)
+  clockAccum += dtEnv;
+  if (clockAccum > 0.5) {
+    clockAccum = 0;
+    ui.setClock(env.current, env.periodSeconds - env.phaseTime);
+  }
 
   const nightAmt = THREE.MathUtils.clamp((env.stars - 0.05) * 1.4, 0, 1);
   fireflies.update(dt, nightAmt);

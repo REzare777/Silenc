@@ -266,10 +266,24 @@ export function createVillage(ctx) {
         ctx.roomLights.push({ pos: placed.interiorLight, lit: true, power: 1, flicker: i + 7, baseIntensity: 1.9, distance: 8 });
       }
       if (c.chimney) ctx.smokeSources.push({ pos: c.chimney.clone(), rate: 0.11 });
+      // дверь дома запоминаем — отсюда игрок вернётся из локации
+      const doorPos = facadePos(h[0], h[1], hry, 0, -h[2].d / 2 - 1.5);
+      ctx.doors.homes = ctx.doors.homes || [];
+      ctx.doors.homes[i] = { x: doorPos.x, z: doorPos.z, ry: hry };
       addInteract(
         facadePos(h[0], h[1], hry, 0, -h[2].d / 2 - 0.4),
-        1.9, 'Толкнуть дверь',
-        () => ctx.ui.toast(`${houseLines[i % houseLines.length]} Можно зайти внутрь.`),
+        2.0, 'Войти в дом',
+        () => {
+          // в дом пускают только утром и днём
+          const phase = ctx.env ? (ctx.env.target || ctx.env.current) : 'day';
+          if (phase === 'morning' || phase === 'day') {
+            ctx.systems.locations.setLocation(`home${i}`);
+            return;
+          }
+          ctx.ui.toast(phase === 'night'
+            ? 'Дверь заперта: хозяева спят. В дом пускают утром и днём.'
+            : 'Дом уже заперт на ночь. Заходите утром или днём.', 3600);
+        },
       );
     });
 

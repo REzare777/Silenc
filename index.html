@@ -80,6 +80,9 @@
   #compass .needle{position:absolute;left:50%;top:0;width:1px;height:100%;background:linear-gradient(180deg,var(--gold),transparent);transform:translateX(-50%)}
   /* ---------- time of day ---------- */
   #timebar{position:absolute;top:16px;right:18px;display:flex;gap:6px;padding:6px;pointer-events:auto}
+  #clock{display:block;width:100%;text-align:center;font-size:10px;letter-spacing:.04em;color:var(--ink-dim);
+    margin-top:2px;padding-top:4px;border-top:1px solid rgba(255,255,255,.08);white-space:nowrap}
+  #clock b{color:var(--gold);font-weight:600}
   #timebar button{appearance:none;border:0;background:transparent;color:var(--ink-dim);font:inherit;font-size:11px;
     letter-spacing:.06em;padding:7px 11px;border-radius:9px;cursor:pointer;transition:.2s;white-space:nowrap}
   #timebar button:hover{color:var(--ink);background:rgba(255,255,255,.07)}
@@ -344,6 +347,8 @@
     <button data-tod="golden" class="on">Золотой час</button>
     <button data-tod="dusk">Сумерки</button>
     <button data-tod="night">Ночь</button>
+  
+    <span id="clock">—</span>
   </div>
 
   <div id="hints" class="panel">

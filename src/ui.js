@@ -27,6 +27,7 @@ export class UI {
       menu: document.getElementById('menu'),
       resume: document.getElementById('resume'),
       timebar: document.getElementById('timebar'),
+      clock: document.getElementById('clock'),
       compass: document.getElementById('compass'),
       strip: document.getElementById('strip'),
       segQ: document.getElementById('segQ'),
@@ -195,6 +196,18 @@ export class UI {
 
   hideStart() { this.el.start.classList.add('gone'); }
   setLoading(text) { this.el.load.textContent = text; }
+
+  /** Часы в углу: текущий период и сколько осталось до следующего. */
+  setClock(phase, remainSec) {
+    if (!this.el.clock) return;
+    const names = {
+      morning: 'Утро', day: 'День', golden: 'Золотой час',
+      dusk: 'Вечер', night: 'Ночь',
+    };
+    const m = Math.max(0, Math.floor(remainSec / 60));
+    const sec = Math.max(0, Math.floor(remainSec % 60));
+    this.el.clock.innerHTML = `<b>${names[phase] || phase}</b> · до смены ${m}:${String(sec).padStart(2, '0')}`;
+  }
 
   setTime(t) {
     this.el.timebar.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.tod === t));
