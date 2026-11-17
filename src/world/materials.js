@@ -71,7 +71,7 @@ export function buildMaterials(T) {
     greenCloth: new THREE.MeshStandardMaterial({ color: 0x5c7245, roughness: 1 }),
     skin: new THREE.MeshStandardMaterial({ color: 0xd8a887, roughness: 0.8 }),
     dark: new THREE.MeshStandardMaterial({ color: 0x2a231d, roughness: 0.9 }),
-    foliageInstanced: std(T.tuft, { color: 0xffffff, roughness: 1 }),
+    foliageInstanced: std(T.tuft, { color: 0xa9c47d, roughness: 1 }),
     flowerWhite: new THREE.MeshStandardMaterial({ color: 0xf6efd8, roughness: 0.9, side: THREE.DoubleSide }),
     flowerYellow: new THREE.MeshStandardMaterial({ color: 0xf3c743, roughness: 0.9, side: THREE.DoubleSide }),
     flowerViolet: new THREE.MeshStandardMaterial({ color: 0xa482c9, roughness: 0.9, side: THREE.DoubleSide }),

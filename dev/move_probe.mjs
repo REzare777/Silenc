@@ -1,0 +1,30 @@
+import { chromium } from 'playwright';
+import { LAUNCH } from './browser.mjs';
+const b = await chromium.launch(LAUNCH);
+const p = await b.newPage({ viewport: { width: 400, height: 300 } });
+p.setDefaultTimeout(120000);
+await p.goto('http://127.0.0.1:4205/?v=' + Date.now(), { waitUntil: 'domcontentloaded' });
+await p.waitForFunction(() => window.__villageReady === true, null, { timeout: 120000 });
+await p.evaluate(() => document.getElementById('begin').click());
+await p.waitForTimeout(1000);
+const r = await p.evaluate(() => {
+  const d = window.__dbg, pl = d.player;
+  const out = {};
+  pl.teleport(0, 30, 0); pl.y = 0; pl.groundY = 0; pl.vy = 0;
+  out.start = [pl.pos.x.toFixed(2), pl.pos.z.toFixed(2)];
+  // шаг в +x: yaw = atan2(-dx, -dz) = atan2(-1, 0) = -PI/2
+  pl.yaw = -Math.PI / 2;
+  pl.keys.add('KeyW');
+  for (let i = 0; i < 60; i++) pl.update(1 / 60);
+  pl.keys.clear();
+  out.after60 = [pl.pos.x.toFixed(2), pl.pos.z.toFixed(2)];
+  out.groundY = pl.groundY;
+  out.y = pl.y;
+  out.keysSize = pl.keys.size;
+  out.enabled = pl.enabled;
+  out.mode = d.mode;
+  out.speed = pl.speed;
+  return out;
+});
+console.log(JSON.stringify(r, null, 2));
+await b.close();

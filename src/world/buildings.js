@@ -510,7 +510,10 @@ export function church(M, opts = {}) {
   out.place = (px, pz, ry = 0) => {
     group.position.set(px, 0, pz); group.rotation.y = ry;
     out.colliders.push(rotatedAABB(px, pz, w / 2, d / 2, ry));
-    out.colliders.push(localBox(px, pz, ry, 0, -(d / 2 + 1.2), 4.6, 4.6));
+    // Раньше перед фасадом стоял невидимый коллайдер 4,6 × 4,6 м: игрок
+    // упирался в пустоту рядом с крыльцом и не мог обойти церковь.
+    // Крыльцо низкое (0,72 м) — это площадка, а не стена, поэтому
+    // здесь достаточно платформ ступеней.
     out.platforms.push(localBox(px, pz, ry, 0, -(d / 2 + 0.6), 4.0, 1.2, 0.72));
     out.platforms.push(localBox(px, pz, ry, 0, -(d / 2 + 1.5), 3.2, 0.6, 0.36));
     // ступени к задней двери
@@ -703,6 +706,29 @@ export function windmill(M, opts = {}) {
   const landR2 = 2.05, landW2 = 1.5, landD2 = 1.35;
   B.add(box(landW2, 0.14, landD2, 1), 'plank',
     mat(Math.sin(exitA) * landR2, h - 0.07, Math.cos(exitA) * landR2, exitA));
+
+  // ---------- настил верха башни ----------
+  // Крыша мельницы твёрдая: круглый настил закрывает верх башни, чтобы
+  // с площадки нельзя было провалиться внутрь. Он же — «пол» под
+  // последним витком лестницы. Физика «только сверху» (only: true) —
+  // поднимающийся игрок в него не упирается и не подбрасывается.
+  {
+    const RTOP = rIn(h) - 0.03;
+    // доски по кругу
+    B.add(cyl(RTOP, RTOP, 0.1, SEG), 'plank', mat(0, h - 0.05, 0));
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2;
+      B.add(box(RTOP * 2 * 0.98, 0.06, 0.1, 1), 'timber',
+        mat(0, h + 0.02, 0, a));
+    }
+    // круглое ограждение по краю настила (кроме проёма лестницы)
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      if (Math.abs(Math.atan2(Math.sin(a - exitA), Math.cos(a - exitA))) < 0.5) continue;
+      B.add(box(0.12, 1.0, 0.12, 1), 'timber',
+        mat(Math.sin(a) * (RTOP - 0.08), h + 0.5, Math.cos(a) * (RTOP - 0.08), a));
+    }
+  }
 
   // ---------- смотровая площадка с забором (сзади, где не ходят крылья) ----------
   const galIn = rIn(h) - 0.01, galOut = rOut(h) + 1.55;
@@ -947,6 +973,18 @@ export function windmill(M, opts = {}) {
     const lp2 = localOriented(px, pz, ry,
       Math.sin(exitA) * landR2, Math.cos(exitA) * landR2, landW2, landD2, exitA, h);
     out.platforms.push(lp2);
+    // КРЫША МЕЛЬНИЦЫ — твёрдая: настил верха башни.
+    // Три перекрывающихся прямоугольника («звезда») закрывают круг целиком,
+    // а флаг only: true пропускает игрока снизу — поднимающийся по лестнице
+    // не упирается в крышу и не подбрасывается ею.
+    {
+      const RTOP = rIn(h) - 0.03;
+      const arm = RTOP * 0.66, half = RTOP * 0.72;
+      out.platforms.push({ cx: px, cz: pz, hx: RTOP, hz: arm, ang: 0, y: h, only: true });
+      out.platforms.push({ cx: px, cz: pz, hx: arm, hz: RTOP, ang: 0, y: h, only: true });
+      out.platforms.push({ cx: px, cz: pz, hx: half, hz: arm, ang: Math.PI / 4, y: h, only: true });
+      out.platforms.push({ cx: px, cz: pz, hx: half, hz: arm, ang: -Math.PI / 4, y: h, only: true });
+    }
     // смотровая площадка
     for (let i = 0; i < gN; i++) {
       const a = gA0 + (gA1 - gA0) * (i + 0.5) / gN;

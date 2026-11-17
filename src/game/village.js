@@ -33,6 +33,24 @@ import {
 } from './layout.js';
 
 /**
+ * Поляны вокруг зданий: здесь деревья не растут.
+ *
+ * Без этого опушка леса подступала вплотную к церкви и мельнице (они стоят
+ * как раз на опушке) — к стенам примыкали стволы, и вокруг здания нельзя было
+ * пройти.
+ *
+ * @type {[number, number, number][]} [x, z, радиус]
+ */
+const BUILDING_CLEARINGS = [
+  [LAYOUT.church.x, LAYOUT.church.z, 11],
+  [LAYOUT.mill.x, LAYOUT.mill.z, 9],
+  [LAYOUT.tavern.x, LAYOUT.tavern.z, 12],
+  [LAYOUT.barn.x, LAYOUT.barn.z, 10],
+  [LAYOUT.blacksmith.x, LAYOUT.blacksmith.z, 7],
+  [LAYOUT.well.x, LAYOUT.well.z, 5],
+];
+
+/**
  * Создаёт систему деревни.
  *
  * @param {object} ctx контекст игры
@@ -211,7 +229,7 @@ export function createVillage(ctx) {
       [13, 9, { w: 6.5, d: 5, h: 3.2, roof: 'thatch', floors: 1 }],
       [-16, 19, { w: 7, d: 5.5, h: 3.2, roof: 'thatch', floors: 1 }],
       [16, 20, { w: 6, d: 5, h: 3.1, roof: 'tile', floors: 1 }],
-      [-25, -24, { w: 6.5, d: 5, h: 3.1, roof: 'thatch', floors: 1 }],
+      [-32, -22, { w: 6.5, d: 5, h: 3.1, roof: 'thatch', floors: 1 }],
       [24, -22, { w: 6, d: 5.4, h: 3.2, roof: 'thatch', floors: 1 }],
       [-27, 11, { w: 6, d: 5, h: 3.0, roof: 'tile', floors: 1 }],
       [28, 13, { w: 8, d: 6, h: 3.4, roof: 'tile', floors: 2 }],
@@ -270,7 +288,9 @@ export function createVillage(ctx) {
     });
 
     /* --- стога сена --- */
-    const haystacks = [[-34, -14], [-36.5, -15.5], [-33, -18.5], [30, 40]];
+    // Раньше три стога стояли впритык за амбаром и загораживали обход
+    // вокруг него. Теперь они — у полей и на лугах, как и должно быть.
+    const haystacks = [[-40, 28], [-53, 13], [28, 35], [21, 16]];
     for (const [hx, hz] of haystacks) {
       place(haystack(ctx.M, { r: 1.5, h: 2.6 }), hx, hz);
       addInteract(
@@ -414,6 +434,10 @@ export function createVillage(ctx) {
         // подступает вплотную и полностью закрывает скалу от взгляда
         if (Math.hypot(x - LAYOUT.dungeon.x, z - LAYOUT.dungeon.z) < 11) return true;
         if (Math.abs(x) < 46 && Math.abs(z) < 46) return true;       // поля и огороды деревни
+        // вокруг зданий — поляна: деревья не растут вплотную к стенам
+        for (const b of BUILDING_CLEARINGS) {
+          if (Math.hypot(x - b[0], z - b[1]) < b[2]) return true;
+        }
         return false;
       },
     });

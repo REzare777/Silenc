@@ -80,7 +80,7 @@ export function scatterGrass(M, spots, count = 900) {
     const a = rng() * Math.PI * 2, r = rng() * s.r;
     dummy.position.set(s.x + Math.cos(a) * r, 0, s.z + Math.sin(a) * r);
     dummy.rotation.set(0, rng() * Math.PI, 0);
-    dummy.scale.setScalar(0.6 + rng() * 0.7);
+    dummy.scale.setScalar(0.55 + rng() * 0.55);
     dummy.updateMatrix();
     mesh.setMatrixAt(i, dummy.matrix);
   }
