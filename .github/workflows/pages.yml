@@ -65,4 +65,5 @@ jobs:
           git push origin gh-pages
 
       - name: Итог
-        run: echo "Сайт: https://rezare777.github.io/Silenc/"
+        run: |
+          echo "Сайт опубликован: https://rezare777.github.io/Silenc/"
