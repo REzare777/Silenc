@@ -1,14 +1,19 @@
 name: Публикация игры на GitHub Pages
 
-# Каждый push в main собирает игру и выкладывает её на публичный адрес:
+# Каждый push в main собирает игру и обновляет публичную ветку gh-pages:
 # https://rezare777.github.io/Silenc/
+#
+# ВАЖНО: в репозитории GitHub → Settings → Pages → Source должно стоять
+# "Deploy from a branch" → ветка gh-pages, папка / (root).
+# Если переключить Source на "GitHub Actions", этот workflow перестанет
+# обновлять сайт — тогда используйте pages-actions.yml.
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -21,22 +26,43 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: npm
+
       - run: npm ci
       - run: npm run build
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Подготовить публичную папку
+        run: |
+          rm -rf "$RUNNER_TEMP/site"
+          mkdir -p "$RUNNER_TEMP/site"
+          cp -r dist/. "$RUNNER_TEMP/site/"
+          touch "$RUNNER_TEMP/site/.nojekyll"
+          cat > "$RUNNER_TEMP/site/README.md" <<'EOF'
+          # Шёпот-Долина — публичная сборка
+
+          Ветка `gh-pages` содержит собранную игру (Three.js + Vite, статика).
+          Онлайн: https://rezare777.github.io/Silenc/
+          Исходники: https://github.com/REzare777/Silenc (ветка main)
+          EOF
+
+      - name: Опубликовать в ветку gh-pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages
+          git checkout -B gh-pages origin/gh-pages
+          git rm -r --cached . -q || true
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -r "$RUNNER_TEMP/site/." .
+          git add -A
+          git commit -q -m "Публичная сборка ${GITHUB_SHA::7}" || echo "изменений нет"
+          git push origin gh-pages
+
+      - name: Итог
+        run: echo "Сайт: https://rezare777.github.io/Silenc/"
