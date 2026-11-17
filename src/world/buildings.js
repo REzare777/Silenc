@@ -221,7 +221,7 @@ function houseInterior(B, o) {
     // миска и свеча на столе
     B.put('cloth', 0.32, 0.1, 0.32, tx - 0.22, fy + 0.87, tz, 1.1);
     B.put('bone', 0.07, 0.2, 0.07, tx + 0.26, fy + 0.93, tz + 0.1, 1.1);
-    B.put('ember', 0.06, 0.1, 0.06, tx + 0.26, fy + 1.08, tz + 0.1, 1.1);
+    B.put('ember', 0.045, 0.08, 0.045, tx + 0.26, fy + 1.06, tz + 0.1, 1.1);
   }
 
   // сундук у боковой стены
@@ -396,7 +396,7 @@ export function cottage(M, opts = {}) {
 
   const group = B.build(M, null, { name: 'cottage' });
   // тёплый свет внутри: дом не должен быть тёмной коробкой
-  const inner = new THREE.PointLight(0xffb45a, 1.5, 9, 1.7);
+  const inner = new THREE.PointLight(0xffb45a, 1.15, 9, 1.7);
   inner.position.set(0.2, 1.9, 0.2);
   group.add(inner);
   const out = { group, colliders: [], platforms: [], windowLights: [], chimney: new THREE.Vector3() };
