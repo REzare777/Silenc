@@ -67,12 +67,21 @@ const res = await page.evaluate(async () => {
   return out;
 });
 
-console.log('время идёт, пока стоишь:', res.timeRuns ? '✓' : '✗', `| период ${res.period} с (${res.period / 60} мин)`);
-console.log('игрок стоял на месте:', res.playerStayed ? '✓' : '✗');
-console.log('смена периода плавная:', res.transitionStarted ? '✓' : '✗');
-console.log('дверь таверны есть:', res.tavernDoorExists ? '✓' : '✗');
-console.log('вход в таверну во всех фазах:', res.tavernAlways.every(Boolean) ? '✓' : '✗', JSON.stringify(res.tavernAlways));
-console.log('трактирщик днём на месте:', res.barkeepDay ? '✓' : '✗');
-console.log('трактирщик ночью ушёл:', res.barkeepNight ? '✓' : '✗');
-console.log('ошибки:', errs.length, errs.slice(0, 3));
+const checks = [
+  ['время идёт, пока стоишь', res.timeRuns],
+  ['игрок стоял на месте', res.playerStayed],
+  ['смена периода плавная', res.transitionStarted],
+  ['дверь таверны есть', res.tavernDoorExists],
+  ['вход в таверну во всех фазах', res.tavernAlways.every(Boolean)],
+  ['трактирщик днём на месте', res.barkeepDay],
+  ['трактирщик ночью ушёл', res.barkeepNight],
+];
+let bad = 0;
+for (const [name, ok] of checks) {
+  if (!ok) bad++;
+  console.log(`${ok ? '✓' : '✗'} ${name}`);
+}
+console.log(`период: ${res.period} с (${res.period / 60} мин)`);
+console.log('ошибки: ' + (bad + errs.length), errs.slice(0, 3));
 await browser.close();
+if (bad + errs.length) process.exit(1);

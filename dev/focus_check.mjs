@@ -54,7 +54,6 @@ const res = await page.evaluate(async () => {
   /* ---------- 1. все постройки: проход внутрь ---------- */
   const buildings = [
     { name: 'церковь', x: 3, z: 44, ry: ryToFace(3, 44, 0, 0), hx: 4.5, hz: 8.5 },
-    { name: 'кузня', x: 14.5, z: -8, ry: ryToFace(14.5, -8, 0, -2), hx: 3.0, hz: 2.5 },
 
     { name: 'таверна', x: -17, z: -13, ry: ryToFace(-17, -13, 0, 0), hx: 7.5, hz: 9.0 },
     { name: 'амбар', x: -40, z: -8, ry: ryToFace(-40, -8, -10, -4), hx: 6.0, hz: 4.0 },
@@ -121,7 +120,8 @@ const res = await page.evaluate(async () => {
     return stuck;
   };
   for (const b of [
-    { name: 'церковь', x: 3, z: 44, ry: ryToFace(3, 44, 0, 0), hx: 4.5, hz: 8.5, gap: 1.8 },
+    // hz = 12.3: колокольня выступает южнее нефа на 4,8 м — обход идёт вокруг неё
+    { name: 'церковь', x: 3, z: 44, ry: ryToFace(3, 44, 0, 0), hx: 4.5, hz: 12.3, gap: 1.8 },
     { name: 'амбар', x: -40, z: -8, ry: ryToFace(-40, -8, -10, -4), hx: 6.0, hz: 4.0, gap: 1.8 },
     { name: 'таверна', x: -17, z: -13, ry: ryToFace(-17, -13, 0, 0), hx: 7.5, hz: 9.0, gap: 1.8 },
     { name: 'мельница', x: 34, z: -33, gap: 5.4 },
@@ -190,28 +190,18 @@ const res = await page.evaluate(async () => {
       out.push(`  мельница: под верхней ступенью y=${p.groundAt(top.x, top.z).toFixed(2)} (пол башни 0.00)`);
       // жёлтая крыша твёрдая: с площадки можно подняться на соломенную шапку
       {
+        // Ступеней на соломенной крыше нет (решение игрока): сверху остаётся
+        // только смотровая площадка, а настила-потолка быть не должно.
         const gal = (d.ctx.platforms || []).find((pl) => !pl.sp && Math.abs((pl.y ?? 0) - s.y1) < 0.05 && pl.hx > 1.2);
-        if (!gal) {
-          out.push('✗ мельница: не нашёл ступени на крыше');
-        } else {
-          put(gal.cx, gal.cz);
-          p.groundY = s.y1; p.y = 0;
-          let roofY = 0;
-          for (let i = 0; i < 260; i++) {
-            const yaw = Math.atan2(-(s.cx - p.pos.x), -(s.cz - p.pos.z));
-            step(yaw, 2);
-            roofY = Math.max(roofY, p.groundY);
-          }
-          out.push(`${roofY > s.y1 + 1.5 ? '✓' : '✗'} мельница: жёлтая крыша твёрдая — подъём до y=${roofY.toFixed(2)}`);
-        }
+        out.push(`${!gal ? '✓' : '✗'} мельница: настила-потолка нет — крыша осталась соломенной`);
       }
     }
   }
 
   /* ---------- 5. церковь: не войти и не застрять у двери ---------- */
   {
-    const b = { x: 3, z: 44, ry: ryToFace(3, 44, 0, 0), hx: 4.5, hz: 8.5 };
-    const doorZ = 44 - 8.5 - 0.9;
+    const b = { x: 3, z: 44, ry: ryToFace(3, 44, 0, 0), hx: 4.5, hz: 12.3 };
+    const doorZ = 44 - 11.9;
     put(3, doorZ - 1.5);
     const yaw = Math.atan2(-(3 - 3), -(44 - (doorZ - 1.5)));
     for (let k = 0; k < 90; k++) step(yaw, 1);

@@ -343,14 +343,14 @@ export function buildHomeInterior(M, glowTex, variant) {
   scene.add(group);
 
   // свет: лампа под потолком + отблеск от окна
-  const lamp = new THREE.PointLight(v === 5 ? 0xffc074 : 0xffb45a, 3.2, 13, 1.5);
+  const lamp = new THREE.PointLight(v === 5 ? 0xffc074 : 0xffb45a, 7, 14, 1.3);
   lamp.position.set(v === 0 ? -1.4 : 0.4, H - 0.45, v === 0 ? 1.2 : 0.2);
   scene.add(lamp);
-  const win = new THREE.PointLight(0xa8cbe8, 1.5, 9, 1.4);
+  const win = new THREE.PointLight(0xa8cbe8, 4, 10, 1.3);
   win.position.set(-1.4, 1.6, D / 2 - 0.6);
   scene.add(win);
-  scene.add(new THREE.AmbientLight(0x8a7659, 1.25));
-  scene.add(new THREE.HemisphereLight(0x9db4d6, 0x4a3826, 0.55));
+  scene.add(new THREE.AmbientLight(0x8a7659, 1.7));
+  scene.add(new THREE.HemisphereLight(0x9db4d6, 0x4a3826, 0.9));
 
   /* ---------------- коллайдеры и точки ---------------- */
   const colliders = { boxes: [], circles: [] };

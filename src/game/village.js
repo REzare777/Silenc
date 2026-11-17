@@ -51,6 +51,16 @@ const BUILDING_CLEARINGS = [
 ];
 
 /**
+ * Дома закрыты на ключ.
+ *
+ * Пока эта тема отложена, все жилые дома в деревне заперты: створка
+ * закрыта, за проёмом глухая дверь (коллайдер), а подсказка у двери
+ * говорит, что хозяева не жалуют гостей. Вернуть дома открытыми —
+ * достаточно переключить этот флаг в `false`.
+ */
+const HOUSES_LOCKED = true;
+
+/**
  * Создаёт систему деревни.
  *
  * @param {object} ctx контекст игры
@@ -163,13 +173,19 @@ export function createVillage(ctx) {
     const chRy = ryToFace([LAYOUT.church.x, LAYOUT.church.z], [0, 0]);
     place(ch, LAYOUT.church.x, LAYOUT.church.z, chRy);
     ctx.interactables.push({
-      pos: new THREE.Vector3(3, 2, 44 - 9.5), radius: 3.6, label: 'Позвонить в колокол',
+      pos: facadePos(3, 44, chRy, 0, -11.1, 2.0), radius: 3.6, label: 'Позвонить в колокол',
       act: () => { ctx.ambience.bell(); ctx.ui.toast('Колокол над долиной — глухой и тёплый.'); },
     });
+    // вход в храм — у двери колокольни (южный фасад)
     addInteract(
-      facadePos(3, 44, chRy, 0, -8.9, 1.6), 2.4, 'Толкнуть в тяжёлую дверь',
-      () => ctx.ui.toast('Дверь заперта на засов. Внутри пахнет ладаном и старым деревом — но войти нельзя.'),
+      facadePos(3, 44, chRy, 0, -11.9, 1.6), 2.6, 'Войти в храм',
+      () => ctx.systems.locations.setLocation('church'),
     );
+    // точка выхода из храма — перед дверью колокольни, на земле
+    {
+      const out = facadePos(3, 44, chRy, 0, -13.4, 0);
+      ctx.doors.church = { x: out.x, z: out.z, ry: chRy };
+    }
     addInteract(
       facadePos(3, 44, chRy, 0, 8.9, 1.6), 2.4, 'Открыть тяжёлую дверь',
       () => ctx.ui.toast('Створка тяжёлая, с железными обвязками. За ней — кладовая и темнота. Заперто.'),
@@ -255,7 +271,10 @@ export function createVillage(ctx) {
     ];
     homes.forEach((h, i) => {
       const hry = ryToFace([h[0], h[1]], [0, 0]);
-      const c = cottage(ctx.M, { ...h[2], wall: wallKinds[i % 3], lit: true, variant: i });
+      const c = cottage(ctx.M, {
+        ...h[2], wall: wallKinds[i % 3], lit: true, variant: i,
+        doorOpen: !HOUSES_LOCKED,
+      });
       const placed = place(c, h[0], h[1], hry);
       // свет из окон внутрь дома
       for (const p of (placed.windowLights || [])) {
@@ -272,8 +291,13 @@ export function createVillage(ctx) {
       ctx.doors.homes[i] = { x: doorPos.x, z: doorPos.z, ry: hry };
       addInteract(
         facadePos(h[0], h[1], hry, 0, -h[2].d / 2 - 0.4),
-        2.0, 'Войти в дом',
+        2.0,
+        HOUSES_LOCKED ? 'Запертая дверь дома' : 'Войти в дом',
         () => {
+          if (HOUSES_LOCKED) {
+            ctx.ui.toast('Дом заперт на ключ: хозяева не жалуют гостей.', 3600);
+            return;
+          }
           // в дом пускают только утром и днём
           const phase = ctx.env ? (ctx.env.target || ctx.env.current) : 'day';
           if (phase === 'morning' || phase === 'day') {

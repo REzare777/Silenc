@@ -23,6 +23,7 @@ import { buildBarnInterior } from '../world/barn.js';
 import { buildTavernInterior } from '../world/tavern.js';
 import { buildDungeon } from '../world/dungeon.js';
 import { buildHomeInterior, HOME_NAMES } from '../world/homes.js';
+import { buildChurchInterior, CHURCH_NAME } from '../world/church.js';
 import { barkeep } from '../world/npc.js';
 import { createNpc } from './npc.js';
 import { tavernDoor, barnExitPoint, dungeonGate } from './layout.js';
@@ -90,6 +91,14 @@ export function createLocations(ctx) {
   // двери домов в деревне (чтобы вернуться к своей двери)
   ctx.doors.homes = ctx.doors.homes || [];
 
+  /* ---------------- храм ----------------
+   *
+   * Внутри храма — своя сцена со своим светом: витражи дают холодный
+   * отблеск, алтарь — тёплый. Снаружи это тот же неф, что и на холме.
+   */
+  const churchLoc = buildChurchInterior(ctx.M, ctx.glowTex);
+  const sceneChurch = churchLoc.scene;
+
   /* ---------------- бармен ----------------
    *
    * Живёт за стойкой: ходит вдоль неё, протирает кружку, останавливается.
@@ -130,15 +139,18 @@ export function createLocations(ctx) {
     const inBarn = current === 'barn';
     const inTavern = current === 'tavern';
     const inDungeon = current === 'dungeon';
+    const inChurch = current === 'church';
     const homeIdx = current.startsWith('home') ? parseInt(current.slice(4), 10) : -1;
     const inHome = homeIdx >= 0 && homeIdx < homeLocs.length;
     const L = inBarn ? barnLoc : inTavern ? tavernLoc : inDungeon ? dungeonLoc
-      : inHome ? homeLocs[homeIdx] : null;
+      : inChurch ? churchLoc
+        : inHome ? homeLocs[homeIdx] : null;
 
     ctx.renderPass.scene = inBarn ? sceneBarn
       : inTavern ? sceneTavern
         : inDungeon ? sceneDungeon
-          : inHome ? homeLocs[homeIdx].scene : ctx.scene;
+          : inChurch ? sceneChurch
+            : inHome ? homeLocs[homeIdx].scene : ctx.scene;
     ctx.player.setColliders(L ? L.colliders.boxes : ctx.colliders.boxes,
       L ? L.colliders.circles : ctx.colliders.circles);
     ctx.player.setPlatforms(L ? L.platforms : ctx.platforms);
@@ -153,9 +165,11 @@ export function createLocations(ctx) {
         ? 'Подземелье. Холодный свет кристаллов и полная тишина. Вглубь — по лестнице в шахте.'
         : inTavern
           ? '«Уставший вепрь». Тепло, пахнет дымом и элем.'
-          : inHome
-            ? `${homeLocs[homeIdx].name}. Внутри пахнет дымом и сушёными травами.`
-            : 'Амбар. Тут пахнет сеном и зерном.', 2600);
+          : inChurch
+            ? `${CHURCH_NAME}. Холодный свет витражей, ладан и полная тишина.`
+            : inHome
+              ? `${homeLocs[homeIdx].name}. Внутри пахнет дымом и сушёными травами.`
+              : 'Амбар. Тут пахнет сеном и зерном.', 2600);
     } else {
       // назад — к той двери, откуда вошли
       if (prev.startsWith('home')) {
@@ -167,6 +181,9 @@ export function createLocations(ctx) {
       } else if (prev === 'dungeon') {
         const gate = ctx.doors.dungeon;
         ctx.player.teleport(gate.x, gate.z, gate.ry);
+      } else if (prev === 'church') {
+        const door = ctx.doors.church;
+        ctx.player.teleport(door.x, door.z, door.ry);
       } else if (prev === 'tavern') {
         const door = ctx.doors.tavern;
         ctx.player.teleport(door.x, door.z, ctx.doors.tavernRy);
@@ -256,6 +273,15 @@ export function createLocations(ctx) {
         ctx.ui.toast(loc.lines[k % loc.lines.length], 3600);
       }, `home${i}`);
     });
+  });
+
+  /* ---- храм: выход и детали ---- */
+  add(new THREE.Vector3(churchLoc.exitDoor.x, 1.4, churchLoc.exitDoor.z), 2.6,
+    'Выйти из храма', () => setLocation('village'), 'church');
+  churchLoc.spots.forEach((spot, k) => {
+    add(spot[0], 2.3, spot[1], () => {
+      ctx.ui.toast(churchLoc.lines[k % churchLoc.lines.length], 3600);
+    }, 'church');
   });
 
   /* ---- подземелье: вход и выход ---- */

@@ -47,6 +47,19 @@ export function buildMaterials(T) {
       side: THREE.DoubleSide,
     }),
     windowDark: std(T.windowDark, { roughness: 0.35, metalness: 0.1, side: THREE.DoubleSide }),
+    // витражи храма: цветное стекло со своим свечением
+    stainedRed: new THREE.MeshStandardMaterial({
+      color: 0xb03a2a, emissive: 0xff4422, emissiveIntensity: 1.5, roughness: 0.55, side: THREE.DoubleSide,
+    }),
+    stainedBlue: new THREE.MeshStandardMaterial({
+      color: 0x2a5c9a, emissive: 0x3f86e0, emissiveIntensity: 1.4, roughness: 0.55, side: THREE.DoubleSide,
+    }),
+    stainedGold: new THREE.MeshStandardMaterial({
+      color: 0xd8a83c, emissive: 0xffb43a, emissiveIntensity: 1.3, roughness: 0.55, side: THREE.DoubleSide,
+    }),
+    stainedGreen: new THREE.MeshStandardMaterial({
+      color: 0x3f7a4a, emissive: 0x59c07a, emissiveIntensity: 1.2, roughness: 0.55, side: THREE.DoubleSide,
+    }),
     glass: new THREE.MeshStandardMaterial({
       color: 0x9fc4cf, roughness: 0.12, metalness: 0.1, transparent: true, opacity: 0.45,
     }),
