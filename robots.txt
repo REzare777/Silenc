@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rezare777.github.io/Silenc/sitemap.xml

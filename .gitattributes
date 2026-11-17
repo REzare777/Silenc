@@ -1,0 +1,19 @@
+# Нормализуем переводы строк: в репозитории — LF, у Windows — CRLF при checkout
+* text=auto eol=lf
+
+*.js   text eol=lf
+*.mjs  text eol=lf
+*.html text eol=lf
+*.css  text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.py   text eol=lf
+
+# бинарники
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.ico  binary
+*.woff binary
+*.woff2 binary
+*.zip  binary
