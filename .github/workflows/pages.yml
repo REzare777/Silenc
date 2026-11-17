@@ -43,13 +43,13 @@ jobs:
           mkdir -p "$RUNNER_TEMP/site"
           cp -r dist/. "$RUNNER_TEMP/site/"
           touch "$RUNNER_TEMP/site/.nojekyll"
-          cat > "$RUNNER_TEMP/site/README.md" <<'EOF'
-          # Шёпот-Долина — публичная сборка
-
-          Ветка `gh-pages` содержит собранную игру (Three.js + Vite, статика).
-          Онлайн: https://rezare777.github.io/Silenc/
-          Исходники: https://github.com/REzare777/Silenc (ветка main)
-          EOF
+          printf '%s\n' \
+            '# Шёпот-Долина — публичная сборка' \
+            '' \
+            'Ветка gh-pages содержит собранную игру (Three.js + Vite, статика).' \
+            'Онлайн: https://rezare777.github.io/Silenc/' \
+            'Исходники: https://github.com/REzare777/Silenc (ветка main)' \
+            > "$RUNNER_TEMP/site/README.md"
 
       - name: Опубликовать в ветку gh-pages
         run: |
