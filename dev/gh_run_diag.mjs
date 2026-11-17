@@ -1,0 +1,12 @@
+import { chromium } from 'playwright';
+import { LAUNCH } from './browser.mjs';
+const url = process.argv[2];
+const browser = await chromium.launch(LAUNCH);
+const page = await browser.newPage({ viewport: { width: 1500, height: 1100 } });
+await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+await page.waitForTimeout(6000);
+const txt = await page.evaluate(() => document.body.innerText);
+const lines = txt.split('\n').filter(l => /error|fail|✗|Exit code|step|job|Error|refus|denied|fatal/i.test(l));
+console.log(lines.slice(0, 40).join('\n'));
+await page.screenshot({ path: '/workspace/village/shots/gh_run.png', fullPage: false });
+await browser.close();

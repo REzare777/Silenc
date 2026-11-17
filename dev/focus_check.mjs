@@ -55,21 +55,9 @@ const res = await page.evaluate(async () => {
   const buildings = [
     { name: 'церковь', x: 3, z: 44, ry: ryToFace(3, 44, 0, 0), hx: 4.5, hz: 8.5 },
     { name: 'кузня', x: 14.5, z: -8, ry: ryToFace(14.5, -8, 0, -2), hx: 3.0, hz: 2.5 },
-    { name: 'мельница', x: 34, z: -33, ry: 0.6, rad: 3.6 },
+
     { name: 'таверна', x: -17, z: -13, ry: ryToFace(-17, -13, 0, 0), hx: 7.5, hz: 9.0 },
     { name: 'амбар', x: -40, z: -8, ry: ryToFace(-40, -8, -10, -4), hx: 6.0, hz: 4.0 },
-    { name: 'дом -11,8', x: -11, z: 8, ry: ryToFace(-11, 8, 0, 0), hx: 3.0, hz: 2.5 },
-    { name: 'дом -32,-22', x: -32, z: -22, ry: ryToFace(-32, -22, 0, 0), hx: 3.25, hz: 2.5 },
-    { name: 'дом 13,9', x: 13, z: 9, ry: ryToFace(13, 9, 0, 0), hx: 3.25, hz: 2.5 },
-    { name: 'дом -16,19', x: -16, z: 19, ry: ryToFace(-16, 19, 0, 0), hx: 3.5, hz: 2.75 },
-    { name: 'дом 16,20', x: 16, z: 20, ry: ryToFace(16, 20, 0, 0), hx: 3.0, hz: 2.5 },
-    { name: 'дом 24,-22', x: 24, z: -22, ry: ryToFace(24, -22, 0, 0), hx: 3.0, hz: 2.7 },
-    { name: 'дом -27,11', x: -27, z: 11, ry: ryToFace(-27, 11, 0, 0), hx: 3.0, hz: 2.5 },
-    { name: 'дом 28,13', x: 28, z: 13, ry: ryToFace(28, 13, 0, 0), hx: 4.0, hz: 3.0 },
-    { name: 'дом -10,29', x: -10, z: 29, ry: ryToFace(-10, 29, 0, 0), hx: 3.0, hz: 2.5 },
-    { name: 'дом 11,30', x: 11, z: 30, ry: ryToFace(11, 30, 0, 0), hx: 3.5, hz: 2.75 },
-    { name: 'дом 24,-33', x: 24, z: -33, ry: ryToFace(24, -33, 0, 0), hx: 2.75, hz: 2.3 },
-    { name: 'дом -30,27', x: -30, z: 27, ry: ryToFace(-30, 27, 0, 0), hx: 3.0, hz: 2.5 },
   ];
   for (const b of buildings) {
     const R = b.rad || Math.max(b.hx, b.hz);
@@ -180,8 +168,8 @@ const res = await page.evaluate(async () => {
       const st0 = at(t0);
       put(st0.x, st0.z);
       let maxY = p.groundY, stuckAt = -1, hitRoof = false, prevG = p.groundY;
-      for (let i = 1; i <= 240; i++) {
-        const t = t0 + (i / 240) * 0.98;
+      for (let i = 1; i <= 340; i++) {
+        const t = t0 + (i / 340) * 0.98;
         const tgt = at(t);
         const yaw = Math.atan2(-(tgt.x - p.pos.x), -(tgt.z - p.pos.z));
         step(yaw, 2);
@@ -192,19 +180,31 @@ const res = await page.evaluate(async () => {
         if (stuckAt < 0 && Math.hypot(p.pos.x - tgt.x, p.pos.z - tgt.z) > 1.6) stuckAt = i;
       }
       out.push(`${maxY > s.y1 - 0.6 ? '✓' : '✗'} мельница: подъём до y=${maxY.toFixed(2)} (цель ${s.y1})`);
-      out.push(`${!hitRoof ? '✓' : '✗'} мельница: настил не вытолкнул поднимающегося`);
+      out.push(`${!hitRoof ? '✓' : '✗'} мельница: пол в башне не перехватывает подъём`);
       out.push(`${stuckAt < 0 ? '✓' : '✗'} мельница: игрок не отстал от лестницы (проблема на шаге ${stuckAt})`);
-      // стоит ли игрок на настиле верха (проверяем с высоты настила)
+      // в башне пола нет: под последней ступенью — каменный пол первого этажа
       const top = at(0.99);
       p.teleport(top.x, top.z, 0);
       p.groundY = s.y1 - 0.4;
       p.y = 0;
-      out.push(`  мельница: пол под верхней ступенью y=${p.groundAt(top.x, top.z).toFixed(2)} (настил ${s.y1})`);
-      // снизу настил не должен мешать: под ним стоит пол башни
-      p.teleport(s.cx + 1.2, s.cz, 0);
-      p.groundY = 0; p.y = 0;
-      const below = p.groundAt(s.cx + 1.2, s.cz);
-      out.push(`${below < 1 ? '✓' : '✗'} мельница: под настилом пол башни (y=${below.toFixed(2)})`);
+      out.push(`  мельница: под верхней ступенью y=${p.groundAt(top.x, top.z).toFixed(2)} (пол башни 0.00)`);
+      // жёлтая крыша твёрдая: с площадки можно подняться на соломенную шапку
+      {
+        const gal = (d.ctx.platforms || []).find((pl) => !pl.sp && Math.abs((pl.y ?? 0) - s.y1) < 0.05 && pl.hx > 1.2);
+        if (!gal) {
+          out.push('✗ мельница: не нашёл ступени на крыше');
+        } else {
+          put(gal.cx, gal.cz);
+          p.groundY = s.y1; p.y = 0;
+          let roofY = 0;
+          for (let i = 0; i < 260; i++) {
+            const yaw = Math.atan2(-(s.cx - p.pos.x), -(s.cz - p.pos.z));
+            step(yaw, 2);
+            roofY = Math.max(roofY, p.groundY);
+          }
+          out.push(`${roofY > s.y1 + 1.5 ? '✓' : '✗'} мельница: жёлтая крыша твёрдая — подъём до y=${roofY.toFixed(2)}`);
+        }
+      }
     }
   }
 

@@ -1,0 +1,13 @@
+import { chromium } from 'playwright';
+import { LAUNCH } from './browser.mjs';
+const url = process.argv[2];
+const browser = await chromium.launch(LAUNCH);
+const page = await browser.newPage({ viewport: { width: 640, height: 400 } });
+page.on('request', (r) => console.log('REQ ', r.url().slice(0, 110)));
+page.on('response', async (r) => console.log('RES ', r.status(), (r.headers()['content-type'] || '-'), r.url().slice(0, 90)));
+page.on('console', (m) => console.log('CON ', m.type(), m.text().slice(0, 160)));
+page.on('pageerror', (e) => console.log('ERR ', e.message.slice(0, 200)));
+await page.goto(url, { waitUntil: 'load', timeout: 60000 });
+await page.waitForTimeout(15000);
+console.log('--- ready:', await page.evaluate(() => window.__villageReady), '| state:', await page.evaluate(() => document.readyState));
+await browser.close();

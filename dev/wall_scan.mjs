@@ -1,13 +1,17 @@
 /**
- * Диагностика «невидимых стенок» в интерьере таверны.
+ * ============================================================================
+ *  Скан «невидимых стенок»: есть ли под коллайдером видимая геометрия
+ * ============================================================================
  *
- * Для каждого коллайдера проверяем, есть ли рядом с ним видимая геометрия:
- * пускаем лучи из центра коллайдера в шесть сторон и смотрим, попадает ли
- * луч в меш в пределах половины размера коллайдера. Если попаданий нет —
- * коллайдер «висит в воздухе»: игрок упирается в пустоту.
+ *  Идея: игрок упирается в невидимую стену там, где есть коллайдер, но рядом
+ *  нет ни одного меша. Для каждого коллайдера считаем его AABB и ищем меши,
+ *  чей мировой AABB пересекается с ним. Пересечений нет — коллайдер «висячий».
  *
- * Запуск: cd dev && node wall_scan.mjs
+ *  Лес и подлесок исключены (16 000 инстансов) — они не являются стенками.
+ *
+ *  Запуск: cd dev && node wall_scan.mjs
  */
+
 import { chromium } from 'playwright';
 import { LAUNCH } from './browser.mjs';
 
@@ -16,115 +20,74 @@ const page = await browser.newPage({ viewport: { width: 640, height: 400 } });
 page.setDefaultTimeout(240000);
 const errs = [];
 page.on('pageerror', (e) => errs.push('PAGEERROR ' + e.message));
+
 await page.goto('http://127.0.0.1:4205/?v=' + Date.now(), { waitUntil: 'domcontentloaded' });
 await page.waitForFunction(() => window.__villageReady === true, null, { timeout: 240000 });
-await page.waitForTimeout(1000);
-await page.evaluate(() => {
-  document.getElementById('begin').click();
-  setTimeout(() => { const s = document.getElementById('start'); if (s) s.remove(); }, 150);
-});
-await page.waitForTimeout(1500);
+await page.evaluate(() => document.getElementById('begin').click());
+await page.waitForTimeout(1200);
 
 const res = await page.evaluate(() => {
   const d = window.__dbg;
-  d.setLocation('tavern');
   const THREE = d.THREE;
-  const group = d.tavernLoc.group;
-  const names = {};
-  for (const [k, v] of Object.entries(d.M)) if (v && v.isMaterial) names[v.uuid] = k;
+  const boxes = d.ctx.colliders.boxes || [];
+  const circles = d.ctx.colliders.circles || [];
 
-  const meshes = [];
-  group.traverse((o) => { if (o.isMesh) meshes.push(o); });
-  group.updateMatrixWorld(true);
-  const ray = new THREE.Raycaster();
-  const DIRS = [
-    new THREE.Vector3(1, 0, 0), new THREE.Vector3(-1, 0, 0),
-    new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, -1, 0),
-    new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, -1),
-  ];
-
-  const boxes = d.tavernLoc.colliders.boxes || [];
-  const circles = d.tavernLoc.colliders.circles || [];
-  const all = [];
-  boxes.forEach((b, i) => all.push({ kind: 'box', i, ...b }));
-  circles.forEach((c, i) => all.push({ kind: 'circle', i, ...c }));
-
-  const probe = (cx, cy, cz, reach) => {
-    const hits = [];
-    for (const dir of DIRS) {
-      ray.set(new THREE.Vector3(cx, cy, cz), dir);
-      ray.far = reach;
-      const inter = ray.intersectObjects(meshes, false);
-      if (inter.length) {
-        const m = inter[0].object.material;
-        hits.push({ dir: `${dir.x},${dir.y},${dir.z}`, d: +inter[0].distance.toFixed(2), mat: names[m && m.uuid] || '?' });
-      }
-    }
-    return hits;
-  };
-
-  /**
-   * Покрытие объёма коллайдера геометрией: сэмплируем точки внутри
-   * и проверяем, есть ли рядом с каждой видимая поверхность.
-   */
-  const coverage = (cx, cy, cz, hx, hy, hz) => {
-    let inside = 0, total = 0;
-    for (let i = 0; i < 4; i++) {
-      for (let j = 0; j < 4; j++) {
-        for (let k = 0; k < 4; k++) {
-          const px = cx - hx + (2 * hx * (i + 0.5)) / 4;
-          const py = cy - hy + (2 * hy * (j + 0.5)) / 4;
-          const pz = cz - hz + (2 * hz * (k + 0.5)) / 4;
-          total++;
-          if (probe(px, py, pz, 0.22).length) inside++;
-        }
-      }
-    }
-    return total ? inside / total : 0;
-  };
-
-  const list = all.map((c) => {
-    const isBox = c.kind === 'box';
-    const hx = isBox ? c.hx : c.r;
-    const hz = isBox ? c.hz : c.r;
-    const cx = c.cx ?? c.x, cz = c.cz ?? c.z;
-    const y0 = c.y0 ?? 0, y1 = c.y1 ?? 1.8;
-    const cy = (y0 + y1) / 2;
-    const reach = Math.max(hx, hz, (y1 - y0) / 2) + 0.12;
-    const hits = probe(cx, cy, cz, reach);
-    const near = hits.filter((h) => h.d <= reach + 0.01);
-    const cov = coverage(cx, cy, cz, Math.max(hx, 0.05), Math.max((y1 - y0) / 2, 0.05), Math.max(hz, 0.05));
-    return {
-      cover: +cov.toFixed(2),
-      kind: c.kind, i: c.i,
-      pos: `${cx.toFixed(2)},${cz.toFixed(2)}`,
-      y: `${y0.toFixed(2)}..${y1.toFixed(2)}`,
-      size: isBox ? `${(hx * 2).toFixed(2)}×${(hz * 2).toFixed(2)}` : `r${c.r}`,
-      visible: near.length > 0,
-      near: near.map((h) => `${h.dir}@${h.d}(${h.mat})`).join(' '),
-    };
+  // меши с мировыми габаритами (лес и подлесок пропускаем)
+  const items = [];
+  d.scene.traverse((o) => {
+    if (!o.isMesh || !o.visible) return;
+    const n = (o.name || '').toLowerCase();
+    if (n.includes('forest') || n.includes('undergrowth') || n.includes('foliage')) return;
+    if (o.isInstancedMesh && o.count > 400) return;
+    const b = new THREE.Box3().setFromObject(o);
+    if (b.isEmpty()) return;
+    items.push({ b, mat: (o.material && o.material.name) || '?', name: o.name || '' });
   });
 
-  return {
-    total: list.length,
-    invisible: list.filter((x) => !x.visible),
-    thin: list.filter((x) => x.cover < 0.6 && parseFloat(x.y.split('..')[1]) > 1.6),
-    upper: list.filter((x) => parseFloat(x.y.split('..')[1]) > 4.4),
+  const colBox = (cx, cz, hx, hz, ang, y0, y1) => {
+    const c = Math.abs(Math.cos(ang)), s = Math.abs(Math.sin(ang));
+    const ex = hx * c + hz * s, ez = hx * s + hz * c;
+    return new THREE.Box3(
+      new THREE.Vector3(cx - ex, y0, cz - ez),
+      new THREE.Vector3(cx + ex, y1, cz + ez));
   };
+
+  const ghosts = [];
+  const seen = [];
+  for (const b of boxes) {
+    const y0 = b.y0 !== undefined ? b.y0 : 0, y1 = b.y1 !== undefined ? b.y1 : 2.4;
+    const cb = colBox(b.cx, b.cz, b.hx, b.hz, b.ang || 0, y0, y1);
+    let n = 0;
+    for (const it of items) if (it.b.intersectsBox(cb)) { n++; if (n === 1) seen.push(it); }
+    if (!n) {
+      ghosts.push({
+        t: 'box', x: +b.cx.toFixed(1), z: +b.cz.toFixed(1),
+        w: +(b.hx * 2).toFixed(2), d: +(b.hz * 2).toFixed(2),
+        a: +(b.ang || 0).toFixed(2), y: `${(+y0.toFixed(1))}..${(+y1.toFixed(1))}`,
+      });
+    }
+  }
+  for (const c of circles) {
+    const y0 = c.y0 || 0, y1 = c.y1 || 2.2;
+    const cb = colBox(c.x, c.z, c.r, c.r, 0, y0, y1);
+    let n = 0;
+    for (const it of items) if (it.b.intersectsBox(cb)) { n++; if (n === 1) seen.push(it); }
+    if (!n) ghosts.push({ t: 'circle', x: +c.x.toFixed(1), z: +c.z.toFixed(1), r: c.r, y: `${(+y0.toFixed(1))}..${(+y1.toFixed(1))}` });
+  }
+  return { boxes: boxes.length, circles: circles.length, ghosts, meshes: items.length };
 });
 
-console.log('всего коллайдеров:', res.total);
-console.log('\n=== БЕЗ ВИДИМОЙ ГЕОМЕТРИИ (игрок упирается в пустоту) ===');
-for (const c of res.invisible) {
-  console.log(`  ${c.kind}#${c.i}  pos=${c.pos}  y=${c.y}  размер=${c.size}`);
+console.log(`мешей учтено: ${res.meshes} | коллайдеров: ${res.boxes} боксов + ${res.circles} кругов`);
+console.log(`«висячих» (видимой геометрии нет): ${res.ghosts.length}\n`);
+const byZone = {};
+for (const g of res.ghosts) {
+  const key = `${Math.round(g.x / 5) * 5},${Math.round(g.z / 5) * 5}`;
+  (byZone[key] = byZone[key] || []).push(g);
 }
-console.log('\n=== ПОКРЫТИЕ ОБЪЁМА < 60% (коллайдер шире видимой стены) ===');
-for (const c of res.thin) {
-  console.log(`  ${c.kind}#${c.i}  pos=${c.pos}  y=${c.y}  размер=${c.size}  покрытие=${c.cover}`);
-}
-console.log('\n=== коллайдеры верхнего уровня (y1 > 4.4) ===');
-for (const c of res.upper) {
-  console.log(`  ${c.kind}#${c.i}  pos=${c.pos}  y=${c.y}  размер=${c.size}  ${c.visible ? 'видимая' : 'НЕВИДИМАЯ'}  ${c.near}`);
+for (const [k, list] of Object.entries(byZone).sort()) {
+  console.log(`— зона ${k} (${list.length}) —`);
+  for (const g of list.slice(0, 10)) console.log('   ', JSON.stringify(g));
+  if (list.length > 10) console.log(`    … ещё ${list.length - 10}`);
 }
 console.log('\nошибки:', errs.length, errs.slice(0, 3));
 await browser.close();

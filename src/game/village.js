@@ -255,17 +255,21 @@ export function createVillage(ctx) {
     ];
     homes.forEach((h, i) => {
       const hry = ryToFace([h[0], h[1]], [0, 0]);
-      const c = cottage(ctx.M, { ...h[2], wall: wallKinds[i % 3], lit: true });
+      const c = cottage(ctx.M, { ...h[2], wall: wallKinds[i % 3], lit: true, variant: i });
       const placed = place(c, h[0], h[1], hry);
       // свет из окон внутрь дома
       for (const p of (placed.windowLights || [])) {
         ctx.roomLights.push({ pos: p, lit: true, power: 1, flicker: i, baseIntensity: 1.5, distance: 7 });
       }
+      // свет от свечи внутри дома
+      if (placed.interiorLight) {
+        ctx.roomLights.push({ pos: placed.interiorLight, lit: true, power: 1, flicker: i + 7, baseIntensity: 1.9, distance: 8 });
+      }
       if (c.chimney) ctx.smokeSources.push({ pos: c.chimney.clone(), rate: 0.11 });
       addInteract(
         facadePos(h[0], h[1], hry, 0, -h[2].d / 2 - 0.4),
-        1.9, 'Постучать в дверь',
-        () => ctx.ui.toast(houseLines[i % houseLines.length]),
+        1.9, 'Толкнуть дверь',
+        () => ctx.ui.toast(`${houseLines[i % houseLines.length]} Можно зайти внутрь.`),
       );
     });
 

@@ -6,6 +6,9 @@ import { Builder, box, cyl, sphere, cone, torus, gableEnds, hipRoof, roofShell, 
  * ------------------------------------------------------------------ */
 
 /** Повёрнутый прямоугольник (OBB) — точная форма стены под любым углом. */
+/** Уровень пола в жилых домах: перепад с землёй ≤ 0.46, чтобы в дом можно было войти без прыжка. */
+const FLOOR_Y = 0.42;
+
 export function rotatedAABB(cx, cz, hw, hd, ry) {
   return { cx, cz, hx: hw, hz: hd, ang: ry };
 }
@@ -171,6 +174,134 @@ function roseWindow(B, x, y, z) {
 
 
 /* ---------------------------- домик ---------------------------- */
+/**
+ * Интерьер жилого дома: дощатый пол, очаг, стол с лавками, сундук,
+ * полка с горшками и свеча. Ставится внутрь cottage — за стенами с
+ * дверным проёмом, чтобы в дом можно было зайти, а не упираться в стену.
+ *
+ * @param {Builder} B билдер геометрии
+ * @param {object} o размеры и вариации
+ */
+function houseInterior(B, o) {
+  const { w, d, floors = 1, variant = 0 } = o;
+  const wallH = o.wallH || 3.1;
+  const T = 0.3;
+  const fy = FLOOR_Y;                              // уровень пола
+  const iw = w - T * 2, id = d - T * 2;
+
+  // дощатый пол
+  B.put('plank', iw, 0.08, id, 0, fy - 0.04, 0, 1.1);
+
+  // очаг у задней стены: каменный блок с топкой и тлеющи углями
+  {
+    const hx = -iw / 2 + 0.72, hz = id / 2 - 0.42;
+    B.put('stone', 1.3, 1.45, 0.8, hx, fy + 0.72, hz, 1.2);
+    B.put('stoneDark', 1.42, 0.18, 0.9, hx, fy + 1.5, hz, 1.2);
+    B.put('stoneDark', 0.55, 0.62, 0.12, hx, fy + 0.62, hz - 0.42, 1.2);
+    B.put('ember', 0.42, 0.1, 0.3, hx, fy + 0.36, hz - 0.3, 1.2);
+    // дымоходная труба вверх
+    B.put('stoneDark', 0.42, wallPipeH(o), 0.42, hx, fy + 1.6 + wallPipeH(o) / 2, hz, 1.2);
+    // поленья и котелок
+    B.put('timber', 0.5, 0.16, 0.22, hx + 0.1, fy + 0.26, hz - 0.5, 1.2);
+    B.put('iron', 0.34, 0.26, 0.34, hx + 0.1, fy + 0.47, hz - 0.5, 1.2);
+  }
+
+  // стол и две лавки — у правой стены, чтобы проход к двери оставался свободным
+  const tx = iw / 2 - 1.15, tz = 0.15;
+  {
+    B.put('plank', 1.15, 0.1, 0.85, tx, fy + 0.78, tz, 1.1);
+    for (const sx of [-1, 1]) {
+      B.put('timber', 0.11, 0.78, 0.11, tx + sx * 0.48, fy + 0.39, tz + 0.32, 1.1);
+      B.put('timber', 0.11, 0.78, 0.11, tx + sx * 0.48, fy + 0.39, tz - 0.32, 1.1);
+    }
+    B.put('plank', 1.05, 0.09, 0.3, tx, fy + 0.44, tz + 0.72, 1.1);
+    for (const sx of [-1, 1]) {
+      B.put('timber', 0.09, 0.44, 0.09, tx + sx * 0.42, fy + 0.22, tz + 0.72, 1.1);
+    }
+    // миска и свеча на столе
+    B.put('cloth', 0.32, 0.1, 0.32, tx - 0.22, fy + 0.87, tz, 1.1);
+    B.put('bone', 0.07, 0.2, 0.07, tx + 0.26, fy + 0.93, tz + 0.1, 1.1);
+    B.put('ember', 0.06, 0.1, 0.06, tx + 0.26, fy + 1.08, tz + 0.1, 1.1);
+  }
+
+  // сундук у боковой стены
+  {
+    const cx = -iw / 2 + 0.42, cz = id / 2 - 1.6;
+    B.put('timber', 0.8, 0.62, 0.5, cx, fy + 0.31, cz, 1.1);
+    B.put('iron', 0.84, 0.08, 0.54, cx, fy + 0.46, cz, 1.1);
+    B.put('iron', 0.12, 0.16, 0.08, cx, fy + 0.4, cz - 0.27, 1.1);
+  }
+
+  // полка с горшками и связками трав — над сундуком
+  {
+    const sx = -iw / 2 + 0.35, sz = id / 2 - 1.6;
+    B.put('plank', 0.45, 0.08, 1.5, sx + 0.12, fy + 1.55, sz, 1.1);
+    for (const dz of [-0.45, 0, 0.45]) {
+      B.put(variant % 2 ? 'redCloth' : 'cloth', 0.22, 0.26, 0.22, sx + 0.16, fy + 1.72, sz + dz, 1.1);
+      B.put('timber', 0.05, 0.42, 0.05, sx + 0.16, fy + 2.05, sz + dz, 1.1);
+    }
+  }
+
+  // уют: половица-ковёр у очага
+  B.put(variant % 2 ? 'redCloth' : 'greenCloth', 1.5, 0.04, 1.1,
+    -iw / 2 + 1.0, fy + 0.02, id / 2 - 1.1, 1.1);
+
+  // ---- второй этаж: антресоль с проёмом и лестницей ----
+  let mezz = null;
+  if (floors > 1) {
+    const mezzY = fy + wallH * 0.55;
+    const gapZ0 = -1.05, gapZ1 = 0.05;                 // проём-коридор в перекрытии
+    // перекрытие: передняя и задняя части (между ними — проём)
+    B.put('plank', iw, 0.16, gapZ0 + id / 2, 0, mezzY - 0.08, (-id / 2 + gapZ0) / 2, 1.1);
+    B.put('plank', iw, 0.16, id / 2 - gapZ1, 0, mezzY - 0.08, (gapZ1 + id / 2) / 2, 1.1);
+    // балка под краем проёма
+    B.put('timber', iw, 0.14, 0.16, 0, mezzY - 0.16, gapZ0, 1.1);
+    // опоры перекрытия
+    for (const sx of [-1, 1]) {
+      B.put('timber', 0.18, mezzY - fy, 0.18, sx * (iw / 2 - 0.22), (mezzY + fy) / 2, gapZ0 + 0.25, 1.1);
+    }
+    // лестница: рампа вдоль левой стены, из переднего угла на антресоль
+    const lx = -iw / 2 + 0.85;
+    const z0 = -id / 2 + 0.85, z1 = gapZ0 - 0.05;
+    const N = 8;
+    for (let i = 0; i < N; i++) {
+      const t0 = i / N, t1 = (i + 1) / N;
+      const zc = z0 + (z1 - z0) * (t0 + t1) / 2;
+      const y = fy + (mezzY - fy) * (t0 + t1) / 2;
+      B.put('plank', 1.0, 0.1, Math.abs(z1 - z0) / N + 0.02, lx, y - 0.05, zc, 1.1);
+    }
+    // перила
+    B.put('timber', 0.1, 0.9, Math.abs(z1 - z0), lx - 0.5, fy + (mezzY - fy) / 2 + 0.5, (z0 + z1) / 2, 1.1);
+    // на антресоли — мешки и связки трав
+    for (const dz of [-1.7, 1.7]) {
+      B.put('cloth', 0.42, 0.5, 0.34, iw / 2 - 0.45, mezzY + 0.28, dz, 1.1);
+      B.put('rope', 0.46, 0.07, 0.38, iw / 2 - 0.45, mezzY + 0.3, dz, 1.1);
+    }
+    B.put('timber', 0.08, 0.8, 0.08, iw / 2 - 0.22, mezzY + 0.45, 0, 1.1);
+    for (let i = 0; i < 4; i++) {
+      B.put('wheat', 0.07, 0.72, 0.05, iw / 2 - 0.3 + (i - 1.5) * 0.07, mezzY + 0.4, 0, 1.1);
+    }
+    mezz = {
+      y: mezzY,
+      ramp: { x0: lx, z0, x1: lx, z1, y0: fy, y1: mezzY, halfWidth: 0.55 },
+    };
+  }
+
+  // где стоит свечь — вернём, чтобы дом можно было подсветить изнутри
+  return { candle: [tx + 0.26, tz + 0.1], mezz };
+}
+
+/** Высота дымоходной трубы внутри дома (до уровня крыши). */
+function wallPipeH(o) {
+  return Math.max(0.6, (o.wallH || 3.1) - 0.4);
+}
+
+/**
+ * Жилой дом: настоящие стены с дверным проёмом и интерьером.
+ *
+ * Раньше дом был сплошным объёмом: дверь была нарисована, но за ней стояла
+ * стена, и игрок упирался в неё. Теперь в дом можно зайти.
+ */
 export function cottage(M, opts = {}) {
   const {
     w = 6, d = 5, h = 3.1, roofH = 2.5, floors = 1, roof = 'thatch',
@@ -180,9 +311,26 @@ export function cottage(M, opts = {}) {
   const B = new Builder();
   const roofMat = roof === 'thatch' ? 'thatch' : (roof === 'slate' ? 'tileSlate' : 'tile');
 
-  B.put('stone', w + 0.24, 0.55, d + 0.24, 0, 0.275, 0, 1.1);
+  // каменный цоколь — кольцом по периметру: сплошной плитой он закрывал
+  // собой дощатый пол внутри дома
+  B.put('stone', w + 0.24, 0.42, 0.24, 0, 0.21, -d / 2 - 0.12, 1.1);
+  B.put('stone', w + 0.24, 0.42, 0.24, 0, 0.21, d / 2 + 0.12, 1.1);
+  B.put('stone', 0.24, 0.42, d + 0.24, -w / 2 - 0.12, 0.21, 0, 1.1);
+  B.put('stone', 0.24, 0.42, d + 0.24, w / 2 + 0.12, 0.21, 0, 1.1);
   const wallH = floors > 1 ? h * 1.74 : h;
-  B.put(wall, w, wallH, d, 0, 0.5 + wallH / 2, 0, 2.2);
+  // Стены по периметру, а не сплошной объём: в фасаде (-z) оставлен
+  // настоящий дверной проём, в который можно войти.
+  const T = 0.3;
+  const cy = FLOOR_Y + wallH / 2;
+  B.put(wall, w, wallH, T, 0, cy, d / 2 - T / 2, 2.2);                       // задняя
+  B.put(wall, T, wallH, d - T * 2, -w / 2 + T / 2, cy, 0, 2.2);            // левая
+  B.put(wall, T, wallH, d - T * 2, w / 2 - T / 2, cy, 0, 2.2);             // правая
+  const sideW = (w - doorW) / 2, sideX = doorW / 2 + sideW / 2;
+  B.put(wall, sideW, wallH, T, -sideX, cy, -d / 2 + T / 2, 2.2);           // фасад слева
+  B.put(wall, sideW, wallH, T, sideX, cy, -d / 2 + T / 2, 2.2);            // фасад справа
+  B.put(wall, doorW, 0.5, T, 0, FLOOR_Y + wallH - 0.25, -d / 2 + T / 2, 2.2);  // перемычка
+  // интерьер: пол, очаг, стол, сундук, полка
+  const interior = houseInterior(B, { w, d, wallH, floors, variant: opts.variant || 0 });
 
   timberFrame(B, w, wallH, d);
   for (const sx of [-1, 1]) {
@@ -190,19 +338,28 @@ export function cottage(M, opts = {}) {
     B.put('timber', 0.16, wallH, 0.19, sx * (w / 2 + 0.02), 0.5 + wallH / 2, d / 2 - 0.3);
   }
 
-  // дверь: косяки, перемычка, створка
-  // дверь: косяки, перемычка, створка (по центру фасада — так окна симметричны)
+  // дверь: косяки, перемычка, распахнутая внутрь створка (проём свободен)
   const dx = 0;
-  B.put('timber', 0.16, 2.1, 0.24, dx - doorW / 2 - 0.08, 1.55, -d / 2 - 0.07);
-  B.put('timber', 0.16, 2.1, 0.24, dx + doorW / 2 + 0.08, 1.55, -d / 2 - 0.07);
-  B.put('timber', doorW + 0.32, 0.18, 0.24, dx, 2.6, -d / 2 - 0.07);
-  B.put('plank', doorW, 1.95, 0.1, dx, 1.48, -d / 2 - 0.13);
-  B.put('iron', 0.09, 0.09, 0.06, dx + doorW * 0.32, 1.35, -d / 2 - 0.19);
-  B.put('stone', doorW + 0.5, 0.14, 0.7, dx, 0.55, -d / 2 - 0.3);
+  B.put('timber', 0.16, 2.1, 0.24, dx - doorW / 2 - 0.08, FLOOR_Y + 1.05, -d / 2 - 0.07);
+  B.put('timber', 0.16, 2.1, 0.24, dx + doorW / 2 + 0.08, FLOOR_Y + 1.05, -d / 2 - 0.07);
+  B.put('timber', doorW + 0.32, 0.18, 0.24, dx, FLOOR_Y + 2.1, -d / 2 - 0.07);
+  {
+    const openA = 1.98;                       // створка открыта внутрь дома
+    const hx0 = dx - doorW / 2 + 0.04;
+    const cxD = hx0 + Math.cos(openA) * doorW / 2;
+    const czD = -d / 2 + 0.04 + Math.sin(openA) * doorW / 2;
+    B.add(box(doorW, 1.95, 0.1, 1), 'plank', mat(cxD, FLOOR_Y + 0.98, czD, openA));
+    B.add(box(0.1, 0.1, 0.07, 1), 'iron',
+      mat(cxD + Math.cos(openA) * (doorW / 2 - 0.13), FLOOR_Y + 0.85, czD + Math.sin(openA) * (doorW / 2 - 0.13), openA));
+    for (const hy of [0.62, 2.3].map((v) => v + FLOOR_Y)) {
+      B.add(box(0.07, 0.18, 0.12, 1), 'iron', mat(hx0, hy, -d / 2 + 0.02));
+    }
+  }
+  B.put('stone', doorW + 0.5, 0.14, 0.7, dx, FLOOR_Y + 0.05, -d / 2 - 0.3);
 
   // окна — строго симметрично относительно центра фасада и целиком внутри стены
   const winX = w * 0.33;
-  const winY = 1.85;
+  const winY = FLOOR_Y + 1.35;
   addWindow(B, winX, winY, -d / 2 - 0.02, 0.9, 1.05, 'z', lit);
   addWindow(B, -winX, winY, -d / 2 - 0.02, 0.9, 1.05, 'z', lit);
   for (const sx of [-1, 1]) {
@@ -210,7 +367,7 @@ export function cottage(M, opts = {}) {
     addWindow(B, sx * (w / 2 + 0.02), winY, -d * 0.24, 0.8, 0.95, 'x', lit);
   }
   if (floors > 1) {
-    const upY = 0.5 + wallH - 1.25;          // верхний ряд — под карнизом
+    const upY = FLOOR_Y + wallH - 1.25;          // верхний ряд — под карнизом
     addWindow(B, winX, upY, -d / 2 - 0.02, 0.85, 1.0, 'z', lit);
     addWindow(B, -winX, upY, -d / 2 - 0.02, 0.85, 1.0, 'z', lit);
     for (const sx of [-1, 1]) {
@@ -219,34 +376,64 @@ export function cottage(M, opts = {}) {
     }
   }
 
-  const roofBase = 0.5 + wallH;
+  const roofBase = FLOOR_Y + wallH;
   addRoof(B, w, d, roofH, roofMat, wall, 0.4, true, roofBase);
   if (chimney) addChimney(B, w * 0.28, d * 0.16, roofBase + roofH + 1.1, roofBase);
 
   if (porch) {
     // Каменный цоколь: без него настил и ступень «висели» в воздухе.
-    B.put('stone', doorW + 1.4, 0.36, 1.0, dx, 0.18, -d / 2 - 0.62);
+    B.put('stone', doorW + 1.4, 0.42, 1.0, dx, 0.21, -d / 2 - 0.62);
     B.put('stone', doorW + 0.5, 0.14, 0.44, dx, 0.07, -d / 2 - 1.28);
-    B.put('plank', doorW + 1.4, 0.12, 1.0, dx, 0.42, -d / 2 - 0.62);
-    B.put('plank', doorW + 0.5, 0.14, 0.44, dx, 0.21, -d / 2 - 1.28);
-    B.put('timber', 0.12, 2.28, 0.12, dx - (doorW + 1.0) / 2, 1.7, -d / 2 - 0.98);
-    B.put('timber', 0.12, 2.28, 0.12, dx + (doorW + 1.0) / 2, 1.7, -d / 2 - 0.98);
+    B.put('plank', doorW + 1.4, 0.12, 1.0, dx, FLOOR_Y, -d / 2 - 0.62);
+    B.put('plank', doorW + 0.5, 0.14, 0.44, dx, 0.24, -d / 2 - 1.28);
+    B.put('timber', 0.12, 2.28, 0.12, dx - (doorW + 1.0) / 2, FLOOR_Y + 1.2, -d / 2 - 0.98);
+    B.put('timber', 0.12, 2.28, 0.12, dx + (doorW + 1.0) / 2, FLOOR_Y + 1.2, -d / 2 - 0.98);
     const ps = roofShell(doorW + 1.4, 1.5, 0.45, { overhang: 0.12, thickness: 0.14, scale: 1 });
-    for (const g of ps.outer) B.add(g, roofMat, mat(dx, 2.82, -d / 2 - 0.55));
-    for (const g of ps.inner) B.add(g, 'plank', mat(dx, 2.82, -d / 2 - 0.55));
-    for (const g of ps.edges) B.add(g, roofMat, mat(dx, 2.82, -d / 2 - 0.55));
+    for (const g of ps.outer) B.add(g, roofMat, mat(dx, FLOOR_Y + 2.32, -d / 2 - 0.55));
+    for (const g of ps.inner) B.add(g, 'plank', mat(dx, FLOOR_Y + 2.32, -d / 2 - 0.55));
+    for (const g of ps.edges) B.add(g, roofMat, mat(dx, FLOOR_Y + 2.32, -d / 2 - 0.55));
   }
 
   const group = B.build(M, null, { name: 'cottage' });
+  // тёплый свет внутри: дом не должен быть тёмной коробкой
+  const inner = new THREE.PointLight(0xffb45a, 1.5, 9, 1.7);
+  inner.position.set(0.2, 1.9, 0.2);
+  group.add(inner);
   const out = { group, colliders: [], platforms: [], windowLights: [], chimney: new THREE.Vector3() };
   out.place = (px, pz, ry = 0) => {
     group.position.set(px, 0, pz);
     group.rotation.y = ry;
     group.updateMatrixWorld(true);
-    out.colliders.push(rotatedAABB(px, pz, w / 2, d / 2, ry));
+    // Стены — отдельными коллайдерами, между ними проём двери.
+    // Раньше был один сплошной прямоугольник на весь дом: игрок упирался
+    // в «стенку из воздуха» прямо на нарисованной двери.
+    out.colliders.push(localBox(px, pz, ry, 0, d / 2 - T / 2, w, T));
+    out.colliders.push(localBox(px, pz, ry, -w / 2 + T / 2, 0, T, d - T * 2));
+    out.colliders.push(localBox(px, pz, ry, w / 2 - T / 2, 0, T, d - T * 2));
+    out.colliders.push(localBox(px, pz, ry, -sideX, -d / 2 + T / 2, sideW, T));
+    out.colliders.push(localBox(px, pz, ry, sideX, -d / 2 + T / 2, sideW, T));
+    // пол внутри дома
+    out.platforms.push(localBox(px, pz, ry, 0, 0, w - T * 2, d - T * 2, FLOOR_Y));
+    // антресоль второго этажа и лестница наверх
+    if (interior.mezz) {
+      const m = interior.mezz;
+      const iw = w - T * 2, id = d - T * 2;
+      const gapZ0 = -1.05, gapZ1 = 0.05;
+      out.platforms.push(localBox(px, pz, ry, 0, (-id / 2 + gapZ0) / 2, iw, gapZ0 + id / 2, m.y));
+      out.platforms.push(localBox(px, pz, ry, 0, (gapZ1 + id / 2) / 2, iw, id / 2 - gapZ1, m.y));
+      const r = m.ramp;
+      const p0 = new THREE.Vector3(r.x0, r.y0, r.z0).applyMatrix4(group.matrixWorld);
+      const p1 = new THREE.Vector3(r.x1, r.y1, r.z1).applyMatrix4(group.matrixWorld);
+      out.platforms.push({
+        ramp: {
+          x0: p0.x, z0: p0.z, x1: p1.x, z1: p1.z,
+          y0: r.y0, y1: r.y1, halfWidth: r.halfWidth,
+        },
+      });
+    }
     if (porch) {
-      out.platforms.push(localBox(px, pz, ry, dx, -d / 2 - 0.62, doorW + 1.4, 1.0, 0.48));
-      out.platforms.push(localBox(px, pz, ry, dx, -d / 2 - 1.28, doorW + 0.5, 0.44, 0.28));
+      out.platforms.push(localBox(px, pz, ry, dx, -d / 2 - 0.62, doorW + 1.4, 1.0, FLOOR_Y));
+      out.platforms.push(localBox(px, pz, ry, dx, -d / 2 - 1.28, doorW + 0.5, 0.44, 0.24));
     }
     out.windowLights = [];
     group.traverse((o) => {
@@ -255,7 +442,10 @@ export function cottage(M, opts = {}) {
         out.windowLights.push(p);
       }
     });
-    out.chimney.set(w * 0.28, 0.5 + wallH + roofH + 0.85, d * 0.16).applyMatrix4(group.matrixWorld);
+    out.chimney.set(w * 0.28, FLOOR_Y + wallH + roofH + 0.85, d * 0.16).applyMatrix4(group.matrixWorld);
+    // тёплый свет от свечи внутри дома (гаснет вместе с остальным светом)
+    out.interiorLight = new THREE.Vector3(interior.candle[0], 1.7, interior.candle[1])
+      .applyMatrix4(group.matrixWorld);
     return out;
   };
   return out;
@@ -578,6 +768,8 @@ export function windmill(M, opts = {}) {
   const SEG = 14;             // сегментов в круге
   const GAP = (2 * Math.PI) / SEG;
   const BACK = Math.PI;       // проёмы смотрят назад (-z)
+  // сектор ступеней на соломенной крыше: сбоку от выхода лестницы
+  const STEPS_A0 = 1.82, STEPS_A1 = 2.62;
   /** угол рядом с проёмом (выход с настила) — там забор прерывается */
   const nearDoor = (a) => {
     let da = a - BACK;
@@ -707,28 +899,24 @@ export function windmill(M, opts = {}) {
   B.add(box(landW2, 0.14, landD2, 1), 'plank',
     mat(Math.sin(exitA) * landR2, h - 0.07, Math.cos(exitA) * landR2, exitA));
 
-  // ---------- настил верха башни ----------
-  // Крыша мельницы твёрдая: круглый настил закрывает верх башни, чтобы
-  // с площадки нельзя было провалиться внутрь. Он же — «пол» под
-  // последним витком лестницы. Физика «только сверху» (only: true) —
-  // поднимающийся игрок в него не упирается и не подбрасывается.
+  // ---------- край башни: круглое ограждение ----------
+  // Настила нет, поэтому край башни огорожен: иначе игрок на смотровой
+  // площадке проваливался бы внутрь башни. Проём лестницы остаётся открытым.
   {
-    const RTOP = rIn(h) - 0.03;
-    // доски по кругу
-    B.add(cyl(RTOP, RTOP, 0.1, SEG), 'plank', mat(0, h - 0.05, 0));
-    for (let i = 0; i < 9; i++) {
-      const a = (i / 9) * Math.PI * 2;
-      B.add(box(RTOP * 2 * 0.98, 0.06, 0.1, 1), 'timber',
-        mat(0, h + 0.02, 0, a));
-    }
-    // круглое ограждение по краю настила (кроме проёма лестницы)
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2;
-      if (Math.abs(Math.atan2(Math.sin(a - exitA), Math.cos(a - exitA))) < 0.5) continue;
-      B.add(box(0.12, 1.0, 0.12, 1), 'timber',
-        mat(Math.sin(a) * (RTOP - 0.08), h + 0.5, Math.cos(a) * (RTOP - 0.08), a));
+    const RTOP = rIn(h) - 0.08;
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2;
+      if (Math.abs(Math.atan2(Math.sin(a - exitA), Math.cos(a - exitA))) < 0.42) continue;
+      B.add(box(0.13, 1.0, 0.13, 1), 'timber',
+        mat(Math.sin(a) * RTOP, h + 0.5, Math.cos(a) * RTOP, a));
     }
   }
+
+  // ---------- верха башни: настила нет ----------
+  // Раньше здесь был круглый деревянный пол. Он перехватывал игрока при
+  // подъёме по винтовой лестнице (последний виток упирался в пол) — поэтому
+  // пол убрали. Твёрдой остаётся только жёлтая соломенная шапка: по ней
+  // можно подняться снаружи башни, как по ступеням.
 
   // ---------- смотровая площадка с забором (сзади, где не ходят крылья) ----------
   const galIn = rIn(h) - 0.01, galOut = rOut(h) + 1.55;
@@ -760,8 +948,8 @@ export function windmill(M, opts = {}) {
   // крылья, а их ступица крепится к самой шапке — всё вращающееся живёт
   // на здании, ничего не висит рядом отдельной палкой.
   const CAP_H = 3.4, CAP_R = RT + 0.12, CAP_T = 0.3;
-  const HATCH = 0.52;                       // половина раствора люка (рад)
-  const capSt = BACK + HATCH, capLen = 2 * Math.PI - 2 * HATCH;
+  // шапка сплошная: люк убран — крыша мельницы должна быть цельной и твёрдой
+  const capSt = 0, capLen = 2 * Math.PI;
   const CB = new Builder();
   // внешний конус
   CB.add(new THREE.CylinderGeometry(0.06, CAP_R, CAP_H, SEG, 1, true, capSt, capLen),
@@ -780,20 +968,6 @@ export function windmill(M, opts = {}) {
     const a = capSt + capLen * ((i + 0.5) / SEG);
     const px = Math.sin(a) * (CAP_R - 0.04), pz = Math.cos(a) * (CAP_R - 0.04);
     CB.add(box(0.2, 0.22, 0.24, 1), 'timber', mat(px, 0.02, pz, a));
-  }
-  // кромки люка: два бруса вдоль среза
-  for (const sgn of [-1, 1]) {
-    const a = BACK + sgn * HATCH;
-    const bx = Math.sin(a) * (CAP_R - 0.05), bz = Math.cos(a) * (CAP_R - 0.05);
-    const apex = new THREE.Vector3(0, CAP_H - 0.12, 0);
-    const p0 = new THREE.Vector3(bx, 0.05, bz);
-    const dir = new THREE.Vector3().subVectors(apex, p0);
-    const len = dir.length();
-    const q = new THREE.Quaternion().setFromUnitVectors(
-      new THREE.Vector3(0, 1, 0), dir.clone().normalize());
-    const m = new THREE.Matrix4().compose(
-      new THREE.Vector3().addVectors(p0, apex).multiplyScalar(0.5), q, new THREE.Vector3(1, 1, 1));
-    CB.add(box(0.14, len, 0.2, 1), 'timber', m);
   }
   // кронштейны под площадкой (остаются на башне, не на шапке):
   // диагональ от стены внизу — к краю настила вверху, прижаты к башне
@@ -817,6 +991,26 @@ export function windmill(M, opts = {}) {
       // горизонтальная связь-распорка у края
       strut(new THREE.Vector3(sx * wallR, h - 0.34, cz * wallR),
         new THREE.Vector3(sx * edgeR, h - 0.34, cz * edgeR), 0.12);
+    }
+  }
+
+  // ---------- ступени на соломенной крыше ----------
+  // Обручи-ступени по внешней стороне конуса: по ним можно подняться на
+  // жёлтую крышу мельницы снаружи башни.
+  {
+    const LEVELS = 9;
+    for (let k = 0; k < LEVELS; k++) {
+      const t = k / (LEVELS - 1);
+      const r = CAP_R * (1 - t * 0.82) + 0.42;
+      const y = h + CAP_H * t;
+      // ступени идут по дуге сбоку от выхода лестницы, чтобы подъём
+      // по винтовой лестнице ничем не перехватывался
+      const N = 6;
+      for (let i = 0; i < N; i++) {
+        const a = STEPS_A0 + (STEPS_A1 - STEPS_A0) * (i + 0.5) / N;
+        B.add(box(0.42, 0.1, 0.3, 1), 'timber',
+          mat(Math.sin(a) * r * 0.95, y, Math.cos(a) * r * 0.95, a + Math.PI / 2));
+      }
     }
   }
 
@@ -973,17 +1167,42 @@ export function windmill(M, opts = {}) {
     const lp2 = localOriented(px, pz, ry,
       Math.sin(exitA) * landR2, Math.cos(exitA) * landR2, landW2, landD2, exitA, h);
     out.platforms.push(lp2);
-    // КРЫША МЕЛЬНИЦЫ — твёрдая: настил верха башни.
-    // Три перекрывающихся прямоугольника («звезда») закрывают круг целиком,
-    // а флаг only: true пропускает игрока снизу — поднимающийся по лестнице
-    // не упирается в крышу и не подбрасывается ею.
+    // ЖЁЛТАЯ КРЫША МЕЛЬНИЦЫ — твёрдая: ступени по внешней стороне соломенного
+    // конуса шапки. Это единственная твёрдая поверхность наверху: пола в
+    // башне нет, поэтому подъём по винтовой лестнице ничем не перехватывается.
     {
-      const RTOP = rIn(h) - 0.03;
-      const arm = RTOP * 0.66, half = RTOP * 0.72;
-      out.platforms.push({ cx: px, cz: pz, hx: RTOP, hz: arm, ang: 0, y: h, only: true });
-      out.platforms.push({ cx: px, cz: pz, hx: arm, hz: RTOP, ang: 0, y: h, only: true });
-      out.platforms.push({ cx: px, cz: pz, hx: half, hz: arm, ang: Math.PI / 4, y: h, only: true });
-      out.platforms.push({ cx: px, cz: pz, hx: half, hz: arm, ang: -Math.PI / 4, y: h, only: true });
+      const LEVELS = 9;
+      for (let k = 0; k < LEVELS; k++) {
+        const t = k / (LEVELS - 1);
+        const r = CAP_R * (1 - t * 0.82) + 0.42;     // радиус кольца ступеней
+        const y = h + CAP_H * t;
+        // ступени — «дольки» по дуге сбоку от лестницы: на них можно
+        // подняться на крышу, и винтовая лестница при этом свободна
+        const N = 6;
+        for (let i = 0; i < N; i++) {
+          const a = STEPS_A0 + (STEPS_A1 - STEPS_A0) * (i + 0.5) / N;
+          // долька: центр на локальном радиусе, длинная сторона — по касательной
+          out.platforms.push(localOriented(px, pz, ry,
+            Math.sin(a) * r * 0.95, Math.cos(a) * r * 0.95,
+            r * 1.24, r * 0.5, a, y));
+        }
+        // макушка — сплошная площадка, чтобы с крыши нельзя было провалиться
+        if (k === LEVELS - 1) {
+          out.platforms.push(localOriented(px, pz, ry, 0, 0, r * 2.2, r * 0.9, 0, y));
+          out.platforms.push(localOriented(px, pz, ry, 0, 0, r * 0.9, r * 2.2, 0, y));
+        }
+      }
+    }
+    // ограждение по краю башни: без него игрок проваливался бы внутрь
+    {
+      const RTOP = rIn(h) - 0.08;
+      for (let i = 0; i < 14; i++) {
+        const a = (i / 14) * Math.PI * 2;
+        if (Math.abs(Math.atan2(Math.sin(a - exitA), Math.cos(a - exitA))) < 0.42) continue;
+        const wx = px + Math.sin(a) * RTOP * Math.cos(ry) + Math.cos(a) * RTOP * Math.sin(ry);
+        const wz = pz - Math.sin(a) * RTOP * Math.sin(ry) + Math.cos(a) * RTOP * Math.cos(ry);
+        out.circles.push({ x: wx, z: wz, r: 0.13, y0: h, y1: h + 1.0 });
+      }
     }
     // смотровая площадка
     for (let i = 0; i < gN; i++) {
