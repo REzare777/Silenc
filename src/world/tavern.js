@@ -68,6 +68,8 @@ export function buildTavernInterior(M, glowTex) {
   };
   const MT = {
     ...M, pane: paneMat, lampGlass, ...clothMats,
+    // стены трактира — тот же тёплый оттенок, что и на фасаде
+    tavernWall: M.tavernWall,
     ...bottleMats.reduce((o, m, i) => (o['bottle' + i] = m, o), {}),
   };
 
@@ -84,35 +86,51 @@ export function buildTavernInterior(M, glowTex) {
   /* ================================================================
    *  СТЕНЫ: каменный цоколь, штукатурка, фахверк
    * ================================================================ */
-  const wallKey = 'plasterWarm';
+  const wallKey = 'tavernWall';
   const frameKey = 'timber';
 
-  // ---- южная стена (-z): дверь + два окна ----
+  // ---- южная стена (-z): дверь, два окна зала и три окна галереи ----
+  // Проёмы режут стену по сетке: сначала по X, потом по Y — так окна
+  // второго этажа могут стоять над окнами первого и над дверью.
   {
     const z = -hd + WALL / 2;
     const DW = 0.85, DH = 2.6;                     // половина ширины двери, высота двери
-    const wins = [{ x: -3.5, w: 1.3, h: 1.7, y: 1.5 }, { x: 3.5, w: 1.3, h: 1.7, y: 1.5 }];
-    // проёмы: дверь и два окна
+    const wins = [
+      { x: -3.5, w: 1.3, h: 1.7, y: 1.5 },        // нижний ряд зала
+      { x: 3.5, w: 1.3, h: 1.7, y: 1.5 },
+      { x: -2.6, w: 0.95, h: 1.1, y: 5.09 },      // окна галереи (второй этаж)
+      { x: 0, w: 0.95, h: 1.1, y: 5.09 },
+      { x: 2.6, w: 0.95, h: 1.1, y: 5.09 },
+    ];
+    // проёмы: дверь и все окна
     const holes = [
       { x0: -DW, x1: DW, y0: 0, y1: DH, door: true },
-      { x0: wins[0].x - wins[0].w / 2, x1: wins[0].x + wins[0].w / 2, y0: wins[0].y - wins[0].h / 2, y1: wins[0].y + wins[0].h / 2 },
-      { x0: wins[1].x - wins[1].w / 2, x1: wins[1].x + wins[1].w / 2, y0: wins[1].y - wins[1].h / 2, y1: wins[1].y + wins[1].h / 2 },
+      ...wins.map((w) => ({
+        x0: w.x - w.w / 2, x1: w.x + w.w / 2,
+        y0: w.y - w.h / 2, y1: w.y + w.h / 2,
+      })),
     ];
     const panel = (x0, x1, y0, y1) => {
       if (x1 - x0 <= 0.02 || y1 - y0 <= 0.02) return;
       B.put(wallKey, x1 - x0, y1 - y0, WALL, (x0 + x1) / 2, (y0 + y1) / 2, z, 1.9);
     };
-    // стена между проёмами — сплошные вертикальные полосы
-    let cursor = -hw;
-    for (const h of holes) {
-      panel(cursor, h.x0, 0, TOP);
-      cursor = h.x1;
-    }
-    panel(cursor, hw, 0, TOP);
-    // над и под каждым проёмом
-    for (const h of holes) {
-      panel(h.x0, h.x1, 0, h.y0);
-      panel(h.x0, h.x1, h.y1, TOP);
+    // стена по сетке: вертикальные полосы между отверстиями,
+    // в каждой полосе — вырезы по высоте
+    const edges = new Set([-hw, hw]);
+    for (const h of holes) { edges.add(h.x0); edges.add(h.x1); }
+    const xs = [...edges].sort((a, b) => a - b);
+    for (let i = 0; i < xs.length - 1; i++) {
+      const x0 = xs[i], x1 = xs[i + 1];
+      const cx = (x0 + x1) / 2;
+      const cuts = holes
+        .filter((h) => cx > h.x0 && cx < h.x1)
+        .sort((a, b) => a.y0 - b.y0);
+      let y = 0;
+      for (const c of cuts) {
+        panel(x0, x1, y, c.y0);
+        y = Math.max(y, c.y1);
+      }
+      panel(x0, x1, y, TOP);
     }
     // рамы и стёкла окон
     for (const w of wins) {
@@ -1533,6 +1551,10 @@ export function buildTavernInterior(M, glowTex) {
     // южные окна (стена -z)
     curtain(-3.5, 1.5, southZ, 1.3, 1.7, 0, 'fabric', 'x');
     curtain(3.5, 1.5, southZ, 1.3, 1.7, 0, 'fabric2', 'x');
+    // окна галереи — те же проёмы, что и на фасаде
+    curtain(-2.6, 5.09, southZ, 0.95, 1.1, 0, 'fabric2', 'x');
+    curtain(0, 5.09, southZ, 0.95, 1.1, 0, 'fabric', 'x');
+    curtain(2.6, 5.09, southZ, 0.95, 1.1, 0, 'fabric2', 'x');
     // северные окна (стена +z) — по одному в каждой нише-комнате
     curtain(-1.15, 5.5, northZ, 1.2, 1.5, Math.PI, 'fabric2', 'x');
     curtain(2.25, 5.5, northZ, 1.2, 1.5, Math.PI, 'fabric', 'x');

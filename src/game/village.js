@@ -22,9 +22,10 @@ import {
   cottage, tavern, church, barn, windmill, blacksmith, well, marketStall, haystack, localBox,
 } from '../world/buildings.js';
 import {
-  forest, scatterGrass, scatterFlowers, wheatField, lantern, campfire, fence, gate,
+  scatterGrass, scatterFlowers, wheatField, lantern, campfire, fence, gate,
   trough, signpost, makeGlow,
 } from '../world/props.js';
+import { denseForest } from '../world/forest.js';
 import { Embers } from '../world/particles.js';
 import { Builder, box, cyl, sphere, cone, mat } from '../world/geo.js';
 import {
@@ -148,12 +149,12 @@ export function createVillage(ctx) {
       act: () => { ctx.ambience.bell(); ctx.ui.toast('Колокол над долиной — глухой и тёплый.'); },
     });
     addInteract(
-      facadePos(3, 44, chRy, 0, -8.9, 1.6), 2.4, 'Войти в церковь',
-      () => ctx.ui.toast('Внутри пахнет ладаном и старым деревом. Свечи не зажигали давно.'),
+      facadePos(3, 44, chRy, 0, -8.9, 1.6), 2.4, 'Толкнуть в тяжёлую дверь',
+      () => ctx.ui.toast('Дверь заперта на засов. Внутри пахнет ладаном и старым деревом — но войти нельзя.'),
     );
     addInteract(
       facadePos(3, 44, chRy, 0, 8.9, 1.6), 2.4, 'Открыть тяжёлую дверь',
-      () => ctx.ui.toast('Створка тяжёлая, с железными обвязками. За ней — кладовая и темнота.'),
+      () => ctx.ui.toast('Створка тяжёлая, с железными обвязками. За ней — кладовая и темнота. Заперто.'),
     );
     // фонарь у задней двери — иначе створку не видно
     {
@@ -251,7 +252,8 @@ export function createVillage(ctx) {
     });
 
     /* --- прилавки --- */
-    const stalls = [[5.6, 5.6, 'fabric'], [-5.8, 6.4, 'fabric2'], [6.4, -6.2, 'fabric2'], [-6.6, -5.6, 'fabric']];
+    // прилавки: последний отодвинут от входа трактира, чтобы не загораживал дверь
+    const stalls = [[5.6, 5.6, 'fabric'], [-5.8, 6.4, 'fabric2'], [6.4, -6.2, 'fabric2'], [-9.2, -2.6, 'fabric']];
     const stallLines = [
       'На прилавке — мед, репа и кусок сыра.',
       'Ткани, ленты и пряжа. Торговец здоровается кивком.',
@@ -398,27 +400,27 @@ export function createVillage(ctx) {
     ctx.scene.add(flowers);
     ctx.scene.userData.flowers = flowers;
 
-    /* --- лес --- */
-    const trees = [
-      { x: -14, z: 14, type: 'oak', s: 1.35 },
-      { x: 15, z: 16, type: 'oak', s: 1.15 },
-      { x: -33, z: 24, type: 'birch', s: 1.1 },
-    ];
-    for (let i = 0; i < 340; i++) {
-      const a = ctx.rng() * Math.PI * 2;
-      const r = 46 + Math.pow(ctx.rng(), 0.7) * 80;
-      const x = Math.cos(a) * r, z = Math.sin(a) * r;
-      if (Math.abs(x) < 9 && Math.abs(z) < 95) continue;
-      if (x > 32 && x < 70 && z > -32 && z < 4) continue;   // лужайка у пруда
-      // дорога к скале и площадка перед входом — без деревьев
-      if (distToDungeonTrail(x, z) < 4.5) continue;
-      if (Math.hypot(x - LAYOUT.dungeon.x, z - LAYOUT.dungeon.z) < 11) continue;
-      const type = ctx.rng() > 0.45 ? 'pine' : (ctx.rng() > 0.6 ? 'birch' : 'oak');
-      trees.push({ x, z, type, s: 0.8 + ctx.rng() * 0.75, autumn: ctx.rng() > 0.86 });
-    }
-    ctx.scene.add(forest(ctx.M, trees));
+    /* --- лес: плотное кольцо вокруг деревни --- */
+    // Лес начинается в 44 м от центра и полностью закрывает дальний обзор:
+    // скала с входом в подземелье (≈100 м) не видна с улицы.
+    const { group: forestGroup, trees } = denseForest(ctx.M, ctx.rng, {
+      center: [0, 0],
+      inner: 44,
+      keepClear: (x, z) => {
+        if (Math.abs(x) < 8 && Math.abs(z) < 100) return true;      // главная дорога вдоль Z
+        if (x > 29 && x < 73 && z > -35 && z < 7) return true;       // лужайка у пруда
+        if (distToDungeonTrail(x, z) < 3.4) return true;             // узкая тропа к пещере
+        // у самой скалы — только площадка перед входом; дальше лес
+        // подступает вплотную и полностью закрывает скалу от взгляда
+        if (Math.hypot(x - LAYOUT.dungeon.x, z - LAYOUT.dungeon.z) < 11) return true;
+        if (Math.abs(x) < 46 && Math.abs(z) < 46) return true;       // поля и огороды деревни
+        return false;
+      },
+    });
+    ctx.scene.add(forestGroup);
+    // коллайдеры — только у ближних деревьев (дальние не мешают прогулке)
     for (const t of trees) {
-      if (Math.hypot(t.x, t.z) < 72) ctx.colliders.circles.push({ x: t.x, z: t.z, r: 0.3 * (t.s || 1) });
+      if (Math.hypot(t.x, t.z) < 80) ctx.colliders.circles.push({ x: t.x, z: t.z, r: 0.34 * t.s });
     }
   }
 
@@ -623,6 +625,8 @@ export function createVillage(ctx) {
      * ================================================================ */
     const trailPts = dungeonTrail();
     const trail = new Builder();
+    const trailGroup = new THREE.Group();
+    trailGroup.name = 'dungeonTrail';
     const stones = [];
     for (let i = 0; i < trailPts.length - 1; i++) {
       const [ax, az] = trailPts[i];
@@ -631,12 +635,31 @@ export function createVillage(ctx) {
       const len = Math.hypot(dx, dz);
       const n = Math.max(2, Math.round(len / 1.5));
       const ang = Math.atan2(dx, dz);
+      // сплошное полотно дороги: раньше здесь лежали отдельные плиты,
+      // и в лесу тропа читалась как набор разрозненных камней
+      {
+        const tex = ctx.T.dirt.clone();
+        tex.needsUpdate = true;
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(1.6, len / 3.2);
+        const matRoad = new THREE.MeshStandardMaterial({
+          map: tex, roughness: 0.98,
+          polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6,
+        });
+        const road = new THREE.Mesh(new THREE.PlaneGeometry(3.0, len), matRoad);
+        road.rotation.x = -Math.PI / 2;
+        road.rotation.z = -ang;
+        road.position.set((ax + bx) / 2, 0.045, (az + bz) / 2);
+        road.receiveShadow = true;
+        trailGroup.add(road);
+      }
+      // редкие плоские камни, утопленные в полотно (не лежат поверх)
       for (let k = 0; k < n; k++) {
         const t = (k + 0.5) / n;
         const px = ax + dx * t + (ctx.rng() - 0.5) * 0.5;
         const pz = az + dz * t + (ctx.rng() - 0.5) * 0.5;
-        trail.add(box(1.5 + ctx.rng() * 0.7, 0.12, 1.1 + ctx.rng() * 0.4), 'stoneDark',
-          mat(px, 0.05, pz, ang + (ctx.rng() - 0.5) * 0.3));
+        trail.add(box(0.85 + ctx.rng() * 0.5, 0.06, 0.6 + ctx.rng() * 0.3), 'stoneDark',
+          mat(px, 0.038, pz, ang + (ctx.rng() - 0.5) * 0.3));
         stones.push([px, pz]);
       }
       // бордюр по краям дороги
@@ -646,7 +669,7 @@ export function createVillage(ctx) {
         const nx = -dz / len, nz = dx / len;
         for (const s of [-1, 1]) {
           trail.add(box(0.5, 0.22, 0.5), 'stone',
-            mat(px + nx * s * 1.35, 0.1, pz + nz * s * 1.35, ang));
+            mat(px + nx * s * 1.5, 0.1, pz + nz * s * 1.5, ang));
         }
       }
     }
@@ -660,7 +683,8 @@ export function createVillage(ctx) {
       const a = Math.atan2(nx - px, nz - pz);
       trail.add(box(0.12, 0.44, 0.56), 'plank', mat(ox, 1.02, oz, a));
     }
-    ctx.scene.add(trail.build(M, null, { name: 'dungeonTrail' }));
+    ctx.scene.add(trail.build(M, null, { name: 'dungeonTrailStones' }));
+    ctx.scene.add(trailGroup);
 
     // указатель на выезде из села — «в скалу» показывает на северо-запад
     {

@@ -493,6 +493,99 @@ function leafCanvas(size = 256, base = 0x4c7a33) {
   return c;
 }
 
+/* ---------- травинки для кустиков газона ---------- */
+function tuftCanvas(size = 64) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  g.fillStyle = '#8fbf58';
+  g.fillRect(0, 0, size, size);
+  for (let i = 0; i < 90; i++) {
+    const x = hash2(i, 3, 11) * size;
+    const h = 6 + hash2(i, 7, 13) * size * 0.7;
+    const w = 1 + hash2(i, 11, 17) * 2;
+    const lean = (hash2(i, 13, 19) - 0.5) * 10;
+    g.fillStyle = `rgba(${120 + hash2(i, 17, 23) * 60 | 0},${170 + hash2(i, 19, 29) * 50 | 0},70,0.85)`;
+    g.beginPath();
+    g.moveTo(x - w, size);
+    g.quadraticCurveTo(x + lean * 0.5, size - h * 0.6, x + lean, size - h);
+    g.quadraticCurveTo(x + lean * 0.5 + w, size - h * 0.6, x + w, size);
+    g.closePath();
+    g.fill();
+  }
+  return c;
+}
+
+/* ---------- кора: вертикальные волокна, борозды и сучки ---------- */
+function barkCanvas(size = 256, base = 0x4b3524) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  const img = g.createImageData(size, size);
+  const d = img.data;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      // борозды идут вдоль ствола (по вертикали), но слегка волнистые
+      const wob = fbm(x / 26, y / 90, 17, 3) * 10;
+      const groove = Math.abs(Math.sin((x + wob) / size * Math.PI * 13 + fbm(x / 60, y / 140, 29, 2) * 4));
+      const fibre = fbm(x / 3.2, y / 46, 43, 3);
+      const crack = fbm(x / 14, y / 70, 61, 4);
+      let k = 0.52 + groove * 0.34 + (fibre - 0.5) * 0.26;
+      if (crack < 0.34) k *= 0.62;               // глубокие трещины
+      const i = (y * size + x) * 4;
+      d[i] = clamp01((((base >> 16) & 255) / 255) * k) * 255;
+      d[i + 1] = clamp01((((base >> 8) & 255) / 255) * k) * 255;
+      d[i + 2] = clamp01(((base & 255) / 255) * k) * 255;
+      d[i + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  // сучки — тёмные овалы с кольцом вокруг
+  for (let n = 0; n < 7; n++) {
+    const x = hash2(n, 7, 3) * size, y = hash2(n, 11, 5) * size;
+    const r = 3 + hash2(n, 13, 7) * 5;
+    g.fillStyle = 'rgba(30,20,12,0.85)';
+    g.beginPath(); g.ellipse(x, y, r, r * 1.5, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(120,92,62,0.5)';
+    g.lineWidth = 1.4;
+    g.beginPath(); g.ellipse(x, y, r * 1.7, r * 2.3, 0, 0, Math.PI * 2); g.stroke();
+  }
+  return c;
+}
+
+/* ---------- лесная подстилка: мох, прелая листва, земля ---------- */
+function forestFloorCanvas(size = 512) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  const img = g.createImageData(size, size);
+  const d = img.data;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const soil = fbm(x / 22, y / 22, 11, 4);
+      const moss = fbm(x / 34, y / 30, 23, 4);
+      const litter = fbm(x / 7, y / 9, 37, 3);
+      // мох зеленее, подстилка бурая, листва ржавая
+      const green = clamp01((moss - 0.42) * 2.4);
+      let r = lerp(48, 96, soil) * 0.9, gg = lerp(38, 74, soil) * 0.9, b = lerp(28, 48, soil) * 0.9;
+      r = lerp(r, 58, green * 0.8); gg = lerp(gg, 88, green * 0.8); b = lerp(b, 40, green * 0.8);
+      if (litter > 0.62) { r = lerp(r, 118, 0.6); gg = lerp(gg, 86, 0.6); b = lerp(b, 46, 0.6); }
+      const i = (y * size + x) * 4;
+      d[i] = clamp01(r / 255) * 255;
+      d[i + 1] = clamp01(gg / 255) * 255;
+      d[i + 2] = clamp01(b / 255) * 255;
+      d[i + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  // сухие листья и веточки поверх
+  for (let n = 0; n < 260; n++) {
+    const x = hash2(n, 3, 17) * size, y = hash2(n, 5, 19) * size;
+    const a = hash2(n, 9, 23) * Math.PI * 2;
+    const len = 5 + hash2(n, 15, 29) * 11;
+    g.save();
+    g.translate(x, y); g.rotate(a);
+    g.fillStyle = `rgba(${132 + hash2(n, 21, 31) * 50 | 0},${84 + hash2(n, 23, 37) * 40 | 0},40,0.5)`;
+    g.beginPath(); g.ellipse(0, 0, len, len * 0.42, 0, 0, Math.PI * 2); g.fill();
+    g.restore();
+  }
+  return c;
+}
+
 /* ------------------------------------------------------------------ */
 
 export function buildTextures() {
@@ -522,6 +615,10 @@ export function buildTextures() {
     leaf: tex(leafCanvas(256, 0x4c7a33), 1),
     leafAutumn: tex(leafCanvas(256, 0x7a6a28), 1),
     leafPine: tex(leafCanvas(256, 0x2f5230), 1),
+    bark: tex(barkCanvas(256, 0x4b3524), 1),
+    barkBirch: tex(barkCanvas(256, 0xb9b3a4), 1),
+    forestFloor: tex(forestFloorCanvas(512), 96),
+    tuft: tex(tuftCanvas(64), 1),
   };
   // Анизотропия для всех текстур. Без неё мипмапы «кипят» на больших
   // плоскостях (пол, стены, настил) при движении камеры — это и читалось

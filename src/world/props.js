@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Builder, box, cyl, sphere, cone, torus, mat, plane } from './geo.js';
 
 /* ------------------------------------------------------------------ *
@@ -98,19 +99,35 @@ export function scatterFlowers(M, spots, perKind = 90) {
     { mat: M.flowerViolet, c: 0xa98ad0 },
   ];
   const rng = mulberry(913);
-  const petal = new THREE.PlaneGeometry(0.16, 0.16);
-  petal.rotateX(-Math.PI / 2);
-  const stemGeo = cyl(0.012, 0.016, 0.3, 4);
+  // Цветок, а не квадратик: пять лепестков, стебель и сердцевина.
+  // Раньше это был плоский квад, и с высоты он читался как цветной артефакт.
+  const petalParts = [];
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    const p = new THREE.PlaneGeometry(0.075, 0.12);
+    p.rotateX(-Math.PI / 2);
+    p.rotateY(-a);
+    p.translate(Math.cos(a) * 0.05, 0, Math.sin(a) * 0.05);
+    petalParts.push(p);
+  }
+  const core = new THREE.CircleGeometry(0.028, 6);
+  core.rotateX(-Math.PI / 2);
+  core.translate(0, 0.004, 0);
+  petalParts.push(core);
+  const petal = mergeGeometries(petalParts, false);
+  const stemGeo = cyl(0.01, 0.014, 0.22, 4);
+  stemGeo.translate(0, 0.11, 0);
+  const flowerGeo = mergeGeometries([petal.clone().translate(0, 0.22, 0), stemGeo], false);
   kinds.forEach((k, ki) => {
-    const inst = new THREE.InstancedMesh(petal, k.mat, perKind);
+    const inst = new THREE.InstancedMesh(flowerGeo, k.mat, perKind);
     const dummy = new THREE.Object3D();
     const col = new THREE.Color(k.c);
     for (let i = 0; i < perKind; i++) {
       const s = spots[(i * 3 + ki) % spots.length];
       const a = rng() * Math.PI * 2, r = rng() * s.r;
-      dummy.position.set(s.x + Math.cos(a) * r, 0.26 + rng() * 0.16, s.z + Math.sin(a) * r);
-      dummy.rotation.set((rng() - 0.5) * 0.5, rng() * Math.PI, (rng() - 0.5) * 0.5);
-      dummy.scale.setScalar(0.8 + rng() * 0.7);
+      dummy.position.set(s.x + Math.cos(a) * r, 0, s.z + Math.sin(a) * r);
+      dummy.rotation.set((rng() - 0.5) * 0.3, rng() * Math.PI, (rng() - 0.5) * 0.3);
+      dummy.scale.setScalar(0.8 + rng() * 0.6);
       dummy.updateMatrix();
       inst.setMatrixAt(i, dummy.matrix);
       inst.setColorAt(i, col);

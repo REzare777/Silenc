@@ -58,15 +58,20 @@ function addWindow(B, x, y, z, w = 0.85, h = 1.0, facing = 'z', lit = true) {
   const frame = 'timber';
   const dp = 0.26;   // глубина откоса
   if (facing === 'z') {
+    // Направление наружу: для северного фасада (z > 0) откос и стекло
+    // зеркалятся. Раньше стекло всегда смотрело в −Z, и на северной стене
+    // окно выглядело пустой рамой — сквозь него было видно пустоту.
+    const north = z > 0;
+    const s = north ? 1 : -1;
     // косяки (в глубину) и переплёты
-    B.put(frame, 0.13, h + 0.26, dp, x - w / 2 - 0.065, y, z - dp / 2 + 0.04);
-    B.put(frame, 0.13, h + 0.26, dp, x + w / 2 + 0.065, y, z - dp / 2 + 0.04);
-    B.put(frame, w + 0.26, 0.13, dp, x, y + h / 2 + 0.065, z - dp / 2 + 0.04);
+    B.put(frame, 0.13, h + 0.26, dp, x - w / 2 - 0.065, y, z + s * (dp / 2 - 0.04));
+    B.put(frame, 0.13, h + 0.26, dp, x + w / 2 + 0.065, y, z + s * (dp / 2 - 0.04));
+    B.put(frame, w + 0.26, 0.13, dp, x, y + h / 2 + 0.065, z + s * (dp / 2 - 0.04));
     // подоконник шире и выступает
-    B.put(frame, w + 0.4, 0.11, dp + 0.12, x, y - h / 2 - 0.09, z - dp / 2 + 0.02);
+    B.put(frame, w + 0.4, 0.11, dp + 0.12, x, y - h / 2 - 0.09, z + s * (dp / 2 - 0.02));
     // стекло — в глубине откоса
     B.add(new THREE.PlaneGeometry(w, h), lit ? 'windowLit' : 'windowDark',
-      mat(x, y, z - 0.055, Math.PI));
+      mat(x, y, z + s * 0.055, north ? 0 : Math.PI));
   } else {
     const right = x > 0;
     const ry = right ? Math.PI / 2 : -Math.PI / 2;
@@ -219,6 +224,9 @@ export function cottage(M, opts = {}) {
   if (chimney) addChimney(B, w * 0.28, d * 0.16, roofBase + roofH + 1.1, roofBase);
 
   if (porch) {
+    // Каменный цоколь: без него настил и ступень «висели» в воздухе.
+    B.put('stone', doorW + 1.4, 0.36, 1.0, dx, 0.18, -d / 2 - 0.62);
+    B.put('stone', doorW + 0.5, 0.14, 0.44, dx, 0.07, -d / 2 - 1.28);
     B.put('plank', doorW + 1.4, 0.12, 1.0, dx, 0.42, -d / 2 - 0.62);
     B.put('plank', doorW + 0.5, 0.14, 0.44, dx, 0.21, -d / 2 - 1.28);
     B.put('timber', 0.12, 2.28, 0.12, dx - (doorW + 1.0) / 2, 1.7, -d / 2 - 0.98);
@@ -254,43 +262,58 @@ export function cottage(M, opts = {}) {
 }
 
 /* ---------------------------- таверна ---------------------------- */
+/**
+ * Таверна: фасад снаружи и интерьер (см. `world/tavern.js`) — одно и то же
+ * здание. Размеры и окна совпадают: 15 × 18 м, южный фасад с дверью
+ * по центру и двумя окнами, три высоких окна на северной стороне
+ * (по одному на каждую комнату-нишу) и одно высокое окно над баром.
+ */
 export function tavern(M, opts = {}) {
-  const { w = 13, d = 12, h = 3.4, roofH = 3.2 } = opts;
+  const { w = 15, d = 18, h = 3.6, roofH = 3.4 } = opts;
   const B = new Builder();
   const wallH = h * 1.85;
 
   B.put('stone', w + 0.3, 0.6, d + 0.3, 0, 0.3, 0, 1.1);
-  B.put('plasterWarm', w, wallH, d, 0, 0.55 + wallH / 2, 0, 2.4);
+  B.put('tavernWall', w, wallH, d, 0, 0.55 + wallH / 2, 0, 2.4);
   timberFrame(B, w, wallH, d, 'timber', [-w / 2 + 0.95, w / 2 - 0.95]);
 
   // второй этаж — overhang
-  B.put('plasterWarm', w + 0.3, 0.26, d + 0.3, 0, 0.55 + wallH - 0.13, 0, 2.4);
+  B.put('tavernWall', w + 0.3, 0.26, d + 0.3, 0, 0.55 + wallH - 0.13, 0, 2.4);
   B.put('timber', w + 0.36, 0.2, d + 0.36, 0, 0.55 + wallH - 0.32, 0);
   B.put('timber', w + 0.36, 0.2, d + 0.36, 0, 0.55 + wallH + 0.05, 0);
 
-  // дверь
-  const dx = -w * 0.3;
+  // дверь — по центру южного фасада, как и дверь внутри
+  const dx = 0;
   B.put('timber', 0.18, 2.3, 0.26, dx - 0.78, 1.7, -d / 2 - 0.08);
   B.put('timber', 0.18, 2.3, 0.26, dx + 0.78, 1.7, -d / 2 - 0.08);
   B.put('timber', 1.9, 0.2, 0.26, dx, 2.85, -d / 2 - 0.08);
   B.put('plank', 1.35, 2.15, 0.12, dx, 1.62, -d / 2 - 0.15);
   B.put('iron', 0.1, 0.1, 0.07, dx + 0.45, 1.45, -d / 2 - 0.22);
   B.put('iron', 0.1, 0.1, 0.07, dx + 0.45, 2.05, -d / 2 - 0.22);
-  B.put('stone', 2.2, 0.16, 1.0, dx, 0.6, -d / 2 - 0.42);
+  // порог и ступень — на каменном цоколе (иначе плита висела в воздухе)
+  B.put('stone', 2.6, 0.47, 0.9, dx, 0.235, -d / 2 - 0.55);
+  B.put('stone', 2.6, 0.24, 0.6, dx, 0.12, -d / 2 - 1.25);
 
-  // окна
-  // окна: нижний ряд — равномерный ритм по фасаду, верхний — те же линии
-  const frontXs = [-w * 0.10, w * 0.08, w * 0.26];
-  for (const fx of frontXs) addWindow(B, fx, 2.0, -d / 2 - 0.02, 0.98, 1.12, 'z', true);
-  addWindow(B, w / 2 + 0.02, 2.0, 1.2, 1.0, 1.15, 'x', true);
-  addWindow(B, -w / 2 - 0.02, 2.0, 1.2, 1.0, 1.15, 'x', true);
+  /* Окна фасада — те же места, что и окна внутри (см. world/tavern.js):
+     • юг (вход):  x = ±3.5,  y = 1.5   — нижний ряд зала;
+     • юг (галерея): x = -2.6 / 0 / 2.6, y = 5.09 — окна второго этажа;
+     • север:      x = -1.15 / 2.25 / 5.5, y = 5.5 — по одному на каждую нишу;
+     • восток:     z = -3.6, y = 5.2     — высокое окно над стойкой.
+     На западной стене вместо окон — труба очага и труба кухонной печи. */
   const upY = 0.55 + wallH - 1.75;           // верхний ряд — под карнизом второго этажа
-  for (const fx of frontXs) addWindow(B, fx, upY, -d / 2 - 0.02, 0.92, 1.06, 'z', true);
-  addWindow(B, w / 2 + 0.02, upY, d * 0.2, 0.9, 1.05, 'x', true);
-  addWindow(B, -w / 2 - 0.02, upY, d * 0.2, 0.9, 1.05, 'x', true);
+  for (const fx of [-3.5, 3.5]) addWindow(B, fx, 1.5, -d / 2 - 0.02, 1.3, 1.7, 'z', true);
+  for (const fx of [-2.6, 0, 2.6]) addWindow(B, fx, upY, -d / 2 - 0.02, 0.95, 1.1, 'z', true);
+  for (const fx of [-1.15, 2.25, 5.5]) addWindow(B, fx, 5.5, d / 2 + 0.02, 1.2, 1.5, 'z', true);
+  addWindow(B, w / 2 + 0.02, 5.2, -3.6, 1.2, 1.5, 'x', true);
+
+  // труба очага (западная стена) и кухонной печи (северная) — как в интерьере
+  B.put('stoneDark', 1.5, 2.2, 1.1, -w / 2 + 0.42, 0.55 + wallH - 1.1, 0, 1.3);
+  B.put('stoneDark', 1.7, 0.24, 1.3, -w / 2 + 0.42, 0.55 + wallH + 0.12, 0, 1.3);
+  B.put('stoneDark', 1.1, 1.8, 1.0, -4.6, 0.55 + wallH - 0.9, d / 2 - 0.42, 1.3);
+  B.put('stoneDark', 1.3, 0.24, 1.2, -4.6, 0.55 + wallH + 0.12, d / 2 - 0.42, 1.3);
 
   const roofBase = 0.55 + wallH;
-  addRoof(B, w, d, roofH, 'tile', 'plasterWarm', 0.5, true, roofBase);
+  addRoof(B, w, d, roofH, 'tile', 'tavernWall', 0.5, true, roofBase);
   addChimney(B, w * 0.3, d * 0.2, roofBase + roofH + 2.0, roofBase);
 
   // вывеска на кронштейне — прямо над дверью, чтобы таверну было узнать

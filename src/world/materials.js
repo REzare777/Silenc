@@ -16,6 +16,9 @@ export function buildMaterials(T) {
     plaster: two(T.plaster),
     plasterWarm: two(T.plasterWarm),
     plasterGrey: two(T.plasterGrey),
+    // стены трактира: заметно теплее и насыщеннее, чем у остальных домов,
+    // чтобы фасад не терялся среди серых фахверковых стен
+    tavernWall: two(T.plasterWarm, { color: 0xe6c79b }),
     timber: two(T.wood),
     timberLight: two(T.woodLight),
     oakDoor: std(T.wood, { color: 0xd0a670, roughness: 0.72, metalness: 0.05 }),
@@ -32,13 +35,18 @@ export function buildMaterials(T) {
     leaf: std(T.leaf, { roughness: 0.95 }),
     leafAutumn: std(T.leafAutumn, { roughness: 0.95 }),
     leafPine: std(T.leafPine, { roughness: 0.95 }),
+    bark: std(T.bark, { roughness: 0.98 }),
+    barkBirch: std(T.barkBirch, { roughness: 0.9 }),
+    forestFloor: std(T.forestFloor, { roughness: 1.0 }),
 
     // безтекстурные
     windowLit: new THREE.MeshStandardMaterial({
       map: T.windowLit, emissiveMap: T.windowLit, emissive: 0xffb055, emissiveIntensity: 2.6,
       roughness: 0.4, metalness: 0,
+      // двустороннее стекло: иначе окно с «не той» стороны выглядит пустой рамой
+      side: THREE.DoubleSide,
     }),
-    windowDark: std(T.windowDark, { roughness: 0.35, metalness: 0.1 }),
+    windowDark: std(T.windowDark, { roughness: 0.35, metalness: 0.1, side: THREE.DoubleSide }),
     glass: new THREE.MeshStandardMaterial({
       color: 0x9fc4cf, roughness: 0.12, metalness: 0.1, transparent: true, opacity: 0.45,
     }),
@@ -63,7 +71,7 @@ export function buildMaterials(T) {
     greenCloth: new THREE.MeshStandardMaterial({ color: 0x5c7245, roughness: 1 }),
     skin: new THREE.MeshStandardMaterial({ color: 0xd8a887, roughness: 0.8 }),
     dark: new THREE.MeshStandardMaterial({ color: 0x2a231d, roughness: 0.9 }),
-    foliageInstanced: std(T.leaf, { color: 0x93b158 }),
+    foliageInstanced: std(T.tuft, { color: 0xffffff, roughness: 1 }),
     flowerWhite: new THREE.MeshStandardMaterial({ color: 0xf6efd8, roughness: 0.9, side: THREE.DoubleSide }),
     flowerYellow: new THREE.MeshStandardMaterial({ color: 0xf3c743, roughness: 0.9, side: THREE.DoubleSide }),
     flowerViolet: new THREE.MeshStandardMaterial({ color: 0xa482c9, roughness: 0.9, side: THREE.DoubleSide }),

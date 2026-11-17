@@ -38,8 +38,29 @@ function pathMat(tex, rx, ry, color = 0xffffff) {
   t.needsUpdate = true;
   t.repeat.set(rx, ry);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  return new THREE.MeshStandardMaterial({ map: t, roughness: 0.95, color });
+  return new THREE.MeshStandardMaterial({
+    map: t, roughness: 0.95, color,
+    // дорожки лежат сантиметрами выше земли — polygonOffset гарантирует,
+    // что в местах пересечения не возникает z-fighting («фризит»)
+    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
+  });
 }
+
+/**
+ * Высота слоя дорожки над землёй.
+ *
+ * Дорожки, площадь и лесная подстилка лежат на разных высотах: разница
+ * меньше сантиметра при больших плоскостях приводила к мерцанию
+ * («фризиту») в местах пересечения.
+ */
+export const PATH_Y = {
+  ground: 0,
+  forestFloor: 0.012,
+  main: 0.032,
+  trail: 0.05,
+  cross: 0.07,
+  plaza: 0.09,
+};
 
 /**
  * Земля и холмы по краю карты.
@@ -73,24 +94,25 @@ export function addGround(ctx) {
 export function addRoads(ctx) {
   const main = new THREE.Mesh(new THREE.PlaneGeometry(7.4, 215), pathMat(ctx.T.dirt, 4, 92));
   main.rotation.x = -Math.PI / 2;
-  main.position.set(0, 0.015, 0);
+  main.position.set(0, PATH_Y.main, 0);
   main.receiveShadow = true;
   ctx.scene.add(main);
 
   const cross = new THREE.Mesh(new THREE.PlaneGeometry(175, 5.6), pathMat(ctx.T.dirt, 62, 3));
   cross.rotation.x = -Math.PI / 2;
-  cross.position.set(0, 0.02, 0);
+  cross.position.set(0, PATH_Y.cross, 0);
   cross.receiveShadow = true;
   ctx.scene.add(cross);
 
   const plaza = new THREE.Mesh(new THREE.CircleGeometry(11.5, 48), pathMat(ctx.T.cobble, 4.5, 4.5));
   plaza.rotation.x = -Math.PI / 2;
-  plaza.position.set(0, 0.03, 0);
+  plaza.position.set(0, PATH_Y.plaza, 0);
   plaza.receiveShadow = true;
   ctx.scene.add(plaza);
 
   const paths = [
-    [[-17, -13], [-8, -7]], [[14.5, -8], [7, -4]], [[-11, 8], [-5, 4]],
+    [[-5, -21], [-14, -22.5], [-23.5, -20.2]],   // подход к трактиру с дороги к пещере
+    [[14.5, -8], [7, -4]], [[-11, 8], [-5, 4]],
     [[13, 9], [5, 4]], [[-16, 19], [-7, 8]], [[16, 20], [7, 9]],
     [[-25, -24], [-13, -12]], [[24, -22], [12, -11]], [[-27, 11], [-10, 6]],
     [[28, 13], [10, 6]], [[-10, 29], [-4, 13]], [[11, 30], [4, 13]],
@@ -103,7 +125,7 @@ export function addRoads(ctx) {
     const p = new THREE.Mesh(new THREE.PlaneGeometry(2.5, len), pathMat(ctx.T.dirt, 1, len / 6));
     p.rotation.x = -Math.PI / 2;
     p.rotation.z = -Math.atan2(dx, dz);
-    p.position.set((a[0] + b[0]) / 2, 0.025, (a[1] + b[1]) / 2);
+    p.position.set((a[0] + b[0]) / 2, PATH_Y.trail, (a[1] + b[1]) / 2);
     p.receiveShadow = true;
     ctx.scene.add(p);
   }
