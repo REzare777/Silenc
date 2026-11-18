@@ -21,6 +21,11 @@ const H1 = 4.2;       // высота первого этажа (до насти
 const H2 = 3.0;       // высота верхнего этажа
 const TOP = H1 + H2;  // верх стен
 
+const BACK_DOOR_Z = -6.7;                 // задняя дверь: центр проёма в восточной стене
+const BACK_DOOR_W = 1.2;                  // ширина проёма
+const BACK_DOOR_H = 2.15;                 // высота проёма
+const SEN_X = 7.5;                        // сени: от восточной стены наружу
+const SEN_W = 2.8;                        // ширина сеней
 const GAL_Z = 3.6;                       // край настила галереи
 const NICH_Z = 5.6;                      // стена с дверями: вход в ниши-комнаты
 const HATCH_X1 = -6.05;                  // край проёма (люка) в настиле
@@ -206,14 +211,18 @@ export function buildTavernInterior(M, glowTex) {
     seg(FIRE_Z - OW, FIRE_Z + OW, OH + OW, TOP);
   }
 
-  // ---- восточная стена (+x): полка за баром, окно высоко ----
+  // ---- восточная стена (+x): полка за баром, окно высоко, проём сеней ----
   {
     const x = hw - WALL / 2;
     const w = { z: -3.6, w: 1.2, h: 1.5, y: 5.2 };
     const seg = (z0, z1, y0, y1) => B.put(wallKey, WALL, y1 - y0, z1 - z0,
       x, (y0 + y1) / 2, (z0 + z1) / 2, 1.9);
-    seg(-hd, w.z - w.w / 2, 0, TOP);
+    // проём хозяйственной двери (в сени) — настоящий passage
+    const bz0 = BACK_DOOR_Z - BACK_DOOR_W / 2, bz1 = BACK_DOOR_Z + BACK_DOOR_W / 2;
+    seg(-hd, bz0, 0, TOP);
+    seg(bz1, w.z - w.w / 2, 0, TOP);
     seg(w.z + w.w / 2, hd, 0, TOP);
+    seg(bz0, bz1, BACK_DOOR_H, TOP);            // перемычка над проёмом
     seg(w.z - w.w / 2, w.z + w.w / 2, 0, w.y - w.h / 2);
     seg(w.z - w.w / 2, w.z + w.w / 2, w.y + w.h / 2, TOP);
     B.put(frameKey, WALL + 0.1, 0.16, w.w + 0.24, x, w.y + w.h / 2 + 0.06, w.z, 1.2);
@@ -581,6 +590,9 @@ export function buildTavernInterior(M, glowTex) {
    *  с краном, ящик с припасами и картина на стене.
    * ================================================================ */
   let barExit = null;                // точка перед задней дверью (за стойкой)
+  let backExit = null;               // выход из сеней на улицу
+  let backDoorLeaf = null;           // створка задней двери (её можно отворить)
+  let backDoorCollider = null;       // коллайдер закрытой двери
   {
     const VX = hw - 0.42;             // у восточной стены, за стойкой
     const VZ = -4.25;                // южная часть бара
@@ -635,22 +647,21 @@ export function buildTavernInterior(M, glowTex) {
       colliders.boxes.push({ cx: cx2, cz: cz2, hx: 0.28, hz: 0.34, ang: 0, y0: 0, y1: 0.5 });
     }
 
-    // ---- задняя дверь: бармен уходит домой ----
+    // ---- задняя дверь и сени: бармен уходит домой, игрок выходит сзади ----
     // Раньше бармен просто исчезал на ночь. Теперь сзади стойки есть
-    // настоящая дверь в хозяйскую часть, и он уходит через неё.
-    const DOOR_Z = -6.5;
+    // настоящая дверь в хозяйственные сени, а из сеней — ход на улицу.
+    const DOOR_Z = BACK_DOOR_Z;
     {
       const dx = hw - WALL - 0.04;
-      // проём-наличники
+      // проём-наличники и перемычка
       for (const s2 of [-1, 1]) {
-        B.put('timber', 0.2, 2.3, 0.22, dx - 0.02, 1.15, DOOR_Z + s2 * 0.62, 1.2);
+        B.put('timber', 0.22, BACK_DOOR_H + 0.3, 0.2, dx - 0.02,
+          (BACK_DOOR_H + 0.3) / 2, DOOR_Z + s2 * (BACK_DOOR_W / 2 + 0.1), 1.2);
       }
-      B.put('timber', 0.2, 0.22, 1.45, dx - 0.02, 2.25, DOOR_Z, 1.2);
-      // створка
-      B.put('oakDoor', 0.1, 2.05, 1.02, dx - 0.04, 1.02, DOOR_Z, 1.4);
-      for (const by of [0.35, 1.7]) {
-        B.put('iron', 0.06, 0.12, 1.0, dx - 0.1, by, DOOR_Z, 1);
-      }
+      B.put('timber', 0.22, 0.22, BACK_DOOR_W + 0.4, dx - 0.02, BACK_DOOR_H + 0.11, DOOR_Z, 1.2);
+      // дубовая щеколда на косяке
+      B.put('iron', 0.16, 0.13, 0.46, dx - 0.14, 1.02, DOOR_Z + BACK_DOOR_W / 2 + 0.04, 1);
+      // кольцо на створке
       B.add(torus(0.09, 0.025, 5, 10), 'iron', mat(dx - 0.12, 1.02, DOOR_Z + 0.38, 0, Math.PI / 2));
       // половик и крючок с плащом
       B.put('cloth', 0.5, 0.03, 0.8, dx - 0.62, 0.02, DOOR_Z, 1.2);
@@ -658,6 +669,26 @@ export function buildTavernInterior(M, glowTex) {
       // ведро и круглая щётка у двери
       B.add(cyl(0.17, 0.2, 0.28, 10), 'plank', mat(dx - 0.75, 0.14, DOOR_Z + 0.75));
       B.add(cyl(0.02, 0.02, 0.7, 6), 'timber', mat(dx - 0.75, 0.6, DOOR_Z + 0.75, 0.4, 0, 0.2));
+      // створка — отдельная группа: её можно отворить интерактом
+      backDoorLeaf = new THREE.Group();
+      backDoorLeaf.position.set(hw - WALL - 0.03, 0, DOOR_Z - BACK_DOOR_W / 2 + 0.05);
+      {
+        const lb = new Builder();
+        lb.put('oakDoor', 0.09, 2.05, BACK_DOOR_W - 0.12, 0, 1.03, (BACK_DOOR_W - 0.12) / 2, 1.4);
+        for (const by of [0.35, 1.7]) {
+          lb.put('iron', 0.05, 0.12, BACK_DOOR_W - 0.16, -0.05, by, (BACK_DOOR_W - 0.12) / 2, 1);
+        }
+        lb.add(torus(0.09, 0.025, 5, 10), 'iron',
+          mat(-0.07, 1.02, BACK_DOOR_W - 0.34, 0, Math.PI / 2));
+        backDoorLeaf.add(lb.build(MT, null, { name: 'tavernBackDoor' }));
+      }
+      group.add(backDoorLeaf);
+      // коллайдер закрытой створки — при открытии он опускается
+      backDoorCollider = {
+        cx: hw - WALL / 2, cz: DOOR_Z, hx: WALL / 2, hz: BACK_DOOR_W / 2,
+        ang: 0, y0: 0, y1: BACK_DOOR_H,
+      };
+      colliders.boxes.push(backDoorCollider);
       // настенная свеча у задней двери — без неё этот угол тонул в темноте
       {
         const bx = dx - 0.24, bz = DOOR_Z - 0.52;
@@ -673,7 +704,58 @@ export function buildTavernInterior(M, glowTex) {
         group.add(doorGlow);
       }
     }
-    barExit = { x: hw - 1.35, z: DOOR_Z };
+    // ---- сени за восточной стеной: отсюда — выход на улицу ----
+    {
+      const sz0 = DOOR_Z - 1.9, sz1 = DOOR_Z + 1.7;
+      const scx = hw + SEN_W / 2, scz = (sz0 + sz1) / 2;
+      // пол и низкий навес
+      B.put('stone', SEN_W, 0.16, sz1 - sz0, scx, -0.08, scz, 1.6);
+      B.put('plank', SEN_W, 0.14, sz1 - sz0, scx, 2.32, scz, 1.2);
+      // южная и северная стенки сеней
+      B.put('stone', SEN_W, 2.4, 0.3, scx, 1.2, sz0 - 0.15, 1.6);
+      B.put('stone', SEN_W, 2.4, 0.3, scx, 1.2, sz1 + 0.15, 1.6);
+      // восточная стена сеней — с проёмом наружу
+      const ox = hw + SEN_W + 0.15;
+      const oz0 = DOOR_Z - 0.6, oz1 = DOOR_Z + 0.6;
+      B.put('stone', 0.3, 2.4, oz0 - sz0, ox, 1.2, (sz0 + oz0) / 2, 1.6);
+      B.put('stone', 0.3, 2.4, sz1 - oz1, ox, 1.2, (oz1 + sz1) / 2, 1.6);
+      B.put('stone', 0.3, 2.4 - 2.05, oz1 - oz0, ox, 2.05 + (2.4 - 2.05) / 2, DOOR_Z, 1.6);
+      // косяки и створка наружу
+      for (const s2 of [-1, 1]) {
+        B.put('timber', 0.26, 2.2, 0.18, ox, 1.05, DOOR_Z + s2 * 0.66, 1.2);
+      }
+      B.put('timber', 0.26, 0.18, 1.5, ox, 2.16, DOOR_Z, 1.2);
+      B.put('plank', 0.08, 2.0, 1.06, ox + 0.14, 1.0, DOOR_Z, 1.3);
+      B.add(torus(0.08, 0.022, 5, 10), 'iron', mat(ox + 0.2, 1.0, DOOR_Z + 0.38, 0, Math.PI / 2));
+      // ступень наружу
+      B.put('stone', 0.7, 0.18, 1.6, ox + 0.45, 0.09, DOOR_Z, 1.2);
+      // бочки, дрова и полка в сенях
+      B.add(cyl(0.36, 0.4, 0.78, 12), 'plank', mat(hw + 0.75, 0.39, sz0 + 0.7));
+      B.add(torus(0.37, 0.035, 5, 14), 'iron', mat(hw + 0.75, 0.5, sz0 + 0.7, 0, Math.PI / 2));
+      B.add(cyl(0.34, 0.38, 0.72, 12), 'plank', mat(hw + 0.8, 0.36, sz0 + 1.65));
+      for (let i = 0; i < 5; i++) {
+        B.add(cyl(0.09, 0.09, 0.7, 6), 'timber',
+          mat(hw + 0.55 + (i % 2) * 0.2, 0.14 + Math.floor(i / 2) * 0.18, sz1 - 0.7, 0, 0, Math.PI / 2));
+      }
+      B.put('plank', 0.34, 0.08, 1.4, hw + 0.25, 1.55, scz, 1.2);
+      for (let i = 0; i < 3; i++) {
+        B.add(cyl(0.09, 0.1, 0.24, 8), 'greenCloth',
+          mat(hw + 0.25, 1.71, scz - 0.45 + i * 0.45));
+      }
+      // коллайдеры сеней
+      colliders.boxes.push({ cx: scx, cz: sz0 - 0.15, hx: SEN_W / 2, hz: 0.15, ang: 0 });
+      colliders.boxes.push({ cx: scx, cz: sz1 + 0.15, hx: SEN_W / 2, hz: 0.15, ang: 0 });
+      colliders.boxes.push({ cx: ox, cz: (sz0 + oz0) / 2, hx: 0.15, hz: (oz0 - sz0) / 2, ang: 0 });
+      colliders.boxes.push({ cx: ox, cz: (oz1 + sz1) / 2, hx: 0.15, hz: (sz1 - oz1) / 2, ang: 0 });
+      colliders.boxes.push({ cx: hw + 0.75, cz: sz0 + 0.7, hx: 0.4, hz: 0.4, ang: 0 });
+      // свет в сенях — тёплый, от фонаря над дверью
+      const senLight = new THREE.PointLight(0xffb066, 1.15, 8.0, 1.9);
+      senLight.position.set(hw + 0.6, 2.1, DOOR_Z);
+      group.add(senLight);
+      // точка выхода на улицу (за сенями)
+      backExit = { x: hw + SEN_W + 0.9, z: DOOR_Z };
+    }
+    barExit = { x: hw + 0.85, z: DOOR_Z };
 
     // ---- картина на восточной стене: «Уставший вепрь» ----
     {
@@ -1610,7 +1692,12 @@ export function buildTavernInterior(M, glowTex) {
   colliders.boxes.push({ cx: 0, cz: -hd + WALL / 2, hx: hw, hz: WALL / 2, ang: 0, y0: 0, y1: TOP });
   colliders.boxes.push({ cx: 0, cz: hd - WALL / 2, hx: hw, hz: WALL / 2, ang: 0, y0: 0, y1: TOP });
   colliders.boxes.push({ cx: -hw + WALL / 2, cz: 0, hx: WALL / 2, hz: hd, ang: 0, y0: 0, y1: TOP });
-  colliders.boxes.push({ cx: hw - WALL / 2, cz: 0, hx: WALL / 2, hz: hd, ang: 0, y0: 0, y1: TOP });
+  // восточная стена — с проёмом хозяйственной двери
+  {
+    const bz0 = BACK_DOOR_Z - BACK_DOOR_W / 2, bz1 = BACK_DOOR_Z + BACK_DOOR_W / 2;
+    colliders.boxes.push({ cx: hw - WALL / 2, cz: (-hd + bz0) / 2, hx: WALL / 2, hz: (bz0 + hd) / 2, ang: 0, y0: 0, y1: TOP });
+    colliders.boxes.push({ cx: hw - WALL / 2, cz: (bz1 + hd) / 2, hx: WALL / 2, hz: (hd - bz1) / 2, ang: 0, y0: 0, y1: TOP });
+  }
   // очаг
   colliders.boxes.push({ cx: FIRE_X - 0.2, cz: FIRE_Z, hx: 0.62, hz: 1.25, ang: 0, y0: 0, y1: 2.4 });
   // лестница — препятствие снизу, но не мешает подъёму (подъём идёт мимо resolve)
@@ -1735,6 +1822,26 @@ export function buildTavernInterior(M, glowTex) {
      * @type {{x: number, z: number}}
      */
     barExit,
+    /**
+     * Выход из сеней на улицу с задней стороны таверны.
+     * @type {{x: number, z: number}}
+     */
+    backExit,
+    /**
+     * Отворить заднюю дверь: створка отходит, коллайдер опускается.
+     * @returns {boolean} true, если дверь была открыта
+     */
+    openBackDoor() {
+      if (!backDoorLeaf) return false;
+      if (backDoorLeaf.rotation.y !== 0) return false;
+      backDoorLeaf.rotation.y = 1.25;
+      if (backDoorCollider) backDoorCollider.y1 = -1;
+      return true;
+    },
+    /** Открыта ли задняя дверь. */
+    isBackDoorOpen() {
+      return !!backDoorLeaf && backDoorLeaf.rotation.y !== 0;
+    },
     /**
      * Комнаты второго этажа: центр, размер и название.
      * Используются, чтобы поставить в каждой интеракт «переночевать».

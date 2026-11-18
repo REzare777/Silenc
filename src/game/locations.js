@@ -133,8 +133,8 @@ export function createLocations(ctx) {
    *
    * @param {string} next 'village' | 'barn' | 'tavern'
    */
-  function setLocation(next) {
-    if (current === next) return;
+  function setLocation(next, where = null) {
+    if (current === next && !(next === 'church' && where === 'back')) return;
     const prev = current;
     current = next;
     ctx.loc = current;
@@ -162,7 +162,9 @@ export function createLocations(ctx) {
     ctx.player.dynamicCircles = L ? [] : ctx.animalCircles;
 
     if (L) {
-      ctx.player.teleport(L.spawn.x, L.spawn.z, L.spawn.yaw);
+      // в храм можно войти с юга (через башню) и с севера (через заднюю дверь)
+      const sp = (inChurch && where === 'back' && L.spawnBack) ? L.spawnBack : L.spawn;
+      ctx.player.teleport(sp.x, sp.z, sp.yaw);
       ctx.player.y = 0.02; ctx.player.groundY = 0.02; ctx.player.vy = 0;
       ctx.ui.toast(inDungeon
         ? 'Подземелье. Холодный свет кристаллов и полная тишина. Вглубь — по лестнице в шахте.'
@@ -185,11 +187,15 @@ export function createLocations(ctx) {
         const gate = ctx.doors.dungeon;
         ctx.player.teleport(gate.x, gate.z, gate.ry);
       } else if (prev === 'church') {
-        const door = ctx.doors.church;
+        // выход через заднюю дверь нефа — в задний двор, иначе к башне
+        const door = where === 'churchBack' && ctx.doors.churchBack
+          ? ctx.doors.churchBack : ctx.doors.church;
         ctx.player.teleport(door.x, door.z, door.ry);
       } else if (prev === 'tavern') {
-        const door = ctx.doors.tavern;
-        ctx.player.teleport(door.x, door.z, ctx.doors.tavernRy);
+        // выход через сени — к задней двери таверны, иначе к фасаду
+        const back = where === 'tavernBack' && ctx.doors.tavernBack;
+        const door = back ? ctx.doors.tavernBack : ctx.doors.tavern;
+        ctx.player.teleport(door.x, door.z, back ? door.ry : ctx.doors.tavernRy);
       } else {
         const barnExit = ctx.doors.barnExit;
         const rx = barnExit.x + (-5.4) * Math.sin(barnExit.ry);
@@ -266,8 +272,21 @@ export function createLocations(ctx) {
     () => ctx.ui.toast('Струны звонкие, но пыльные — их давно не играли.'), 'tavern');
   add(new THREE.Vector3(-2.6, 1.0, 2.0), 2.2, 'Сесть за стол',
     () => ctx.ui.toast('Дуб крепкий, скола на нём по кругу. Хорошее место.'), 'tavern');
-  add(new THREE.Vector3(tavernLoc.barExit.x, 1.4, tavernLoc.barExit.z), 2.2, 'Задняя дверь',
-    () => ctx.ui.toast('Через эту дверь бармен уходит домой. На засовe — дубовая щеколда.'), 'tavern');
+  // задняя дверь за стойкой: её можно отворить и выйти в сени
+  add(new THREE.Vector3(tavernLoc.barExit.x - 1.05, 1.4, tavernLoc.barExit.z), 2.2,
+    'Открыть заднюю дверь', () => {
+      if (tavernLoc.openBackDoor()) {
+        ctx.ui.toast('Щеколда щёлкнула, створка отошла. За дверью — сени с бочками и дровами.', 3200);
+      } else {
+        ctx.ui.toast('Дверь уже открыта. В сенях пахнет дровами и пролитым элем.', 2600);
+      }
+    }, 'tavern');
+  // выход из сеней на улицу — с задней стороны таверны
+  add(new THREE.Vector3(tavernLoc.backExit.x - 0.5, 1.4, tavernLoc.backExit.z), 2.4,
+    'Выйти на улицу', () => {
+      ctx.ui.toast('Ты выходишь в задний двор таверны. За забором — тропа к мельнице.', 2800);
+      setLocation('village', 'tavernBack');
+    }, 'tavern');
 
   /* ---- дома: выход и детали ---- */
   homeLocs.forEach((loc, i) => {
@@ -280,9 +299,23 @@ export function createLocations(ctx) {
     });
   });
 
-  /* ---- храм: выход и детали ---- */
+  /* ---- храм: выход, колокол и детали ---- */
   add(new THREE.Vector3(churchLoc.exitDoor.x, 1.4, churchLoc.exitDoor.z), 2.6,
     'Выйти из храма', () => setLocation('village'), 'church');
+  // задняя дверь нефа: рабочий выход в задний двор
+  add(new THREE.Vector3(churchLoc.backExit.x, 1.4, churchLoc.backExit.z), 2.6,
+    'Открыть тяжёлую дверь', () => {
+      ctx.ui.toast('Засов откинут. За дверью — задний двор и тропа вниз, к долине.', 3200);
+      setLocation('village', 'churchBack');
+    }, 'church');
+  // колокол — только наверху, в самой колокольне: с пола он недоступен
+  const bellAct = add(churchLoc.bellPoint.clone(), 2.6, 'Ударить в колокол', () => {
+    churchLoc.ringBell();
+    if (ctx.ambience && ctx.ambience.bell) ctx.ambience.bell();
+    ctx.ui.toast('Колокол над долиной — глухой и тёплый. Звук уходит далеко вниз.', 3200);
+  }, 'church');
+  bellAct.y = 4.6;          // на каком уровне ног срабатывает интеракт
+  bellAct.yTol = 1.6;
   churchLoc.spots.forEach((spot, k) => {
     add(spot[0], 2.3, spot[1], () => {
       ctx.ui.toast(churchLoc.lines[k % churchLoc.lines.length], 3600);

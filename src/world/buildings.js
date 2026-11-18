@@ -583,6 +583,40 @@ export function tavern(M, opts = {}) {
   B.put('timber', 0.16, 0.44, 0.42, benchX + 0.85, 0.22, -d / 2 - 0.5);
   B.put('plank', 2.2, 0.1, 0.9, benchX, 0.42, -d / 2 - 0.55);
 
+  // ---- задняя дверь сбоку (восточная стена) ----
+  // Через неё хозяйство выходит на улицу: из зала — в сени, из сеней — наружу.
+  {
+    const bz = -6.7, bx = w / 2;
+    // косяки и перемычка
+    for (const s2 of [-1, 1]) {
+      B.put('timber', 0.26, 2.3, 0.2, bx + 0.04, 1.35, bz + s2 * 0.78, 1.2);
+    }
+    B.put('timber', 0.26, 0.22, 1.76, bx + 0.04, 2.5, bz, 1.2);
+    // створка с досками и кольцом
+    B.put('plank', 0.12, 2.15, 1.38, bx + 0.12, 1.35, bz, 1.3);
+    for (const by of [0.55, 2.1]) {
+      B.put('timber', 0.16, 0.14, 1.36, bx + 0.17, by, bz, 1.2);
+    }
+    B.add(torus(0.11, 0.028, 5, 12), 'iron', mat(bx + 0.2, 1.35, bz - 0.5, 0, Math.PI / 2));
+    B.put('iron', 0.2, 0.3, 0.07, bx + 0.16, 1.35, bz - 0.5, 1);
+    // козырёк над дверью на кронштейнах
+    B.put('tile', 1.15, 0.16, 1.95, bx + 0.52, 2.72, bz, 1.2);
+    for (const s2 of [-1, 1]) {
+      B.add(box(0.12, 0.55, 0.12, 1), 'timber', mat(bx + 0.42, 2.45, bz + s2 * 0.8));
+    }
+    // ступень и бочки у входа
+    B.put('stone', 0.9, 0.2, 1.9, bx + 0.55, 0.1, bz, 1.2);
+    B.add(cyl(0.3, 0.27, 0.78, 12), 'oakDoor', mat(bx + 0.75, 0.39, bz + 1.35));
+    for (const yy of [0.18, 0.6]) {
+      B.add(cyl(0.315, 0.315, 0.06, 12), 'iron', mat(bx + 0.75, yy, bz + 1.35));
+    }
+    B.add(cyl(0.27, 0.27, 0.05, 12), 'plank', mat(bx + 0.75, 0.8, bz + 1.35));
+    // фонарь на кронштейне
+    B.put('iron', 0.1, 0.1, 0.5, bx + 0.25, 2.55, bz - 0.95, 1);
+    B.add(cyl(0.15, 0.19, 0.22, 8), 'iron', mat(bx + 0.45, 2.4, bz - 0.95));
+    B.add(cyl(0.12, 0.08, 0.14, 8), 'lampGlass', mat(bx + 0.45, 2.23, bz - 0.95));
+  }
+
   const group = B.build(M, null, { name: 'tavern' });
   const out = { group, colliders: [], circles: [], platforms: [], windowLights: [] };
   out.place = (px, pz, ry = 0) => {

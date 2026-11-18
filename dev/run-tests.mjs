@@ -39,7 +39,7 @@ const ALL = [
   'animals_collide', 'dog_test', 'fish_test', 'inv_test', 'broken_normals',
   'npc_test', 'dungeon_test', 'single_check',
   'house_check', 'church_check', 'time_check', 'town_layout',
-  'round36_check',
+  'round36_check', 'r37_check',
 ];
 
 /** Быстрый набор — для проверки «ничего не сломалось» после правки. */

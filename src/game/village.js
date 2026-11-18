@@ -143,6 +143,11 @@ export function createVillage(ctx) {
     const t = tavern(ctx.M, {});
     const tavernRy = ryToFace([LAYOUT.tavern.x, LAYOUT.tavern.z], [0, 0]);
     const tPlaced = place(t, LAYOUT.tavern.x, LAYOUT.tavern.z, tavernRy);
+    // выход через заднюю дверь таверны (сбоку, у восточной стены)
+    {
+      const back = facadePos(LAYOUT.tavern.x, LAYOUT.tavern.z, tavernRy, 8.5, -6.7, 0);
+      ctx.doors.tavernBack = { x: back.x, z: back.z, ry: tavernRy };
+    }
     for (const p of (tPlaced.windowLights || [])) {
       ctx.roomLights.push({ pos: p, lit: true, power: 1, flicker: 3, baseIntensity: 1.6, distance: 8 });
     }
@@ -172,10 +177,6 @@ export function createVillage(ctx) {
     const ch = church(ctx.M, {});
     const chRy = ryToFace([LAYOUT.church.x, LAYOUT.church.z], [0, 0]);
     place(ch, LAYOUT.church.x, LAYOUT.church.z, chRy);
-    ctx.interactables.push({
-      pos: facadePos(3, 44, chRy, 0, -11.1, 2.0), radius: 3.6, label: 'Позвонить в колокол',
-      act: () => { ctx.ambience.bell(); ctx.ui.toast('Колокол над долиной — глухой и тёплый.'); },
-    });
     // вход в храм — у двери колокольни (южный фасад)
     addInteract(
       facadePos(3, 44, chRy, 0, -11.9, 1.6), 2.6, 'Войти в храм',
@@ -186,10 +187,16 @@ export function createVillage(ctx) {
       const out = facadePos(3, 44, chRy, 0, -13.4, 0);
       ctx.doors.church = { x: out.x, z: out.z, ry: chRy };
     }
+    // задняя дверь нефа — рабочая: через неё можно войти в храм
     addInteract(
-      facadePos(3, 44, chRy, 0, 8.9, 1.6), 2.4, 'Открыть тяжёлую дверь',
-      () => ctx.ui.toast('Створка тяжёлая, с железными обвязками. За ней — кладовая и темнота. Заперто.'),
+      facadePos(3, 44, chRy, 0, 8.9, 1.6), 2.6, 'Войти через заднюю дверь',
+      () => ctx.systems.locations.setLocation('church', 'back'),
     );
+    {
+      // точка выхода через заднюю дверь — в заднем дворе у северного фасада
+      const back = facadePos(3, 44, chRy, 0, 10.1, 0);
+      ctx.doors.churchBack = { x: back.x, z: back.z, ry: chRy };
+    }
     // фонарь у задней двери — иначе створку не видно
     {
       const lp = facadePos(3, 44, chRy, 2.35, 8.95, 0);

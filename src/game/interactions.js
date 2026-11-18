@@ -53,8 +53,12 @@ export function createInteractions(ctx) {
    */
   function nearest() {
     let best = null, bestD = 1e9;
+    // высота ног игрока: интеракт наверху (колокол в башне) не должен
+    // срабатывать, когда игрок стоит внизу, под ним
+    const feet = ctx.player.y + ctx.player.groundY;
     for (const it of ctx.interactables) {
       if ((it.where || 'village') !== ctx.loc) continue;
+      if (it.y !== undefined && Math.abs(feet - it.y) > (it.yTol ?? 1.8)) continue;
       const dx = ctx.player.pos.x - it.pos.x;
       const dz = ctx.player.pos.z - it.pos.z;
       const d = Math.hypot(dx, dz);

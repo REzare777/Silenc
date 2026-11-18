@@ -36,14 +36,14 @@ const res = await page.evaluate(() => {
 
   // свободный проход по проходу: от портала к алтарю
   const p = d.player;
-  p.teleport(0, -6.5, 0);
+  p.teleport(0, -3.0, 0);
   p.y = 0.02; p.groundY = 0.02; p.vy = 0; p.keys.clear();
   p.yaw = Math.PI;                 // смотрим на север, к алтарю
   let reached = false;
-  for (let i = 0; i < 420; i++) {
+  for (let i = 0; i < 600; i++) {
     p.keys.add('KeyW');
     p.update(1 / 60);
-    if (p.pos.z > 5.4) { reached = true; break; }
+    if (p.pos.z > 7.6) { reached = true; break; }
   }
   p.keys.clear();
   out.reachedAltar = reached;
