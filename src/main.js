@@ -594,6 +594,11 @@ function loop() {
     locations.dungeonLoc.update(dt, t);
     locations.sceneDungeon.background.copy(locations.DUNGEON_BG);
   }
+  if (ctx.loc === 'church') {
+    // в храме свечи мерцают, а в лучах от витражей плывут пылинки
+    locations.churchLoc.update(dt, t);
+    locations.sceneChurch.background.copy(locations.CHURCH_BG);
+  }
   if (ctx.loc === 'tavern') {
     // внутри таверны свет ПОСТОЯННЫЙ: своя палитра, не зависит от часов улицы
     locations.tavernLoc.update(dt, t);

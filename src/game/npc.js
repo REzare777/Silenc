@@ -56,6 +56,8 @@ export function createNpc(ctx, cfg) {
     dir: 1,
     /** Ушёл ли по ночи. */
     away: false,
+    /** Идёт ли к двери, чтобы уйти. */
+    leaving: false,
     /** Скорость (для анимации). */
     curSpeed: 0,
     /** Говорит ли сейчас с игроком. */
@@ -90,12 +92,34 @@ export function createNpc(ctx, cfg) {
    * @param {object|null} playerPos где игрок (чтобы смотреть на него)
    */
   function update(dt, t, playerPos = null) {
-    if (npc.away) {
+    if (npc.away && !npc.leaving) {
       model.group.visible = false;
       npc.curSpeed = 0;
       return;
     }
     model.group.visible = true;
+
+    // Уход через дверь: персонаж идёт к своей двери и только там пропадает.
+    if (npc.away && cfg.exit) {
+      const dx = cfg.exit.x - npc.x;
+      const dz = cfg.exit.z - npc.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist < 0.16) {
+        model.group.visible = false;     // ушёл за дверь
+        npc.leaving = false;
+        npc.curSpeed = 0;
+        return;
+      }
+      const step = Math.min(dist, speed * 2.2 * dt);
+      npc.x += (dx / dist) * step;
+      npc.z += (dz / dist) * step;
+      npc.curSpeed = speed;
+      npc.state = 'walk';
+      turnTo(Math.atan2(dx, dz), dt);
+      model.group.position.x = npc.x;
+      model.group.position.z = npc.z;
+      return;
+    }
 
     let moving = false;
     if (npc.talking) {
@@ -162,11 +186,30 @@ export function createNpc(ctx, cfg) {
    * @param {boolean} away true — персонажа нет на месте
    */
   function setAway(away) {
-    npc.away = !!away;
-    model.group.visible = !npc.away;
-    if (npc.away) {
+    away = !!away;
+    // Состояние не менялось — ничего не трогаем. Раньше здесь каждый кадр
+    // сбрасывалась позиция на первую точку маршрута, и днём персонаж не мог
+    // уйти с маршрута, а ушедший к двери — «откатывался» назад.
+    if (away === npc.away) return;
+    npc.away = away;
+    if (away) {
       npc.talking = false;
       npc.curSpeed = 0;
+      // если указана дверь — персонаж сначала доходит до неё
+      npc.leaving = !!cfg.exit;
+      model.group.visible = true;
+    } else {
+      npc.leaving = false;
+      model.group.visible = true;
+      // вернулся — снова за стойку (на первую точку маршрута)
+      if (route.length) {
+        npc.x = route[0].x;
+        npc.z = route[0].z;
+        npc.point = 0;
+        npc.dir = 1;
+        npc.idleTime = 0;
+        model.group.position.set(npc.x, 0, npc.z);
+      }
     }
   }
 

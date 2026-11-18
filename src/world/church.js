@@ -13,6 +13,7 @@
 
 import * as THREE from 'three';
 import { Builder, box, cyl, sphere, cone, torus, mat, plane } from './geo.js';
+import { Motes } from './particles.js';
 
 const W = 9;        // ширина нефа
 const D = 17;       // длина нефа
@@ -177,21 +178,30 @@ export function buildChurchInterior(M, glowTex) {
   const altar = new THREE.PointLight(0xffb45a, 16, 22, 1.2);
   altar.position.set(0, 2.2, D / 2 - 2.2);
   scene.add(altar);
-  const west = new THREE.PointLight(0x5f9ade, 10, 20, 1.2);
+  const west = new THREE.PointLight(0x5f9ade, 11, 20, 1.2);
   west.position.set(-W / 2 + 1.0, 3.1, -1.2);
   scene.add(west);
-  const east = new THREE.PointLight(0x5f9ade, 10, 20, 1.2);
+  const east = new THREE.PointLight(0x5f9ade, 11, 20, 1.2);
   east.position.set(W / 2 - 1.0, 3.1, 1.2);
   scene.add(east);
-  const gate = new THREE.PointLight(0xffc074, 8, 14, 1.3);
-  gate.position.set(0, 2.6, -D / 2 + 1.2);
-  scene.add(gate);
   // холодный «дневной» свет, падающий сверху через витражи
-  const sky = new THREE.DirectionalLight(0xa8c4e8, 1.1);
+  const sky = new THREE.DirectionalLight(0xa8c4e8, 1.2);
   sky.position.set(-6, 14, 4);
   scene.add(sky);
   scene.add(new THREE.AmbientLight(0x8a8296, 1.5));
   scene.add(new THREE.HemisphereLight(0x8fa8c8, 0x3a3228, 1.1));
+
+  /* ---------------- живая жизнь ----------------
+   *
+   * Раньше храм был «заморожен»: свечи горели ровным пятном, в воздухе
+   * не двигалось ничего. Теперь пламя мерцает, свет «дышит», а в лучах
+   * от витражей медленно плывут пылинки.
+   */
+  const flames = [];
+  group.traverse((o) => {
+    if (o.isMesh && o.material === M.lampGlass) flames.push(o);
+  });
+  const motes = new Motes(scene, glowTex, 150, 7);
 
   const exitDoor = { x: 0, y: 1.4, z: -D / 2 + 0.8 };
 
@@ -205,5 +215,26 @@ export function buildChurchInterior(M, glowTex) {
       'Под сводом пахнет ладаном и холодным камнем.',
       'В нефе тихо: слышно только собственные шаги и еле слышный звон в башне.',
     ],
+    /**
+     * Анимация локации: мерцание свечей, «дыхание» света, пылинки в лучах.
+     *
+     * @param {number} dt кадр в секундах
+     * @param {number} t мировое время
+     */
+    update(dt, t) {
+      const flick = 0.86 + Math.sin(t * 6.3) * 0.07 + Math.sin(t * 11.7) * 0.05
+        + Math.sin(t * 17.1) * 0.03;
+      altar.intensity = 16 * flick;
+      west.intensity = 11 * (0.94 + Math.sin(t * 0.7 + 1.3) * 0.05);
+      east.intensity = 11 * (0.94 + Math.sin(t * 0.6 + 2.1) * 0.05);
+      sky.intensity = 1.2 * (0.97 + Math.sin(t * 0.35) * 0.03);
+      for (let i = 0; i < flames.length; i++) {
+        const f = flames[i];
+        const k = 0.82 + Math.sin(t * (5.5 + i * 0.7) + i * 2.1) * 0.12
+          + Math.sin(t * (13.3 + i)) * 0.06;
+        f.scale.set(k * 0.9, k * 1.25, k * 0.9);
+      }
+      motes.update(dt, { x: 0, z: 0 });
+    },
   };
 }

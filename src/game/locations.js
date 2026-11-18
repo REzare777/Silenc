@@ -98,6 +98,7 @@ export function createLocations(ctx) {
    */
   const churchLoc = buildChurchInterior(ctx.M, ctx.glowTex);
   const sceneChurch = churchLoc.scene;
+  const CHURCH_BG = new THREE.Color(0x14121a);
 
   /* ---------------- бармен ----------------
    *
@@ -116,6 +117,8 @@ export function createLocations(ctx) {
       { x: 6.28, z: -1.7 },
       { x: 6.28, z: 0.35 },
     ],
+    // ночью уходит домой через заднюю дверь сзади стойки
+    exit: tavernLoc.barExit,
     speed: 0.85,
     wait: 2.6,
     face: -Math.PI / 2,      // стоя лицом к залу
@@ -228,8 +231,8 @@ export function createLocations(ctx) {
     barkeepNpc.setAway(night);
     if (night !== wasAway) {
       ctx.ui.toast(night
-        ? 'Бармен задул свечу и ушёл домой. До рассвета трактир пуст.'
-        : 'Бармен вернулся: вытер стойку, зажёг свечу и ждёт гостей.', 3200);
+        ? 'Бармен задул свечу и ушёл домой через заднюю дверь за стойкой.'
+        : 'Бармен вернулся через заднюю дверь: вытер стойку, зажёг свечу и ждёт гостей.', 3200);
     }
     barkeepNpc.update(dt, t, ctx.player.pos);
     talkToBarkeep.pos.set(barkeepNpc.x, 1.4, barkeepNpc.z);
@@ -263,6 +266,8 @@ export function createLocations(ctx) {
     () => ctx.ui.toast('Струны звонкие, но пыльные — их давно не играли.'), 'tavern');
   add(new THREE.Vector3(-2.6, 1.0, 2.0), 2.2, 'Сесть за стол',
     () => ctx.ui.toast('Дуб крепкий, скола на нём по кругу. Хорошее место.'), 'tavern');
+  add(new THREE.Vector3(tavernLoc.barExit.x, 1.4, tavernLoc.barExit.z), 2.2, 'Задняя дверь',
+    () => ctx.ui.toast('Через эту дверь бармен уходит домой. На засовe — дубовая щеколда.'), 'tavern');
 
   /* ---- дома: выход и детали ---- */
   homeLocs.forEach((loc, i) => {
@@ -350,13 +355,16 @@ export function createLocations(ctx) {
     WARM_OUT,
     TAVERN_BG,
     DUNGEON_BG,
+    CHURCH_BG,
     barnLoc,
     tavernLoc,
     dungeonLoc,
+    churchLoc,
     homeLocs,
     sceneBarn,
     sceneTavern,
     sceneDungeon,
+    sceneChurch,
     /** Персонажи по идентификатору — их находит диалог. */
     npcs: { barkeep: barkeepNpc },
     /** Обновление персонажей (вызывается из игрового цикла). */

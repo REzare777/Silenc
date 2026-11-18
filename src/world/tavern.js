@@ -580,6 +580,7 @@ export function buildTavernInterior(M, glowTex) {
    *  рабочий закуток бармена: шкаф-витрина с бутылками, бочка-калда
    *  с краном, ящик с припасами и картина на стене.
    * ================================================================ */
+  let barExit = null;                // точка перед задней дверью (за стойкой)
   {
     const VX = hw - 0.42;             // у восточной стены, за стойкой
     const VZ = -4.25;                // южная часть бара
@@ -633,6 +634,46 @@ export function buildTavernInterior(M, glowTex) {
       B.add(box(0.16, 0.1, 0.18), 'fabric2', mat(cx2 + 0.06, 0.53, cz2 + 0.12));
       colliders.boxes.push({ cx: cx2, cz: cz2, hx: 0.28, hz: 0.34, ang: 0, y0: 0, y1: 0.5 });
     }
+
+    // ---- задняя дверь: бармен уходит домой ----
+    // Раньше бармен просто исчезал на ночь. Теперь сзади стойки есть
+    // настоящая дверь в хозяйскую часть, и он уходит через неё.
+    const DOOR_Z = -6.5;
+    {
+      const dx = hw - WALL - 0.04;
+      // проём-наличники
+      for (const s2 of [-1, 1]) {
+        B.put('timber', 0.2, 2.3, 0.22, dx - 0.02, 1.15, DOOR_Z + s2 * 0.62, 1.2);
+      }
+      B.put('timber', 0.2, 0.22, 1.45, dx - 0.02, 2.25, DOOR_Z, 1.2);
+      // створка
+      B.put('oakDoor', 0.1, 2.05, 1.02, dx - 0.04, 1.02, DOOR_Z, 1.4);
+      for (const by of [0.35, 1.7]) {
+        B.put('iron', 0.06, 0.12, 1.0, dx - 0.1, by, DOOR_Z, 1);
+      }
+      B.add(torus(0.09, 0.025, 5, 10), 'iron', mat(dx - 0.12, 1.02, DOOR_Z + 0.38, 0, Math.PI / 2));
+      // половик и крючок с плащом
+      B.put('cloth', 0.5, 0.03, 0.8, dx - 0.62, 0.02, DOOR_Z, 1.2);
+      B.add(box(0.16, 0.6, 0.3), 'redCloth', mat(dx - 0.16, 1.55, DOOR_Z - 0.75, 0, 0, 0.2));
+      // ведро и круглая щётка у двери
+      B.add(cyl(0.17, 0.2, 0.28, 10), 'plank', mat(dx - 0.75, 0.14, DOOR_Z + 0.75));
+      B.add(cyl(0.02, 0.02, 0.7, 6), 'timber', mat(dx - 0.75, 0.6, DOOR_Z + 0.75, 0.4, 0, 0.2));
+      // настенная свеча у задней двери — без неё этот угол тонул в темноте
+      {
+        const bx = dx - 0.24, bz = DOOR_Z - 0.52;
+        B.put('iron', 0.18, 0.05, 0.1, bx, 1.92, bz, 1);
+        B.add(cyl(0.03, 0.035, 0.14, 8), 'cloth', mat(bx, 2.03, bz));
+        B.add(cyl(0.018, 0.022, 0.07, 6), 'lampGlass', mat(bx, 2.13, bz));
+        const glow = new THREE.PointLight(0xffb066, 1.15, 8.5, 2);
+        glow.position.set(bx, 2.13, bz);
+        group.add(glow);
+        // слабый отсвет на самом полотне двери
+        const doorGlow = new THREE.PointLight(0xffc890, 0.5, 4.4, 2);
+        doorGlow.position.set(dx - 0.42, 1.15, DOOR_Z);
+        group.add(doorGlow);
+      }
+    }
+    barExit = { x: hw - 1.35, z: DOOR_Z };
 
     // ---- картина на восточной стене: «Уставший вепрь» ----
     {
@@ -1689,6 +1730,11 @@ export function buildTavernInterior(M, glowTex) {
 
   return {
     group, colliders, platforms, climbs, lights, spawn, exitDoor,
+    /**
+     * Задняя дверь за стойкой: через неё бармен уходит домой на ночь.
+     * @type {{x: number, z: number}}
+     */
+    barExit,
     /**
      * Комнаты второго этажа: центр, размер и название.
      * Используются, чтобы поставить в каждой интеракт «переночевать».

@@ -29,10 +29,12 @@ export function localOriented(px, pz, ry, lx, lz, w, d, ang, y = 0) {
 }
 
 /** Каркас из бруса на фасаде (-z). Раскосы — только в свободных местах. */
-function timberFrame(B, w, h, d, matKey = 'timber', braceXs = null) {
+function timberFrame(B, w, h, d, matKey = 'timber', braceXs = null, center = true) {
   const t = 0.19, z = -d / 2 - 0.05;
   for (const sx of [-1, 1]) B.put(matKey, t, h, t, sx * (w / 2 - t / 2 - 0.02), h / 2, z);
-  if (w > 5) B.put(matKey, t, h, t, 0, h / 2, z);
+  // центральная стойка делит фасад пополам и выглядит как балка посередине
+  // дома — для жилых домов она не нужна: проём двери обрамляют косяки
+  if (w > 5 && center) B.put(matKey, t, h, t, 0, h / 2, z);
   B.put(matKey, w, t, t, 0, h - t / 2 - 0.02, z);
   B.put(matKey, w, t, t, 0, 0.18, z);
   // небольшие угловые раскосы под коньком — не пересекают окна
@@ -246,23 +248,29 @@ function houseInterior(B, o) {
   B.put(variant % 2 ? 'redCloth' : 'greenCloth', 1.5, 0.04, 1.1,
     -iw / 2 + 1.0, fy + 0.02, id / 2 - 1.1, 1.1);
 
-  // ---- второй этаж: антресоль с проёмом и лестницей ----
+  // ---- второй этаж: антресоль и лестница у стены ----
+  // Раньше проём в перекрытии шёл через всю комнату по середине — из
+  // комнаты был вид «дыры» в потолке прямо над столом. Теперь перекрытие
+  // сплошное, а люк для лестницы — в углу у левой стены.
   let mezz = null;
   if (floors > 1) {
     const mezzY = fy + wallH * 0.55;
-    const gapZ0 = -1.05, gapZ1 = 0.05;                 // проём-коридор в перекрытии
-    // перекрытие: передняя и задняя части (между ними — проём)
-    B.put('plank', iw, 0.16, gapZ0 + id / 2, 0, mezzY - 0.08, (-id / 2 + gapZ0) / 2, 1.1);
-    B.put('plank', iw, 0.16, id / 2 - gapZ1, 0, mezzY - 0.08, (gapZ1 + id / 2) / 2, 1.1);
-    // балка под краем проёма
-    B.put('timber', iw, 0.14, 0.16, 0, mezzY - 0.16, gapZ0, 1.1);
-    // опоры перекрытия
-    for (const sx of [-1, 1]) {
-      B.put('timber', 0.18, mezzY - fy, 0.18, sx * (iw / 2 - 0.22), (mezzY + fy) / 2, gapZ0 + 0.25, 1.1);
+    const holeW = 1.2;                          // ширина люка у стены
+    const hx0 = -iw / 2, hx1 = hx0 + holeW;
+    const z0 = -id / 2 + 0.85;                  // низ лестницы (передний угол)
+    const z1 = z0 + (id / 2 - 0.85) * 0.8;     // верх лестницы
+    // перекрытие: основная часть и две полосы у левой стены (до и после люка)
+    B.put('plank', iw - holeW, 0.16, id, (hx1 + iw / 2) / 2, mezzY - 0.08, 0, 1.1);
+    B.put('plank', holeW, 0.16, z0 + id / 2, (hx0 + hx1) / 2, mezzY - 0.08, (-id / 2 + z0) / 2, 1.1);
+    B.put('plank', holeW, 0.16, id / 2 - z1, (hx0 + hx1) / 2, mezzY - 0.08, (z1 + id / 2) / 2, 1.1);
+    // балка по краю люка и опора перекрытия
+    B.put('timber', 0.16, 0.16, id / 2 - z1, hx1 + 0.08, mezzY - 0.16, (z1 + id / 2) / 2, 1.1);
+    B.put('timber', holeW, 0.16, 0.16, (hx0 + hx1) / 2, mezzY - 0.16, z1, 1.1);
+    for (const sz of [-1, 1]) {
+      B.put('timber', 0.18, mezzY - fy, 0.18, hx1 + 0.1, (mezzY + fy) / 2, sz * (id / 2 - 0.35), 1.1);
     }
     // лестница: рампа вдоль левой стены, из переднего угла на антресоль
-    const lx = -iw / 2 + 0.85;
-    const z0 = -id / 2 + 0.85, z1 = gapZ0 - 0.05;
+    const lx = (hx0 + hx1) / 2;
     const N = 8;
     for (let i = 0; i < N; i++) {
       const t0 = i / N, t1 = (i + 1) / N;
@@ -270,8 +278,9 @@ function houseInterior(B, o) {
       const y = fy + (mezzY - fy) * (t0 + t1) / 2;
       B.put('plank', 1.0, 0.1, Math.abs(z1 - z0) / N + 0.02, lx, y - 0.05, zc, 1.1);
     }
-    // перила
+    // перила лестницы и ограждение люка
     B.put('timber', 0.1, 0.9, Math.abs(z1 - z0), lx - 0.5, fy + (mezzY - fy) / 2 + 0.5, (z0 + z1) / 2, 1.1);
+    B.put('timber', 0.1, 0.85, Math.abs(z1 - z0), hx1 - 0.05, mezzY + 0.42, (z0 + z1) / 2, 1.1);
     // на антресоли — мешки и связки трав
     for (const dz of [-1.7, 1.7]) {
       B.put('cloth', 0.42, 0.5, 0.34, iw / 2 - 0.45, mezzY + 0.28, dz, 1.1);
@@ -283,6 +292,7 @@ function houseInterior(B, o) {
     }
     mezz = {
       y: mezzY,
+      holeW, hx0, hx1, z0, z1,
       ramp: { x0: lx, z0, x1: lx, z1, y0: fy, y1: mezzY, halfWidth: 0.55 },
     };
   }
@@ -329,11 +339,16 @@ export function cottage(M, opts = {}) {
   const sideW = (w - doorW) / 2, sideX = doorW / 2 + sideW / 2;
   B.put(wall, sideW, wallH, T, -sideX, cy, -d / 2 + T / 2, 2.2);           // фасад слева
   B.put(wall, sideW, wallH, T, sideX, cy, -d / 2 + T / 2, 2.2);            // фасад справа
+  // стена над дверным проёмом. Раньше её не было вовсе: над дверью зияла
+  // вертикальная щель во всю высоту дома — «пустое пространство посередине».
+  const doorTop = FLOOR_Y + 2.1;
+  const aboveH = Math.max(0.12, FLOOR_Y + wallH - doorTop);
+  B.put(wall, doorW, aboveH, T, 0, doorTop + aboveH / 2, -d / 2 + T / 2, 2.2);
   B.put(wall, doorW, 0.5, T, 0, FLOOR_Y + wallH - 0.25, -d / 2 + T / 2, 2.2);  // перемычка
   // интерьер: пол, очаг, стол, сундук, полка
   const interior = houseInterior(B, { w, d, wallH, floors, variant: opts.variant || 0 });
 
-  timberFrame(B, w, wallH, d);
+  timberFrame(B, w, wallH, d, 'timber', null, false);
   for (const sx of [-1, 1]) {
     B.put('timber', 0.16, wallH, 0.19, sx * (w / 2 + 0.02), 0.5 + wallH / 2, -d / 2 + 0.3);
     B.put('timber', 0.16, wallH, 0.19, sx * (w / 2 + 0.02), 0.5 + wallH / 2, d / 2 - 0.3);
@@ -357,11 +372,8 @@ export function cottage(M, opts = {}) {
         B.add(box(0.07, 0.18, 0.12, 1), 'iron', mat(hx0, hy, -d / 2 + 0.02));
       }
     } else {
-      // закрытая дверь: створка в проёме, железный замок и скоба
+      // закрытая дверь: створка в проёме, замок и кольцо (без грубых перевязей)
       B.add(box(doorW, 1.95, 0.12, 1), 'plank', mat(dx, FLOOR_Y + 0.98, -d / 2 + 0.06));
-      for (const hy of [0.62, 1.5, 2.3].map((v) => v + FLOOR_Y)) {
-        B.add(box(doorW - 0.06, 0.12, 0.06, 1), 'iron', mat(dx, hy, -d / 2 - 0.02));
-      }
       B.add(box(0.16, 0.22, 0.09, 1), 'iron', mat(dx + doorW / 2 - 0.18, FLOOR_Y + 1.05, -d / 2 - 0.04));
       B.add(torus(0.11, 0.028, 5, 10), 'iron', mat(dx + doorW / 2 - 0.18, FLOOR_Y + 0.86, -d / 2 - 0.05, 0, Math.PI / 2));
     }
@@ -431,9 +443,11 @@ export function cottage(M, opts = {}) {
     if (interior.mezz) {
       const m = interior.mezz;
       const iw = w - T * 2, id = d - T * 2;
-      const gapZ0 = -1.05, gapZ1 = 0.05;
-      out.platforms.push(localBox(px, pz, ry, 0, (-id / 2 + gapZ0) / 2, iw, gapZ0 + id / 2, m.y));
-      out.platforms.push(localBox(px, pz, ry, 0, (gapZ1 + id / 2) / 2, iw, id / 2 - gapZ1, m.y));
+      // перекрытие сплошное; люк для лестницы — в углу у левой стены
+      const { holeW, hx0, hx1, z0, z1 } = m;
+      out.platforms.push(localBox(px, pz, ry, (hx1 + iw / 2) / 2, 0, iw - holeW, id, m.y));
+      out.platforms.push(localBox(px, pz, ry, (hx0 + hx1) / 2, (-id / 2 + z0) / 2, holeW, z0 + id / 2, m.y));
+      out.platforms.push(localBox(px, pz, ry, (hx0 + hx1) / 2, (z1 + id / 2) / 2, holeW, id / 2 - z1, m.y));
       const r = m.ramp;
       const p0 = new THREE.Vector3(r.x0, r.y0, r.z0).applyMatrix4(group.matrixWorld);
       const p1 = new THREE.Vector3(r.x1, r.y1, r.z1).applyMatrix4(group.matrixWorld);
