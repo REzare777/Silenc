@@ -22,7 +22,7 @@ import {
   cottage, tavern, church, barn, windmill, blacksmith, well, marketStall, haystack, localBox,
 } from '../world/buildings.js';
 import {
-  scatterGrass, scatterFlowers, wheatField, lantern, campfire, fence, gate,
+  scatterGrass, scatterFlowers, wheatField, lantern, campfire, fence, gate, gardenBed,
   trough, signpost, makeGlow,
 } from '../world/props.js';
 import { denseForest } from '../world/forest.js';
@@ -241,28 +241,29 @@ export function createVillage(ctx) {
 
     /* --- дома ---
      *
-     * Раскладка симметричная: главная улица идёт вдоль Z, и каждый дом
-     * имеет зеркальную пару на другой стороне. Все стоят вне дороги,
-     * площади и других зданий — между ними проход, двор и тропинка.
+     * Раскладка по-настоящему: главная улица идёт вдоль Z, и каждый дом
+     * имеет зеркальную пару на другой стороне. Между соседними домами —
+     * двор и огород (10–12 м), как в настоящей деревне: заходить за
+     * забор соседа можно, но это уже другой участок.
      *
-     *   A (-12, 13) / (12, 13)     — у костра
-     *   B (-12, 22) / (12, 22)     — в глубине улицы
-     *   C (-13, 30) / (13, 30)     — у поля, ближе к храму
-     *   D (-21,  8) / (21,  8)     — крупные усадьбы (два этажа)
-     *   F (-30, -20) / (30, -20)   — южная окраина, за трактиром
-     *   G (-21, -32) / (21, -32)   — дальний отшиб, у скалы
+     *   A (-13, 14) / (13, 14)     — ближний ряд к площади
+     *   B (-13, 31) / (13, 31)     — тот же ряд, ближе к храму
+     *   C (-31, 14) / (31, 14)     — второй ряд, за огородами (два этажа)
+     *   D (-29, 32) / (29, 32)     — второй ряд у поля
+     *   E (-33, -20) / (33, -20)   — южная окраина, за трактиром
+     *   F (-21, -32) / (21, -32)   — дальний отшиб, у скалы
      */
     const homes = [
-      [-12, 13, { w: 6, d: 5, h: 3.1, roof: 'thatch', floors: 1 }],
-      [12, 13, { w: 6, d: 5, h: 3.1, roof: 'thatch', floors: 1 }],
-      [-12, 22, { w: 6.5, d: 5.5, h: 3.2, roof: 'thatch', floors: 1 }],
-      [12, 22, { w: 6.5, d: 5.5, h: 3.2, roof: 'thatch', floors: 1 }],
-      [-13, 30, { w: 6, d: 5, h: 3.0, roof: 'tile', floors: 1 }],
-      [13, 30, { w: 6, d: 5, h: 3.0, roof: 'tile', floors: 1 }],
-      [-21, 8, { w: 7, d: 6, h: 3.4, roof: 'tile', floors: 2 }],
-      [21, 8, { w: 7, d: 6, h: 3.4, roof: 'tile', floors: 2 }],
-      [-30, -20, { w: 6, d: 5, h: 3.0, roof: 'thatch', floors: 1 }],
-      [30, -20, { w: 6, d: 5, h: 3.0, roof: 'thatch', floors: 1 }],
+      [-13, 14, { w: 6, d: 5, h: 3.1, roof: 'thatch', floors: 1 }],
+      [13, 14, { w: 6, d: 5, h: 3.1, roof: 'thatch', floors: 1 }],
+      [-13, 31, { w: 6, d: 5, h: 3.0, roof: 'tile', floors: 1 }],
+      [13, 31, { w: 6, d: 5, h: 3.0, roof: 'tile', floors: 1 }],
+      [-31, 14, { w: 7, d: 6, h: 3.4, roof: 'tile', floors: 2 }],
+      [31, 14, { w: 7, d: 6, h: 3.4, roof: 'tile', floors: 2 }],
+      [-29, 32, { w: 6, d: 5, h: 3.1, roof: 'thatch', floors: 1 }],
+      [29, 32, { w: 6, d: 5, h: 3.1, roof: 'thatch', floors: 1 }],
+      [-33, -20, { w: 6, d: 5, h: 3.0, roof: 'thatch', floors: 1 }],
+      [33, -20, { w: 6, d: 5, h: 3.0, roof: 'thatch', floors: 1 }],
       [-21, -32, { w: 5.5, d: 4.6, h: 2.9, roof: 'thatch', floors: 1 }],
       [21, -32, { w: 5.5, d: 4.6, h: 2.9, roof: 'thatch', floors: 1 }],
     ];
@@ -326,6 +327,22 @@ export function createVillage(ctx) {
       );
     });
 
+    /* --- огороды ---
+     *
+     * За каждым домом — две грядки: пустое место между участками должно
+     * выглядеть огородом, а не вытоптанным лугом. Грядки не мешают
+     * проходу (низкие, без препятствий).
+     */
+    for (const h of ctx.homes || []) {
+      const off = Math.sign(h.x) * (h.w / 2 + 1.5);
+      for (const dz of [-2, 2]) {
+        const bed = gardenBed(ctx.M, { w: 1.2, d: 2.6 });
+        bed.position.set(h.x + off, 0, h.z + dz);
+        bed.rotation.y = Math.PI / 2;
+        ctx.scene.add(bed);
+      }
+    }
+
     /* --- прилавки --- */
     // прилавки: последний отодвинут от входа трактира, чтобы не загораживал дверь
     const stalls = [[5.6, 5.6, 'fabric'], [-5.8, 6.4, 'fabric2'], [6.4, -6.2, 'fabric2'], [-9.2, -2.6, 'fabric']];
@@ -347,7 +364,7 @@ export function createVillage(ctx) {
     /* --- стога сена --- */
     // Раньше три стога стояли впритык за амбаром и загораживали обход
     // вокруг него. Теперь они — у полей и на лугах, как и должно быть.
-    const haystacks = [[-40, 28], [-53, 13], [28, 35], [21, 16]];
+    const haystacks = [[-40, 28], [-53, 13], [28, 38], [21, 16]];
     for (const [hx, hz] of haystacks) {
       place(haystack(ctx.M, { r: 1.5, h: 2.6 }), hx, hz);
       addInteract(
@@ -440,7 +457,7 @@ export function createVillage(ctx) {
       );
       gates.push({ x: x - gw / 2, z: z - d / 2, ang: 0 });
     };
-    field(-29, 38, 20, 14);   // поле отодвинуто от домов: между ними проход
+    field(-30, 44, 20, 12);   // поле отодвинуто от домов: между ними проход
     field(31, 44, 19, 14);
     field(-44, 16, 14, 12);
     fenceSegs.push([[-13, -6], [-13, 1]], [[13, -6], [13, 1]]);
@@ -462,7 +479,7 @@ export function createVillage(ctx) {
     }
 
     /* --- поля, трава, цветы --- */
-    ctx.scene.add(wheatField(ctx.M, -29, 38, 20, 14));
+    ctx.scene.add(wheatField(ctx.M, -30, 44, 20, 12));
     ctx.scene.add(wheatField(ctx.M, 31, 44, 19, 14));
 
     const spots = [

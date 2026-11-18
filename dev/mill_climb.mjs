@@ -10,7 +10,9 @@ await page.evaluate(() => document.getElementById('begin').click());
 await page.waitForTimeout(1000);
 const out = await page.evaluate(() => {
   const d = window.__dbg, p = d.player;
-  const sp = (d.ctx.platforms || []).find((pl) => pl.sp).sp;
+  const pls = d.ctx.platforms || [];
+  const sp = pls.find((pl) => pl.sp) ? pls.find((pl) => pl.sp).sp : null;
+  if (!sp) return { error: 'спираль не найдена', platforms: pls.length, ctx: Object.keys(d.ctx) };
   const put = (x, z) => { p.teleport(x, z, 0); p.y = 0; p.groundY = 0; p.vy = 0; p.keys.clear(); };
   const step = (yaw, n) => { for (let i = 0; i < n; i++) { p.yaw = yaw; p.keys.add('KeyW'); p.update(1/60); } p.keys.clear(); };
   const total = sp.turns * Math.PI * 2;
@@ -34,7 +36,7 @@ const out = await page.evaluate(() => {
   }
   // подъём на жёлтую крышу: с площадки — к центру конуса
   // старт на смотровой площадке (снаружи башни), шаг к оси
-  const gal = (d.ctx.platforms || []).find((pl) => !pl.sp && Math.abs((pl.y ?? 0) - sp.y1) < 0.05 && pl.hx > 1.2);
+  const gal = (d.ctx.platforms || []).find((pl) => !pl.sp && Math.abs((pl.y ?? 0) - sp.y1) < 0.05 && pl.hz > 0.5);
   put(gal.cx, gal.cz);
   p.groundY = sp.y1; p.y = 0;
   const roof = { log: [], maxY: 0 };

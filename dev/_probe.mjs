@@ -3,22 +3,23 @@ import { LAUNCH } from './browser.mjs';
 const browser = await chromium.launch(LAUNCH);
 const page = await browser.newPage({ viewport: { width: 640, height: 400 } });
 page.setDefaultTimeout(240000);
+const errs = [];
+page.on('pageerror', (e) => errs.push('PAGEERROR ' + e.message.slice(0, 300)));
 await page.goto('http://127.0.0.1:4205/?v=' + Date.now(), { waitUntil: 'domcontentloaded' });
 await page.waitForFunction(() => window.__villageReady === true, null, { timeout: 240000 });
 await page.evaluate(() => document.getElementById('begin').click());
-await page.waitForTimeout(1200);
+await page.waitForTimeout(1500);
 const info = await page.evaluate(() => {
   const d = window.__dbg;
-  const church = d.ctx.scene.getObjectByName('church');
-  const wp = new d.THREE.Vector3();
-  church.getWorldPosition(wp);
-  const box = new d.THREE.Box3().setFromObject(church);
-  const door = d.ctx.doors.church;
+  const pls = d.ctx.platforms || [];
+  const near = pls.filter((pl) => !pl.sp && Math.abs((pl.y ?? 0) - 11.6) < 0.05);
   return {
-    churchPos: wp.toArray().map((v) => +v.toFixed(2)),
-    churchBox: { min: box.min.toArray().map((v) => +v.toFixed(1)), max: box.max.toArray().map((v) => +v.toFixed(1)) },
-    door: { x: +door.x.toFixed(2), z: +door.z.toFixed(2), ry: +door.ry.toFixed(3) },
+    total: pls.length,
+    nearTop: near.length,
+    sample: near.slice(0, 4).map((pl) => ({ cx: pl.cx, cz: pl.cz, hx: pl.hx, hz: pl.hz, y: pl.y })),
+    keys: Object.keys(pls[0] || {}),
   };
 });
-console.log(JSON.stringify(info));
+console.log(JSON.stringify(info, null, 1));
+console.log('ошибки:', errs.slice(0, 3));
 await browser.close();

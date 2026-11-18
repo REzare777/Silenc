@@ -921,21 +921,25 @@ export function windmill(M, opts = {}) {
       mat(Math.cos(a) * 0.2, 2.45, Math.sin(a) * 0.2, -a));
   }
   B.add(box(0.05, 2.1, 0.1, 1), 'cloth', mat(0.42, 1.5, 0.9, -0.45));
-  const TURNS = 3, NSTEP = Math.max(24, Math.round(h / 0.29));
+  const TURNS = 3, NSTEP = Math.max(30, Math.round(h / 0.24));
   const DTH = Math.PI * 2 * TURNS / NSTEP;
   const RISE = h / NSTEP;
+  const STAIR_IN = 0.9;        // лестница идёт дальше от вала: вал стал физическим
   const steps = [];
   for (let i = 0; i < NSTEP; i++) {
     const y = (i + 1) * RISE;                       // верх ступени
     const theta = BACK + (i + 0.5) * DTH;            // середина ступени
     const ro = rIn(y) - 0.06;
-    const rm = (0.45 + ro) / 2;
+    const rm = (STAIR_IN + ro) / 2;
     const half = rm * DTH / 2;
     const sx = Math.sin(theta), cz = Math.cos(theta);
-    B.add(box(half * 2.06, 0.14, ro - 0.45, 1), 'plank', mat(sx * rm, y - 0.07, cz * rm, theta));
-    B.add(box(half * 2, RISE, 0.07, 1), 'plank', mat(sx * (ro - 0.035), y - RISE / 2 - 0.07, cz * (ro - 0.035), theta));
+    // Ступень шире шага по окружности: иначе между ступенями остаётся
+    // щель, в которую игрок проваливается.
+    const stepW = Math.max(ro * DTH * 1.12, half * 2.2);
+    B.add(box(stepW, 0.14, ro - STAIR_IN, 1), 'plank', mat(sx * rm, y - 0.07, cz * rm, theta));
+    B.add(box(stepW, RISE, 0.07, 1), 'plank', mat(sx * (ro - 0.035), y - RISE / 2 - 0.07, cz * (ro - 0.035), theta));
     B.add(box(0.09, 1.0, 0.09, 1), 'timber', mat(sx * (ro - 0.12), y + 0.5, cz * (ro - 0.12), theta));
-    B.add(box(half * 2, 0.09, 0.09, 1), 'timber', mat(sx * (ro - 0.12), y + 0.95, cz * (ro - 0.12), theta));
+    B.add(box(stepW * 0.9, 0.09, 0.09, 1), 'timber', mat(sx * (ro - 0.12), y + 0.95, cz * (ro - 0.12), theta));
     steps.push({ theta, y, rm, half, ro });
   }
 
@@ -1190,14 +1194,24 @@ export function windmill(M, opts = {}) {
         out.colliders.push(bx);
       }
     }
-    // центральная стойка
-    out.circles.push({ x: px, z: pz, r: 0.4 });
+    // центральная стойка (приводной вал) — физическая: сквозь него
+    // больше не провалишься внутрь башни
+    out.circles.push({ x: px, z: pz, r: 0.36, y0: 0.25, y1: h - 0.15 });
+    // перила винтовой лестницы — тоже препятствия: на них не провалишься
+    for (const st of steps) {
+      const sx = Math.sin(st.theta), cz = Math.cos(st.theta);
+      out.circles.push({
+        x: px + sx * (st.ro - 0.12) * Math.cos(ry) + cz * (st.ro - 0.12) * Math.sin(ry),
+        z: pz - sx * (st.ro - 0.12) * Math.sin(ry) + cz * (st.ro - 0.12) * Math.cos(ry),
+        r: 0.11, y0: st.y, y1: st.y + 0.95,
+      });
+    }
 
     // лестница — одна непрерывная винтовая поверхность
     out.platforms.push({
       sp: {
         cx: px, cz: pz,
-        rIn: 0.45,
+        rIn: STAIR_IN,
         rOut0: rIn(0) - 0.06,
         rOut1: rIn(h) - 0.06,
         a0: BACK + ry,

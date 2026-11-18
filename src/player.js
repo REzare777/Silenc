@@ -126,7 +126,7 @@ export class Player {
       return y;
     };
     let y = evalTurn(sp.m);
-    if (y === null || Math.abs(y - cur) > 0.55) {
+    if (y === null || Math.abs(y - cur) > 0.75) {
       let best = null, bestD = Infinity;
       for (let k = 0; k <= sp.turns; k++) {
         const yy = evalTurn(k);
@@ -135,6 +135,15 @@ export class Player {
         if (dd < bestD) { bestD = dd; best = yy; sp.m = k; }
       }
       y = best;
+    }
+    // Ни один виток не подошёл (игрок замер на краю или чуть промахнулся):
+    // лучше «залипнуть» на ближайшей ступени, чем провалиться сквозь
+    // лестницу. Поэтому берём ступень текущего витка по углу.
+    if (y === null) {
+      const off = ((a - sp.a0 - sp.m * TAU) % TAU + TAU) % TAU;
+      let u = (sp.m * TAU + off) / dA;
+      u = Math.min(Math.max(u, 0.5), N - 0.5);
+      y = sp.y0 + (u + 0.5) * rise;
     }
     return y;
   }

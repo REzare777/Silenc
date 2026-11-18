@@ -50,10 +50,10 @@ const res = await page.evaluate(() => {
     { name: 'прилавок 3', x: 6.4, z: -6.2, r: 1.6 },
     { name: 'прилавок 4', x: -9.2, z: -2.6, r: 1.6 },
   ];
-  const hay = [[-40, 28, 1.5], [-53, 13, 1.5], [28, 35, 1.5], [21, 16, 1.5]];
+  const hay = [[-40, 28, 1.5], [-53, 13, 1.5], [28, 38, 1.5], [21, 16, 1.5]];
   // поля с заборами (забор — тоже препятствие)
   const fields = [
-    { name: 'поле (запад)', x: -29, z: 38, hx: 10, hz: 7 },
+    { name: 'поле (запад)', x: -30, z: 44, hx: 10, hz: 6 },
     { name: 'поле (восток)', x: 31, z: 44, hx: 9.5, hz: 7 },
     { name: 'поле (дальнее)', x: -44, z: 16, hx: 7, hz: 6 },
   ];
@@ -102,7 +102,18 @@ const res = await page.evaluate(() => {
     if (!m) mirror.push(h.i);
   }
 
-  return { homes, problems, mirror, others };
+  // расстояния между соседними домами — «как в деревне», а не щель
+  const gaps = [];
+  for (let i = 0; i < homes.length; i++) {
+    for (let j = i + 1; j < homes.length; j++) {
+      const a = homes[i], b = homes[j];
+      const g = Math.max(Math.abs(a.x - b.x) - (a.w + b.w) / 2,
+        Math.abs(a.z - b.z) - (a.d + b.d) / 2);
+      if (g < 20) gaps.push(`${a.i}-${b.i}: ${g.toFixed(1)} м`);
+    }
+  }
+
+  return { homes, problems, mirror, gaps, others };
 });
 
 console.log('--- дома ---');
@@ -114,6 +125,8 @@ if (!res.problems.length) console.log('  нет — все дома на мес�
 for (const p of res.problems) {
   console.log(`  ✗ дом ${p.i} (${p.x}, ${p.z}): ${p.p.join('; ')}`);
 }
+console.log('\n--- расстояния между домами (ближе 20 м) ---');
+console.log(res.gaps.length ? '  ' + res.gaps.join(', ') : '  все участки просторные');
 console.log('\n--- симметрия ---');
 console.log(res.mirror.length
   ? `  ✗ нет зеркального дома: ${res.mirror.join(', ')}`

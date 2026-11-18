@@ -507,3 +507,38 @@ export function fishingLine(M, tip, len = 1.3) {
   line.castShadow = false;
   return line;
 }
+
+/* ---------- огородная грядка ---------- */
+/**
+ * Грядка: деревянный ящик с землёй и зелёными кустиками.
+ *
+ * Ставится во дворах между домами — чтобы пустое место между участками
+ * выглядело огородом, а не вытоптанным лугом.
+ *
+ * @param {object} M набор материалов
+ * @param {object} opts {w, d} — размеры грядки (длина вдоль X)
+ * @returns {THREE.Group} группа грядки
+ */
+export function gardenBed(M, opts = {}) {
+  const { w = 2.6, d = 1.2 } = opts;
+  const B = new Builder();
+  const wallH = 0.42;
+  // доски ящика
+  for (const sx of [-1, 1]) {
+    B.add(box(0.12, wallH, d, 1), 'plank', mat(sx * (w / 2 - 0.06), wallH / 2, 0));
+  }
+  for (const sz of [-1, 1]) {
+    B.add(box(w, wallH, 0.12, 1), 'plank', mat(0, wallH / 2, sz * (d / 2 - 0.06)));
+  }
+  // земля и кустики
+  B.add(box(w - 0.3, 0.16, d - 0.3, 1), 'dirt', mat(0, wallH - 0.08, 0));
+  const n = Math.max(3, Math.round(w / 0.75));
+  for (let i = 0; i < n; i++) {
+    const x = -w / 2 + 0.45 + (i * (w - 0.9)) / Math.max(1, n - 1);
+    for (const sz of [-1, 1]) {
+      B.add(sphere(0.17, 6, 5), 'leaf',
+        mat(x, wallH + 0.12, sz * (d / 2 - 0.3), 0, 0, 0, 0.85));
+    }
+  }
+  return B.build(M, null, { name: 'gardenBed' });
+}
