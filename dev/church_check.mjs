@@ -3,9 +3,9 @@
  *  Проверка храма: вход, выход, проход по нефу без застреваний
  * ============================================================================
  *
- *  Храм — отдельная локация: за порталом настоящий неф со скамьями,
- *  витражами и алтарём. Проверяем вход, выход к фасаду и свободный
- *  проход по центральному проходу.
+ *  Храм — отдельная локация: за южным порталом настоящий неф со скамьями,
+ *  витражами и алтарём, а в северной стене — сломанная арка в звонарную
+ *  (колокольню). Алтарь стоит по центру, поэтому проход к арке идёт сбоку.
  *
  *  Запуск: cd dev && node church_check.mjs
  */
@@ -27,29 +27,56 @@ await page.waitForTimeout(1200);
 const res = await page.evaluate(() => {
   const d = window.__dbg;
   const out = {};
+  const p = d.player;
 
   const door = d.ctx.interactables.find((x) => x.label === 'Войти в храм');
   out.doorExists = !!door;
   door.act();
   out.inChurch = d.ctx.loc === 'church';
-  out.spawn = { x: +d.player.pos.x.toFixed(2), z: +d.player.pos.z.toFixed(2) };
+  out.spawn = { x: +p.pos.x.toFixed(2), z: +p.pos.z.toFixed(2) };
 
-  // свободный проход по проходу: от портала к алтарю
-  const p = d.player;
-  p.teleport(0, -3.0, 0);
-  p.y = 0.02; p.groundY = 0.02; p.vy = 0; p.keys.clear();
-  p.yaw = Math.PI;                 // смотрим на север, к алтарю
-  let reached = false;
-  for (let i = 0; i < 600; i++) {
-    p.keys.add('KeyW');
-    p.update(1 / 60);
-    if (p.pos.z > 7.6) { reached = true; break; }
-  }
-  p.keys.clear();
-  out.reachedAltar = reached;
-  out.endPos = { x: +p.pos.x.toFixed(2), z: +p.pos.z.toFixed(2) };
+  const reset = (x, z) => {
+    p.teleport(x, z, 0);
+    p.y = 0.02; p.groundY = 0.02; p.vy = 0; p.keys.clear();
+  };
+  const walk = (yaw, frames, done) => {
+    p.yaw = yaw;
+    for (let i = 0; i < frames; i++) {
+      p.keys.add('KeyW');
+      p.update(1 / 60);
+      if (done && done()) break;
+    }
+    p.keys.clear();
+  };
 
-  // выход из храма
+  // 1. свободный проход по нефу от портала к алтарю
+  reset(0, -4.6);
+  walk(Math.PI, 700, () => p.pos.z > 6.1);
+  out.reachedAltar = p.pos.z > 6.1;
+  out.altarZ = +p.pos.z.toFixed(2);
+
+  // 2. обход алтаря сбоку и проход через сломанную арку в звонарную
+  reset(0, 5.0);
+  walk(Math.PI / 2, 300, () => p.pos.x < -2.45);
+  out.sideX = +p.pos.x.toFixed(2);
+  walk(Math.PI, 600, () => p.pos.z > 10.3);
+  out.reachedTower = p.pos.z > 10.3;
+  out.towerZ = +p.pos.z.toFixed(2);
+
+  // 3. обратно в неф
+  walk(0, 400, () => p.pos.z < 9.0);
+  out.backToNave = p.pos.z < 9.0;
+  out.naveZ = +p.pos.z.toFixed(2);
+
+  // 3a. из нефа нельзя выйти наружу сквозь портал, из звонарной — сквозь дверь
+  reset(0, -4.0);
+  walk(Math.PI * 2, 400);
+  out.noPortalLeak = p.pos.z > -6.5;
+  reset(0, 15.0);
+  walk(0, 400);
+  out.noDoorLeak = p.pos.z < 17.0;
+
+  // 4. выход из храма
   const exit = d.ctx.interactables.find((x) => x.where === 'church' && x.label === 'Выйти из храма');
   out.exitExists = !!exit;
   exit.act();
@@ -63,6 +90,11 @@ const checks = [
   ['интеракт входа есть', res.doorExists],
   ['вход в локацию храма', res.inChurch],
   ['проход по нефу до алтаря', res.reachedAltar],
+  ['проход сбоку к сломанной арке', res.sideX !== undefined && res.sideX < -2.2],
+  ['арка ведёт в звонарную', res.reachedTower],
+  ['из звонарной можно вернуться в неф', res.backToNave],
+  ['сквозь портал наружу не пройти', res.noPortalLeak],
+  ['сквозь заднюю дверь не пройти', res.noDoorLeak],
   ['интеракт выхода есть', res.exitExists],
   ['выход в деревню', res.backToVillage],
 ];
@@ -71,6 +103,10 @@ for (const [name, ok] of checks) {
   if (!ok) bad++;
   console.log(`${ok ? '✓' : '✗'} ${name}`);
 }
+console.log('детали:', JSON.stringify({
+  spawn: res.spawn, altarZ: res.altarZ, sideX: res.sideX,
+  towerZ: res.towerZ, naveZ: res.naveZ, exitDist: res.exitDist,
+}));
 console.log('ошибки: ' + (bad + errs.length), errs.slice(0, 3));
 await browser.close();
 if (bad + errs.length) process.exit(1);

@@ -41,8 +41,17 @@ import {
  *
  * @type {[number, number, number][]} [x, z, радиус]
  */
+// Звонарная стоит сзади храма — ей нужна своя поляна, иначе лес
+// зарастает её вплотную и подхода нет.
+const CHURCH_RY = ryToFace([LAYOUT.church.x, LAYOUT.church.z], [0, 0]);
+const BELLHOUSE = {
+  x: LAYOUT.church.x + 12.0 * Math.sin(CHURCH_RY),
+  z: LAYOUT.church.z + 12.0 * Math.cos(CHURCH_RY),
+};
+
 const BUILDING_CLEARINGS = [
   [LAYOUT.church.x, LAYOUT.church.z, 11],
+  [BELLHOUSE.x, BELLHOUSE.z, 12],
   [LAYOUT.mill.x, LAYOUT.mill.z, 9],
   [LAYOUT.tavern.x, LAYOUT.tavern.z, 12],
   [LAYOUT.barn.x, LAYOUT.barn.z, 10],
@@ -177,29 +186,29 @@ export function createVillage(ctx) {
     const ch = church(ctx.M, {});
     const chRy = ryToFace([LAYOUT.church.x, LAYOUT.church.z], [0, 0]);
     place(ch, LAYOUT.church.x, LAYOUT.church.z, chRy);
-    // вход в храм — у двери колокольни (южный фасад)
+    // вход в храм — через южный портал нефа
     addInteract(
-      facadePos(3, 44, chRy, 0, -11.9, 1.6), 2.6, 'Войти в храм',
+      facadePos(3, 44, chRy, 0, -9.0, 1.6), 2.6, 'Войти в храм',
       () => ctx.systems.locations.setLocation('church'),
     );
-    // точка выхода из храма — перед дверью колокольни, на земле
+    // точка выхода из храма — перед крыльцом нефа, на земле
     {
-      const out = facadePos(3, 44, chRy, 0, -13.4, 0);
+      const out = facadePos(3, 44, chRy, 0, -10.6, 0);
       ctx.doors.church = { x: out.x, z: out.z, ry: chRy };
     }
-    // задняя дверь нефа — рабочая: через неё можно войти в храм
+    // звонарная стоит сзади: вход в неё — с заднего двора
     addInteract(
-      facadePos(3, 44, chRy, 0, 8.9, 1.6), 2.6, 'Войти через заднюю дверь',
+      facadePos(3, 44, chRy, 0, 12.2, 1.6), 2.6, 'Войти в звонарку',
       () => ctx.systems.locations.setLocation('church', 'back'),
     );
     {
-      // точка выхода через заднюю дверь — в заднем дворе у северного фасада
-      const back = facadePos(3, 44, chRy, 0, 10.1, 0);
+      // точка выхода через звонарную — в заднем дворе за ступенями
+      const back = facadePos(3, 44, chRy, 0, 13.5, 0);
       ctx.doors.churchBack = { x: back.x, z: back.z, ry: chRy };
     }
-    // фонарь у задней двери — иначе створку не видно
+    // фонарь у двери звонарной — иначе створку не видно
     {
-      const lp = facadePos(3, 44, chRy, 2.35, 8.95, 0);
+      const lp = facadePos(3, 44, chRy, 2.35, 12.35, 0);
       const cl = lantern(ctx.M, ctx.glowTex, { x: lp.x, z: lp.z, height: 3.5, lit: true, intensity: 2.5, distance: 13 });
       ctx.scene.add(cl.group);
       cl.place(lp.x, lp.z);

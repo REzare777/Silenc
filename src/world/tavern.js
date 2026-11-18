@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Builder, box, cyl, sphere, cone, torus, mat } from './geo.js';
-import { makeGlow } from './props.js';
+import { makeGlow, signMesh } from './props.js';
 
 /* ------------------------------------------------------------------
  *  «Уставший вепрь» — таверна: отдельная локация (интерьер)
@@ -689,6 +689,15 @@ export function buildTavernInterior(M, glowTex) {
         ang: 0, y0: 0, y1: BACK_DOOR_H,
       };
       colliders.boxes.push(backDoorCollider);
+      // табличка над задней дверью: «для персонала»
+      {
+        const sign = signMesh('ДЛЯ ПЕРСОНАЛА', 1.35, 0.34);
+        if (sign) {
+          sign.position.set(hw - WALL - 0.06, 2.48, DOOR_Z);
+          sign.rotation.y = -Math.PI / 2;
+          group.add(sign);
+        }
+      }
       // настенная свеча у задней двери — без неё этот угол тонул в темноте
       {
         const bx = dx - 0.24, bz = DOOR_Z - 0.52;

@@ -23,6 +23,65 @@ export function glowTexture() {
   return t;
 }
 
+/**
+ * Табличка с надписью — доска с текстом (например «ДЛЯ ПЕРСОНАЛА»).
+ *
+ * @param {string} text надпись
+ * @param {object} [opts] оформление: w, h, bg, color, size, border
+ * @returns {THREE.CanvasTexture|null} текстура (null вне браузера)
+ */
+export function signTexture(text, opts = {}) {
+  if (typeof document === 'undefined') return null;
+  const w = opts.w ?? 512, h = opts.h ?? 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const c = canvas.getContext('2d');
+  // тёмное дерево
+  c.fillStyle = opts.bg ?? '#2b1d12';
+  c.fillRect(0, 0, w, h);
+  c.strokeStyle = 'rgba(0,0,0,0.28)';
+  c.lineWidth = 3;
+  for (let i = 1; i < 5; i++) {
+    c.beginPath();
+    c.moveTo(0, (h / 5) * i);
+    c.lineTo(w, (h / 5) * i);
+    c.stroke();
+  }
+  // рамка
+  c.strokeStyle = opts.border ?? '#6b4a28';
+  c.lineWidth = 9;
+  c.strokeRect(5, 5, w - 10, h - 10);
+  // надпись
+  c.font = `bold ${opts.size ?? Math.round(h * 0.42)}px Georgia, "Times New Roman", serif`;
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillStyle = 'rgba(0,0,0,0.55)';
+  c.fillText(text, w / 2 + 2, h / 2 + 3);
+  c.fillStyle = opts.color ?? '#e6d3a4';
+  c.fillText(text, w / 2, h / 2);
+  const t = new THREE.CanvasTexture(canvas);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/**
+ * Готовая табличка-меш с надписью.
+ *
+ * @param {string} text надпись
+ * @param {number} w ширина таблички, м
+ * @param {number} h высота таблички, м
+ * @param {object} [opts] оформление (см. signTexture)
+ * @returns {THREE.Mesh|null}
+ */
+export function signMesh(text, w = 1.3, h = 0.33, opts = {}) {
+  const tex = signTexture(text, opts);
+  if (!tex) return null;
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+    new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }));
+  mesh.name = 'sign';
+  return mesh;
+}
+
 export function makeGlow(tex, size = 2.4, color = 0xffb45a, opacity = 0.85) {
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({
     map: tex, color, transparent: true, opacity,

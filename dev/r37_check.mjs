@@ -72,17 +72,20 @@ const res = await page.evaluate(async () => {
   const nearTower = d.ctx.systems.interactions.nearest();
   out.bellOnTower = !!nearTower && nearTower.label === 'Ударить в колокол';
 
-  // проход из башни в неф свободен
+  // проход из нефа в звонарную (арка сбоку от алтаря) свободен
   {
     const p2 = d.player;
-    p2.teleport(0, -7.5, 0);
+    p2.teleport(0, 4.5, 0);
     p2.y = 0.02; p2.groundY = 0.02; p2.vy = 0; p2.keys.clear();
-    p2.yaw = Math.PI;                       // на север, в неф
+    p2.yaw = Math.PI / 2;                   // к арке, влево
+    for (let i = 0; i < 58; i++) { p2.keys.add('KeyW'); p2.update(1 / 60); }
+    p2.keys.clear();
+    p2.yaw = Math.PI;                       // на север, сквозь арку
     let got = false;
-    for (let i = 0; i < 400; i++) {
+    for (let i = 0; i < 500; i++) {
       p2.keys.add('KeyW');
       p2.update(1 / 60);
-      if (p2.pos.z > -2.5) { got = true; break; }
+      if (p2.pos.z > 12.5) { got = true; break; }
     }
     p2.keys.clear();
     out.passageToNave = got;
@@ -95,7 +98,7 @@ const res = await page.evaluate(async () => {
   bellAct.act();
   out.bellRang = true;
 
-  // выход через заднюю дверь нефа
+  // выход через заднюю дверь звонарной
   const backAct = d.ctx.interactables.find((x) => x.label === 'Открыть тяжёлую дверь' && x.where === 'church');
   out.backDoorExists = !!backAct;
   if (backAct) {
@@ -103,6 +106,18 @@ const res = await page.evaluate(async () => {
     out.backToVillage = d.ctx.loc === 'village';
     const door = d.ctx.doors.churchBack;
     out.backDist = +Math.hypot(d.player.pos.x - door.x, d.player.pos.z - door.z).toFixed(2);
+  }
+
+  // вход с задней стороны храма — сразу в звонарную
+  d.ctx.systems.locations.setLocation('village');
+  {
+    const enter = d.ctx.interactables.find((x) => x.label === 'Войти в звонарку');
+    out.backEnterExists = !!enter;
+    if (enter) {
+      enter.act();
+      out.backEnterLoc = d.ctx.loc;
+      out.backSpawn = { x: +d.player.pos.x.toFixed(2), z: +d.player.pos.z.toFixed(2) };
+    }
   }
 
   /* ---------- 2. таверна ---------- */
@@ -129,6 +144,15 @@ const res = await page.evaluate(async () => {
     p3.update(1 / 60);
     out.pushedOutside = +Math.hypot(p3.pos.x - bx, p3.pos.z - bz).toFixed(3);
   }
+  // табличка «ДЛЯ ПЕРСОНАЛА» над второй дверью таверны
+  {
+    d.ctx.systems.locations.setLocation('tavern');
+    let signs = 0;
+    d.ctx.systems.locations.sceneTavern.traverse((o) => {
+      if (o.isMesh && o.name === 'sign') signs++;
+    });
+    out.staffSigns = signs;
+  }
   return out;
 });
 
@@ -139,13 +163,16 @@ const checks = [
   ['лестница в башне: три пролёта', res.rampCount === 3],
   ['игрок поднимается по лестнице', res.climbed],
   ['наверху есть интеракт удара в колокол', res.bellOnTower],
-  ['из башни можно пройти в неф', res.passageToNave],
+  ['из нефа можно пройти в звонарную', res.passageToNave],
+  ['вход сзади ведёт в звонарную', res.backEnterExists && res.backEnterLoc === 'church'
+    && res.backSpawn && res.backSpawn.z > 12],
   ['задняя дверь нефа открыта на выход', res.backDoorExists && res.backToVillage],
   ['выход у задней двери нефа', res.backDist !== undefined && res.backDist < 3],
   ['задняя дверь таверны открывается', res.openDoorExists && res.doorClosedBefore && res.doorOpenAfter],
   ['из таверны есть выход на улицу сзади', res.exitExists && res.backToVillageFromTavern],
   ['выход у задней двери таверны', res.tavernBackDist !== undefined && res.tavernBackDist < 3],
   ['на улице игрок не внутри стены', res.pushedOutside !== undefined && res.pushedOutside < 0.2],
+  ['над второй дверью таверны табличка «для персонала»', res.staffSigns >= 1],
 ];
 let bad = 0;
 for (const [name, ok] of checks) {
