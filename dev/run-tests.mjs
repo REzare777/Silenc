@@ -38,7 +38,7 @@ const ALL = [
   'volume_test', 'mill_test', 'roof_test', 'stair_smooth', 'animals_test',
   'animals_collide', 'dog_test', 'fish_test', 'inv_test', 'broken_normals',
   'npc_test', 'dungeon_test', 'single_check',
-  'house_check', 'church_check', 'time_check',
+  'house_check', 'church_check', 'time_check', 'town_layout',
 ];
 
 /** Быстрый набор — для проверки «ничего не сломалось» после правки. */
