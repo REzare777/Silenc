@@ -490,27 +490,30 @@ export function tavern(M, opts = {}) {
   const { w = 15, d = 18, h = 3.6, roofH = 3.4 } = opts;
   const B = new Builder();
   const wallH = h * 1.85;
+  // Низкий каменный цоколь: пол зала и улица — на одном уровне, иначе
+  // трактир будто «утоплен» в землю, а игрок выходит из бара в ступень.
+  const BASE = 0.22;
 
-  B.put('stone', w + 0.3, 0.6, d + 0.3, 0, 0.3, 0, 1.1);
-  B.put('tavernWall', w, wallH, d, 0, 0.55 + wallH / 2, 0, 2.4);
+  B.put('stone', w + 0.3, BASE, d + 0.3, 0, BASE / 2, 0, 1.1);
+  B.put('tavernWall', w, wallH, d, 0, BASE + wallH / 2, 0, 2.4);
   timberFrame(B, w, wallH, d, 'timber', [-w / 2 + 0.95, w / 2 - 0.95]);
 
   // второй этаж — overhang
-  B.put('tavernWall', w + 0.3, 0.26, d + 0.3, 0, 0.55 + wallH - 0.13, 0, 2.4);
-  B.put('timber', w + 0.36, 0.2, d + 0.36, 0, 0.55 + wallH - 0.32, 0);
-  B.put('timber', w + 0.36, 0.2, d + 0.36, 0, 0.55 + wallH + 0.05, 0);
+  B.put('tavernWall', w + 0.3, 0.26, d + 0.3, 0, BASE + wallH - 0.13, 0, 2.4);
+  B.put('timber', w + 0.36, 0.2, d + 0.36, 0, BASE + wallH - 0.32, 0);
+  B.put('timber', w + 0.36, 0.2, d + 0.36, 0, BASE + wallH + 0.05, 0);
 
   // дверь — по центру южного фасада, как и дверь внутри
   const dx = 0;
-  B.put('timber', 0.18, 2.3, 0.26, dx - 0.78, 1.7, -d / 2 - 0.08);
-  B.put('timber', 0.18, 2.3, 0.26, dx + 0.78, 1.7, -d / 2 - 0.08);
-  B.put('timber', 1.9, 0.2, 0.26, dx, 2.85, -d / 2 - 0.08);
-  B.put('plank', 1.35, 2.15, 0.12, dx, 1.62, -d / 2 - 0.15);
-  B.put('iron', 0.1, 0.1, 0.07, dx + 0.45, 1.45, -d / 2 - 0.22);
-  B.put('iron', 0.1, 0.1, 0.07, dx + 0.45, 2.05, -d / 2 - 0.22);
-  // порог и ступень — на каменном цоколе (иначе плита висела в воздухе)
-  B.put('stone', 2.6, 0.47, 0.9, dx, 0.235, -d / 2 - 0.55);
-  B.put('stone', 2.6, 0.24, 0.6, dx, 0.12, -d / 2 - 1.25);
+  B.put('timber', 0.18, 2.3, 0.26, dx - 0.78, BASE + 1.15, -d / 2 - 0.08);
+  B.put('timber', 0.18, 2.3, 0.26, dx + 0.78, BASE + 1.15, -d / 2 - 0.08);
+  B.put('timber', 1.9, 0.2, 0.26, dx, BASE + 2.3, -d / 2 - 0.08);
+  B.put('plank', 1.35, 2.15, 0.12, dx, BASE + 1.075, -d / 2 - 0.15);
+  B.put('iron', 0.1, 0.1, 0.07, dx + 0.45, BASE + 0.9, -d / 2 - 0.22);
+  B.put('iron', 0.1, 0.1, 0.07, dx + 0.45, BASE + 1.5, -d / 2 - 0.22);
+  // крыльцо: одна низкая ступень перед дверью (пол зала и улица — вровень)
+  B.put('stone', 2.6, BASE, 0.9, dx, BASE / 2, -d / 2 - 0.55);
+  B.put('stone', 2.6, 0.1, 0.6, dx, 0.05, -d / 2 - 1.25);
 
   /* Окна фасада — те же места, что и окна внутри (см. world/tavern.js):
      • юг (вход):  x = ±3.5,  y = 1.5   — нижний ряд зала;
@@ -518,30 +521,30 @@ export function tavern(M, opts = {}) {
      • север:      x = -1.15 / 2.25 / 5.5, y = 5.5 — по одному на каждую нишу;
      • восток:     z = -3.6, y = 5.2     — высокое окно над стойкой.
      На западной стене вместо окон — труба очага и труба кухонной печи. */
-  const upY = 0.55 + wallH - 1.75;           // верхний ряд — под карнизом второго этажа
+  const upY = BASE + wallH - 1.75;           // верхний ряд — под карнизом второго этажа
   for (const fx of [-3.5, 3.5]) addWindow(B, fx, 1.5, -d / 2 - 0.02, 1.3, 1.7, 'z', true);
   for (const fx of [-2.6, 0, 2.6]) addWindow(B, fx, upY, -d / 2 - 0.02, 0.95, 1.1, 'z', true);
   for (const fx of [-1.15, 2.25, 5.5]) addWindow(B, fx, 5.5, d / 2 + 0.02, 1.2, 1.5, 'z', true);
   addWindow(B, w / 2 + 0.02, 5.2, -3.6, 1.2, 1.5, 'x', true);
 
   // труба очага (западная стена) и кухонной печи (северная) — как в интерьере
-  B.put('stoneDark', 1.5, 2.2, 1.1, -w / 2 + 0.42, 0.55 + wallH - 1.1, 0, 1.3);
-  B.put('stoneDark', 1.7, 0.24, 1.3, -w / 2 + 0.42, 0.55 + wallH + 0.12, 0, 1.3);
-  B.put('stoneDark', 1.1, 1.8, 1.0, -4.6, 0.55 + wallH - 0.9, d / 2 - 0.42, 1.3);
-  B.put('stoneDark', 1.3, 0.24, 1.2, -4.6, 0.55 + wallH + 0.12, d / 2 - 0.42, 1.3);
+  B.put('stoneDark', 1.5, 2.2, 1.1, -w / 2 + 0.42, BASE + wallH - 1.1, 0, 1.3);
+  B.put('stoneDark', 1.7, 0.24, 1.3, -w / 2 + 0.42, BASE + wallH + 0.12, 0, 1.3);
+  B.put('stoneDark', 1.1, 1.8, 1.0, -4.6, BASE + wallH - 0.9, d / 2 - 0.42, 1.3);
+  B.put('stoneDark', 1.3, 0.24, 1.2, -4.6, BASE + wallH + 0.12, d / 2 - 0.42, 1.3);
 
-  const roofBase = 0.55 + wallH;
+  const roofBase = BASE + wallH;
   addRoof(B, w, d, roofH, 'tile', 'tavernWall', 0.5, true, roofBase);
   addChimney(B, w * 0.3, d * 0.2, roofBase + roofH + 2.0, roofBase);
 
   // вывеска на кронштейне — прямо над дверью, чтобы таверну было узнать
   const sx = dx;
-  const signY = 3.72, signZ = -d / 2 - 1.3;
+  const signY = BASE + 3.17, signZ = -d / 2 - 1.3;
   // кронштейн: горизонтальная лафа + две косые консоли по краям
-  B.put('iron', 0.1, 0.1, 1.45, sx, 4.52, -d / 2 - 0.85);
+  B.put('iron', 0.1, 0.1, 1.45, sx, BASE + 3.97, -d / 2 - 0.85);
   for (const s of [-1, 1]) {
-    const ax = sx + s * 0.86, ay = 4.5, az = -d / 2 - 1.48;
-    const bx = sx + s * 0.86, by = 3.16, bz = -d / 2 - 0.14;
+    const ax = sx + s * 0.86, ay = BASE + 3.95, az = -d / 2 - 1.48;
+    const bx = sx + s * 0.86, by = BASE + 2.61, bz = -d / 2 - 0.14;
     const dxv = bx - ax, dyv = by - ay, dzv = bz - az;
     const len = Math.hypot(dxv, dyv, dzv);
     const g = cyl(0.042, 0.042, len, 5);
@@ -590,20 +593,20 @@ export function tavern(M, opts = {}) {
     const bz = -6.7, bx = w / 2;
     // косяки и перемычка
     for (const s2 of [-1, 1]) {
-      B.put('timber', 0.26, 2.3, 0.2, bx + 0.04, 1.35, bz + s2 * 0.78, 1.2);
+      B.put('timber', 0.26, 2.3, 0.2, bx + 0.04, BASE + 1.15, bz + s2 * 0.78, 1.2);
     }
-    B.put('timber', 0.26, 0.22, 1.76, bx + 0.04, 2.5, bz, 1.2);
+    B.put('timber', 0.26, 0.22, 1.76, bx + 0.04, BASE + 2.3, bz, 1.2);
     // створка с досками и кольцом
-    B.put('plank', 0.12, 2.15, 1.38, bx + 0.12, 1.35, bz, 1.3);
-    for (const by of [0.55, 2.1]) {
+    B.put('plank', 0.12, 2.15, 1.38, bx + 0.12, BASE + 1.15, bz, 1.3);
+    for (const by of [BASE + 0.35, BASE + 1.9]) {
       B.put('timber', 0.16, 0.14, 1.36, bx + 0.17, by, bz, 1.2);
     }
-    B.add(torus(0.11, 0.028, 5, 12), 'iron', mat(bx + 0.2, 1.35, bz - 0.5, 0, Math.PI / 2));
-    B.put('iron', 0.2, 0.3, 0.07, bx + 0.16, 1.35, bz - 0.5, 1);
+    B.add(torus(0.11, 0.028, 5, 12), 'iron', mat(bx + 0.2, BASE + 1.15, bz - 0.5, 0, Math.PI / 2));
+    B.put('iron', 0.2, 0.3, 0.07, bx + 0.16, BASE + 1.15, bz - 0.5, 1);
     // козырёк над дверью на кронштейнах (поднят — чтобы под ним висела табличка)
-    B.put('tile', 1.15, 0.16, 1.95, bx + 0.52, 3.08, bz, 1.2);
+    B.put('tile', 1.15, 0.16, 1.95, bx + 0.52, BASE + 2.86, bz, 1.2);
     for (const s2 of [-1, 1]) {
-      B.add(box(0.12, 0.55, 0.12, 1), 'timber', mat(bx + 0.42, 2.78, bz + s2 * 0.8));
+      B.add(box(0.12, 0.55, 0.12, 1), 'timber', mat(bx + 0.42, BASE + 2.56, bz + s2 * 0.8));
     }
     // ступень и бочки у входа
     B.put('stone', 0.9, 0.2, 1.9, bx + 0.55, 0.1, bz, 1.2);
@@ -613,9 +616,9 @@ export function tavern(M, opts = {}) {
     }
     B.add(cyl(0.27, 0.27, 0.05, 12), 'plank', mat(bx + 0.75, 0.8, bz + 1.35));
     // фонарь на кронштейне
-    B.put('iron', 0.1, 0.1, 0.5, bx + 0.25, 2.55, bz - 0.95, 1);
-    B.add(cyl(0.15, 0.19, 0.22, 8), 'iron', mat(bx + 0.45, 2.4, bz - 0.95));
-    B.add(cyl(0.12, 0.08, 0.14, 8), 'lampGlass', mat(bx + 0.45, 2.23, bz - 0.95));
+    B.put('iron', 0.1, 0.1, 0.5, bx + 0.25, BASE + 2.33, bz - 0.95, 1);
+    B.add(cyl(0.15, 0.19, 0.22, 8), 'iron', mat(bx + 0.45, BASE + 2.18, bz - 0.95));
+    B.add(cyl(0.12, 0.08, 0.14, 8), 'lampGlass', mat(bx + 0.45, BASE + 2.01, bz - 0.95));
   }
 
   const group = B.build(M, null, { name: 'tavern' });
@@ -623,7 +626,7 @@ export function tavern(M, opts = {}) {
     // табличка над задней дверью: «для персонала»
     const sign = signMesh('ДЛЯ ПЕРСОНАЛА', 1.3, 0.28);
     if (sign) {
-      sign.position.set(w / 2 + 0.2, 2.76, -6.7);
+      sign.position.set(w / 2 + 0.2, BASE + 2.54, -6.7);
       sign.rotation.y = Math.PI / 2;
       group.add(sign);
     }
@@ -642,8 +645,8 @@ export function tavern(M, opts = {}) {
         r: 0.42,
       });
     }
-    out.platforms.push(localBox(px, pz, ry, w * 0.05, -d / 2 - 0.55, 2.6, 0.9, 0.47));
-    out.platforms.push(localBox(px, pz, ry, w * 0.05, -d / 2 - 1.25, 2.6, 0.6, 0.24));
+    out.platforms.push(localBox(px, pz, ry, w * 0.05, -d / 2 - 0.55, 2.6, 0.9, 0.22));
+    out.platforms.push(localBox(px, pz, ry, w * 0.05, -d / 2 - 1.25, 2.6, 0.6, 0.1));
     out.windowLights = [];
     group.traverse((o) => {
       if (o.isMesh && o.material === M.windowLit) {
@@ -709,43 +712,70 @@ export function church(M, opts = {}) {
     }
   }
 
-  // звонарная: стоит СЗАДИ храма, отдельной каменной комнатой. Проём —
-  // на северной стороне: через него входят с заднего двора, а внутри
-  // поднимаются по сломанной лестнице к колоколу.
-  const tz = d / 2 + 1.2;
+  // башня-колокольня: стоит перед южным фасадом, как и прежде. Проём —
+  // на южной стороне, через него входят в храм.
+  const tz = -d / 2 - 1.2;
   const BT = 0.7;                     // толщина стен башни
   const TPD_W = 2.0, TPD_H = 2.9;    // дверной проём
   B.put('stone', 5.2, 0.9, 5.2, 0, 0.45, tz, 1.2);
-  // четыре стены башни: южная сплошная, северная — с проёмом
-  B.put('stone', 4.6, towerH, BT, 0, 0.9 + towerH / 2, tz - 2.3 + BT / 2, 1.6);
+  // четыре стены башни: северная сплошная, южная — с проёмом
+  B.put('stone', 4.6, towerH, BT, 0, 0.9 + towerH / 2, tz + 2.3 - BT / 2, 1.6);
   B.put('stone', BT, towerH, 4.6 - BT * 2, -2.3 + BT / 2, 0.9 + towerH / 2, tz, 1.6);
   B.put('stone', BT, towerH, 4.6 - BT * 2, 2.3 - BT / 2, 0.9 + towerH / 2, tz, 1.6);
   {
     const sideW = (4.6 - TPD_W) / 2, sideX = TPD_W / 2 + sideW / 2;
-    const fz = tz + 2.3 - BT / 2;
+    const fz = tz - 2.3 + BT / 2;
     B.put('stone', sideW, towerH, BT, -sideX, 0.9 + towerH / 2, fz, 1.6);
     B.put('stone', sideW, towerH, BT, sideX, 0.9 + towerH / 2, fz, 1.6);
     B.put('stone', TPD_W, towerH - TPD_H, BT, 0, 0.9 + TPD_H + (towerH - TPD_H) / 2, fz, 1.6);
     // тьма за проёмом — видно, что это вход, а не кладка
-    B.put('dark', TPD_W, TPD_H, 0.3, 0, TPD_H / 2, tz + 2.3 - BT - 0.16, 1.2);
-    // сколоченные дубовые створки: одна перекошена, снизу щель
+    B.put('dark', TPD_W, TPD_H, 0.3, 0, TPD_H / 2, tz - 2.3 + BT + 0.16, 1.2);
+    // дубовые створки с железными обвязками и кольцом
     for (const sx of [-1, 1]) {
-      B.add(box(TPD_W / 2 - 0.04, TPD_H - 0.2, 0.12, 1), 'oakDoor',
-        mat(sx * (TPD_W / 4), (TPD_H - 0.2) / 2, tz + 2.3 + 0.02, sx * 0.05));
+      B.put('oakDoor', TPD_W / 2 - 0.04, TPD_H - 0.2, 0.12,
+        sx * (TPD_W / 4), (TPD_H - 0.2) / 2, tz - 2.3 - 0.02);
       for (const hy of [0.6, TPD_H - 0.6]) {
-        B.put('iron', TPD_W / 2 - 0.1, 0.14, 0.16, sx * (TPD_W / 4), hy, tz + 2.3 + 0.09);
+        B.put('iron', TPD_W / 2 - 0.1, 0.14, 0.16, sx * (TPD_W / 4), hy, tz - 2.3 - 0.09);
       }
     }
-    B.add(torus(0.16, 0.035, 5, 12), 'iron', mat(0.12, 1.45, tz + 2.3 + 0.1, 0, Math.PI / 2));
-    B.put('iron', 0.26, 0.36, 0.07, 0.12, 1.45, tz + 2.3 + 0.06);
+    B.add(torus(0.16, 0.035, 5, 12), 'iron', mat(0.12, 1.45, tz - 2.3 - 0.1, 0, Math.PI / 2));
+    B.put('iron', 0.26, 0.36, 0.07, 0.12, 1.45, tz - 2.3 - 0.06);
     // обрамление проёма
     for (const sx of [-1, 1]) {
-      B.put('stoneDark', 0.4, TPD_H + 0.5, 0.5, sx * (TPD_W / 2 + 0.2), (TPD_H + 0.5) / 2 - 0.25, tz + 2.3 + 0.05, 1.2);
+      B.put('stoneDark', 0.4, TPD_H + 0.5, 0.5, sx * (TPD_W / 2 + 0.2), (TPD_H + 0.5) / 2 - 0.25, tz - 2.3 - 0.05, 1.2);
     }
-    B.put('stoneDark', TPD_W + 1.2, 0.36, 0.6, 0, TPD_H + 0.45, tz + 2.3 + 0.05, 1.2);
-    // ступени перед звонаркой
-    B.put('stone', 3.4, 0.45, 0.9, 0, 0.225, tz + 3.1, 1.2);
-    B.put('stone', 2.6, 0.22, 0.5, 0, 0.11, tz + 3.6, 1.2);
+    B.put('stoneDark', TPD_W + 1.2, 0.36, 0.6, 0, TPD_H + 0.45, tz - 2.3 - 0.05, 1.2);
+    // ступени перед башней
+    B.put('stone', 3.4, 0.45, 0.9, 0, 0.225, tz - 3.1, 1.2);
+    B.put('stone', 2.6, 0.22, 0.5, 0, 0.11, tz - 3.6, 1.2);
+  }
+  // ------- задняя дверь нефа: сколоченный частокол (сломанная) -------
+  // Через неё попадают в звонарную: доски выбиты, часть забита наискось.
+  {
+    const bw = 2.5, bh = 3.0, bz = d / 2;
+    const fy = 0.6;                       // уровень пола нефа
+    // каменный портал
+    for (const sx of [-1, 1]) {
+      B.put('stoneDark', 0.55, bh + 0.5, 0.62, sx * (bw / 2 + 0.27), fy + (bh + 0.5) / 2 - 0.25, bz + 0.06, 1.2);
+    }
+    B.put('stoneDark', bw + 1.1, 0.5, 0.66, 0, fy + bh + 0.22, bz + 0.06, 1.2);
+    B.put('stoneDark', bw + 1.5, 0.22, 0.85, 0, fy + bh + 0.55, bz + 0.12, 1.2);
+    // частокол: часть досок выломана, часть забита наискось
+    const planks = 9;
+    for (let i = 0; i < planks; i++) {
+      if (i === 3 || i === 4) continue;                      // выломанные доски
+      const px = -bw / 2 + (i + 0.5) * (bw / planks);
+      B.add(box(bw / planks - 0.03, bh, 0.14, 1), 'oakDoor',
+        mat(px, fy + bh / 2, bz + 0.02, i === 0 ? 0.06 : (i === planks - 1 ? -0.05 : 0)));
+    }
+    // доски, забитые поверх выломанного места
+    B.add(box(bw * 0.7, 0.2, 0.1, 1), 'timber', mat(-0.2, fy + 1.7, bz + 0.1, 0.24));
+    B.add(box(bw * 0.55, 0.17, 0.1, 1), 'timber', mat(0.25, fy + 1.15, bz + 0.11, -0.3));
+    // сколоченная поперечина
+    B.put('timber', bw + 0.1, 0.18, 0.2, 0, fy + 1.5, bz + 0.06, 1.1);
+    // ступени к задней двери
+    B.put('stone', bw + 1.2, 0.2, 0.9, 0, fy - 0.5, bz + 0.55, 1.2);
+    B.put('stone', bw + 0.9, 0.2, 0.6, 0, fy - 0.3, bz + 0.4, 1.2);
   }
   // угловые пилястры
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
@@ -794,8 +824,12 @@ export function church(M, opts = {}) {
     // здесь достаточно платформ ступеней.
     out.platforms.push(localBox(px, pz, ry, 0, -(d / 2 + 0.6), 4.0, 1.2, 0.72));
     out.platforms.push(localBox(px, pz, ry, 0, -(d / 2 + 1.5), 3.2, 0.6, 0.36));
-    // ступени перед звонаркой (вход с заднего двора)
-    out.platforms.push(localBox(px, pz, ry, 0, tz + 3.6, 2.6, 0.5, 0.22));
+    // ступени перед башней-колокольней (южный фасад)
+    out.platforms.push(localBox(px, pz, ry, 0, tz - 3.6, 2.6, 0.5, 0.22));
+    out.platforms.push(localBox(px, pz, ry, 0, tz - 3.1, 3.4, 0.9, 0.45));
+    // ступени к сломанной задней двери нефа
+    out.platforms.push(localBox(px, pz, ry, 0, d / 2 + 0.4, 1.7, 0.3, 0.2));
+    out.platforms.push(localBox(px, pz, ry, 0, d / 2 + 0.55, 1.85, 0.45, 0.1));
     out.platforms.push(localBox(px, pz, ry, 0, tz + 3.1, 3.4, 0.9, 0.45));
     return out;
   };

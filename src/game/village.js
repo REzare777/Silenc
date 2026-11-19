@@ -41,17 +41,17 @@ import {
  *
  * @type {[number, number, number][]} [x, z, радиус]
  */
-// Звонарная стоит сзади храма — ей нужна своя поляна, иначе лес
-// зарастает её вплотную и подхода нет.
+// Башня-колокольня стоит перед южным фасадом храма — ей нужна своя
+// поляна, иначе лес зарастает её вплотную и подхода нет.
 const CHURCH_RY = ryToFace([LAYOUT.church.x, LAYOUT.church.z], [0, 0]);
-const BELLHOUSE = {
-  x: LAYOUT.church.x + 12.0 * Math.sin(CHURCH_RY),
-  z: LAYOUT.church.z + 12.0 * Math.cos(CHURCH_RY),
+const CHURCH_TOWER = {
+  x: LAYOUT.church.x - 9.7 * Math.sin(CHURCH_RY),
+  z: LAYOUT.church.z - 9.7 * Math.cos(CHURCH_RY),
 };
 
 const BUILDING_CLEARINGS = [
   [LAYOUT.church.x, LAYOUT.church.z, 11],
-  [BELLHOUSE.x, BELLHOUSE.z, 12],
+  [CHURCH_TOWER.x, CHURCH_TOWER.z, 9],
   [LAYOUT.mill.x, LAYOUT.mill.z, 9],
   [LAYOUT.tavern.x, LAYOUT.tavern.z, 12],
   [LAYOUT.barn.x, LAYOUT.barn.z, 10],
@@ -186,29 +186,29 @@ export function createVillage(ctx) {
     const ch = church(ctx.M, {});
     const chRy = ryToFace([LAYOUT.church.x, LAYOUT.church.z], [0, 0]);
     place(ch, LAYOUT.church.x, LAYOUT.church.z, chRy);
-    // вход в храм — через южный портал нефа
+    // вход в храм — через башню-колокольню (южный фасад), как и прежде
     addInteract(
-      facadePos(3, 44, chRy, 0, -9.0, 1.6), 2.6, 'Войти в храм',
+      facadePos(3, 44, chRy, 0, -12.4, 1.8), 2.6, 'Войти в храм',
       () => ctx.systems.locations.setLocation('church'),
     );
-    // точка выхода из храма — перед крыльцом нефа, на земле
+    // точка выхода из храма — перед ступенями башни, на земле
     {
-      const out = facadePos(3, 44, chRy, 0, -10.6, 0);
+      const out = facadePos(3, 44, chRy, 0, -14.2, 0);
       ctx.doors.church = { x: out.x, z: out.z, ry: chRy };
     }
-    // звонарная стоит сзади: вход в неё — с заднего двора
+    // сзади храма — сломанная дверь нефа: через неё попадают в звонарку
     addInteract(
-      facadePos(3, 44, chRy, 0, 12.2, 1.6), 2.6, 'Войти в звонарку',
+      facadePos(3, 44, chRy, 0, 9.4, 1.4), 2.6, 'Войти в звонарку',
       () => ctx.systems.locations.setLocation('church', 'back'),
     );
     {
-      // точка выхода через звонарную — в заднем дворе за ступенями
-      const back = facadePos(3, 44, chRy, 0, 13.5, 0);
+      // точка выхода через звонарную — в заднем дворе у сломанной двери
+      const back = facadePos(3, 44, chRy, 0, 10.6, 0);
       ctx.doors.churchBack = { x: back.x, z: back.z, ry: chRy };
     }
-    // фонарь у двери звонарной — иначе створку не видно
+    // фонарь у сломанной двери — иначе её не видно
     {
-      const lp = facadePos(3, 44, chRy, 2.35, 12.35, 0);
+      const lp = facadePos(3, 44, chRy, 2.35, 9.1, 0);
       const cl = lantern(ctx.M, ctx.glowTex, { x: lp.x, z: lp.z, height: 3.5, lit: true, intensity: 2.5, distance: 13 });
       ctx.scene.add(cl.group);
       cl.place(lp.x, lp.z);
@@ -265,10 +265,13 @@ export function createVillage(ctx) {
      *   A (-13, 14) / (13, 14)     — ближний ряд к площади
      *   B (-13, 31) / (13, 31)     — тот же ряд, ближе к храму
      *   C (-31, 14) / (31, 14)     — второй ряд, за огородами (два этажа)
-     *   D (-29, 32) / (29, 32)     — второй ряд у поля
-     *   E (-33, -20) / (33, -20)   — южная окраина, за трактиром
-     *   F (-21, -32) / (21, -32)   — дальний отшиб, у скалы
+     *   D (-26, 29) / (26, 29)     — второй ряд у поля
+     *   E (-29, -22) / (29, -22)   — южная окраина, в сторону пруда
+     *   F (-19, -34) / (19, -34)   — дальний отшиб, у скалы
      */
+    // Участки разнесены по-настоящему: между соседями 7-11 м свободного
+    // места, двор от улицы 6+ м, а дом у пруда (пара E) стоит в 12 м от
+    // воды и не заходит на лужайку.
     const homes = [
       [-13, 14, { w: 6, d: 5, h: 3.1, roof: 'thatch', floors: 1 }],
       [13, 14, { w: 6, d: 5, h: 3.1, roof: 'thatch', floors: 1 }],
@@ -276,12 +279,12 @@ export function createVillage(ctx) {
       [13, 31, { w: 6, d: 5, h: 3.0, roof: 'tile', floors: 1 }],
       [-31, 14, { w: 7, d: 6, h: 3.4, roof: 'tile', floors: 2 }],
       [31, 14, { w: 7, d: 6, h: 3.4, roof: 'tile', floors: 2 }],
-      [-29, 32, { w: 6, d: 5, h: 3.1, roof: 'thatch', floors: 1 }],
-      [29, 32, { w: 6, d: 5, h: 3.1, roof: 'thatch', floors: 1 }],
-      [-33, -20, { w: 6, d: 5, h: 3.0, roof: 'thatch', floors: 1 }],
-      [33, -20, { w: 6, d: 5, h: 3.0, roof: 'thatch', floors: 1 }],
-      [-21, -32, { w: 5.5, d: 4.6, h: 2.9, roof: 'thatch', floors: 1 }],
-      [21, -32, { w: 5.5, d: 4.6, h: 2.9, roof: 'thatch', floors: 1 }],
+      [-26, 29, { w: 6, d: 5, h: 3.1, roof: 'thatch', floors: 1 }],
+      [26, 29, { w: 6, d: 5, h: 3.1, roof: 'thatch', floors: 1 }],
+      [-29, -22, { w: 6, d: 5, h: 3.0, roof: 'thatch', floors: 1 }],
+      [29, -22, { w: 6, d: 5, h: 3.0, roof: 'thatch', floors: 1 }],
+      [-19, -34, { w: 5.5, d: 4.6, h: 2.9, roof: 'thatch', floors: 1 }],
+      [19, -34, { w: 5.5, d: 4.6, h: 2.9, roof: 'thatch', floors: 1 }],
     ];
     const wallKinds = ['plaster', 'plasterWarm', 'plasterGrey'];
     const houseLines = [
@@ -289,14 +292,14 @@ export function createVillage(ctx) {
       'Дом напротив костра. На крыльце — закопчённая грядка.',
       'Дом в глубине улицы. Дверь выкрашена в синий.',
       'Дом с большим огородом за ним.',
-      'Дом ближе к храму: отсюда слышен колокол.',
-      'Дом у поля. Ветер пахнет скошенной травой.',
       'Двухэтажный дом: внизу печь, наверху сушатся травы.',
       'Двухэтажный дом с мастерской — слышно, как точат.',
+      'Дом ближе к храму: отсюда слышен колокол.',
+      'Дом у поля. Ветер пахнет скошенной травой.',
       'Дом на южной окраине, за трактиром. Тишина.',
-      'Дом у мельницы: слышно, как скрипят жернова.',
+      'Дом у дальнего пруда: слышно, как плещется вода.',
       'Дом на отшибе: забор, поле и тишина.',
-      'Последний дом в долине: дальше только лес и тропа в скалу.',
+      'Дом у мельницы: слышно, как скрипят жернова.',
     ];
     homes.forEach((h, i) => {
       const hry = ryToFace([h[0], h[1]], [0, 0]);
@@ -361,7 +364,9 @@ export function createVillage(ctx) {
 
     /* --- прилавки --- */
     // прилавки: последний отодвинут от входа трактира, чтобы не загораживал дверь
-    const stalls = [[5.6, 5.6, 'fabric'], [-5.8, 6.4, 'fabric2'], [6.4, -6.2, 'fabric2'], [-9.2, -2.6, 'fabric']];
+    // прилавки — у колодца и площади: один из них раньше стоял прямо
+    // перед дверью трактира и закрывал подход к ней
+    const stalls = [[5.6, 5.6, 'fabric'], [-5.8, 6.4, 'fabric2'], [6.4, -6.2, 'fabric2'], [-8.0, 0.0, 'fabric']];
     const stallLines = [
       'На прилавке — мед, репа и кусок сыра.',
       'Ткани, ленты и пряжа. Торговец здоровается кивком.',
@@ -518,7 +523,7 @@ export function createVillage(ctx) {
       inner: 44,
       keepClear: (x, z) => {
         if (Math.abs(x) < 8 && Math.abs(z) < 100) return true;      // главная дорога вдоль Z
-        if (x > 29 && x < 73 && z > -35 && z < 7) return true;       // лужайка у пруда
+        if (x > 36 && x < 73 && z > -35 && z < 7) return true;       // лужайка у пруда
         if (distToDungeonTrail(x, z) < 3.4) return true;             // узкая тропа к пещере
         // у самой скалы — только площадка перед входом; дальше лес
         // подступает вплотную и полностью закрывает скалу от взгляда

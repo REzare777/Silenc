@@ -48,9 +48,12 @@ const res = await page.evaluate(() => {
     { name: 'прилавок 1', x: 5.6, z: 5.6, r: 1.6 },
     { name: 'прилавок 2', x: -5.8, z: 6.4, r: 1.6 },
     { name: 'прилавок 3', x: 6.4, z: -6.2, r: 1.6 },
-    { name: 'прилавок 4', x: -9.2, z: -2.6, r: 1.6 },
+    { name: 'прилавок 4', x: -8.0, z: 0.0, r: 1.6 },
   ];
   const hay = [[-40, 28, 1.5], [-53, 13, 1.5], [28, 38, 1.5], [21, 16, 1.5]];
+  // пруд и лужайка у него — дом не должен стоять на лужайке и подходить к воде
+  const POND = { x: 50, z: -14, r: 10.6 };
+  const MEADOW = { x0: 36, x1: 73, z0: -35, z1: 7 };
   // поля с заборами (забор — тоже препятствие)
   const fields = [
     { name: 'поле (запад)', x: -30, z: 44, hx: 10, hz: 6 },
@@ -78,6 +81,14 @@ const res = await page.evaluate(() => {
     for (const o of others) {
       const g = o.r ? circleGap(h, o) : boxGap(h, o);
       if (g < 0) p.push(`наезжает на «${o.name}» (${g.toFixed(1)} м)`);
+    }
+    // пруд: от воды должно быть не меньше 4 м
+    const pondGap = Math.hypot(h.x - POND.x, h.z - POND.z) - (Math.max(h.w, h.d) / 2 + POND.r);
+    if (pondGap < 4) p.push(`слишком близко к пруду (${pondGap.toFixed(1)} м)`);
+    // лужайка у пруда — на ней домам не место
+    if (h.x + h.w / 2 > MEADOW.x0 && h.x - h.w / 2 < MEADOW.x1
+      && h.z + h.d / 2 > MEADOW.z0 && h.z - h.d / 2 < MEADOW.z1) {
+      p.push('на лужайке у пруда');
     }
     for (const [hx, hz, hr] of hay) {
       if (Math.hypot(h.x - hx, h.z - hz) < Math.max(h.w, h.d) / 2 + hr) p.push('наезжает на стог сена');
