@@ -11,7 +11,7 @@
 | Где | Ссылка |
 |---|---|
 | **Онлайн (основная)** | https://rezare777.github.io/Silenc/ |
-| **Зеркало** | https://o0c1e8mvufhqs.space.mcode.io/ |
+| **Зеркало** | https://njoyss18pfynv.space.mcode.io/ |
 | **itch.io** | https://rezare777.itch.io/ (страница создаётся вручную, см. ниже) |
 | **Однофайловая версия** | `Шёпот-Долина.html` в архиве `whispervale-game.zip` — распаковать и открыть двойным щелчком |
 | **Исходники** | https://github.com/REzare777/Silenc (ветка `main`) |
