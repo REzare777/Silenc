@@ -137,8 +137,12 @@ await page.evaluate(() => {
   d.player.enabled = true;
   const enter = d.ctx.interactables.find((x) => x.label === 'Войти в храм');
   if (enter) enter.act();
+  // ставим игрока ровно в точку спавна локации и смотрим вглубь нефа
+  const ch = d.ctx.systems.locations.churchLoc;
+  d.player.teleport(ch.spawn.x, ch.spawn.z, ch.spawn.yaw);
+  d.player.y = 0; d.player.groundY = 0; d.player.vy = 0;
 });
-await page.waitForTimeout(1400);
+await page.waitForTimeout(1800);
 await grab('R40_church_spawn');
 
 console.log('ошибки:', errs.length, errs.slice(0, 3));

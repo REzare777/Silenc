@@ -243,6 +243,7 @@ export function createVillage(ctx) {
     place(mill, millX, millZ, millRy);
     ctx.mill.blades = mill.blades;
     ctx.mill.cap = mill.cap;
+    ctx.mill.landingGeom = mill.landingGeom || null;   // стык перемычки и площадки
     // подвесные фонари внутри башни
     for (const [lx, ly, lz] of [[0.7, 2.4, -1.8], [2.0, 6.2, 0.4], [-1.9, 9.4, 0.6], [0.4, 10.9, 1.7]]) {
       const wx = millX + lx * Math.cos(millRy) + lz * Math.sin(millRy);
@@ -333,7 +334,10 @@ export function createVillage(ctx) {
       ctx.doors.homes[i] = { x: doorPos.x, z: doorPos.z, ry: hry };
       // список домов с габаритами — им пользуются проверки планировки
       ctx.homes = ctx.homes || [];
-      ctx.homes[i] = { i, x: h[0], z: h[1], w: h[2].w, d: h[2].d, ry: hry };
+      ctx.homes[i] = {
+        i, x: h[0], z: h[1], w: h[2].w, d: h[2].d, ry: hry,
+        doorGeom: placed.doorGeom || null,     // метрики двери для проверок
+      };
       addInteract(
         facadePos(h[0], h[1], hry, 0, -h[2].d / 2 - 0.4),
         2.0,
@@ -436,13 +440,17 @@ export function createVillage(ctx) {
     }
 
     /* --- костёр --- */
+    // Костёр перенесён к трактиру: раньше он стоял вплотную к дому
+    // и тропинке к нему — теперь это отдельный «двор», вдали от домов.
+    const FIRE = { x: -6.5, z: -3.5 };
+    ctx.campfirePos = { x: FIRE.x, z: FIRE.z };   // положение костра для проверок
     const fire = campfire(ctx.M, ctx.glowTex);
-    fire.group.position.set(-9, 0, 8.5);
+    fire.group.position.set(FIRE.x, 0, FIRE.z);
     ctx.scene.add(fire.group);
-    ctx.emberSys = new Embers(ctx.scene, ctx.glowTex, new THREE.Vector3(-9, 0.6, 8.5));
-    ctx.colliders.circles.push({ x: -9, z: 8.5, r: 1.0 });   // круг камней костра
+    ctx.emberSys = new Embers(ctx.scene, ctx.glowTex, new THREE.Vector3(FIRE.x, 0.6, FIRE.z));
+    ctx.colliders.circles.push({ x: FIRE.x, z: FIRE.z, r: 1.0 });   // круг камней костра
     ctx.interactables.push({
-      pos: new THREE.Vector3(-9, 1, 8.5), radius: 2.8, label: 'Подбросить дрова',
+      pos: new THREE.Vector3(FIRE.x, 1, FIRE.z), radius: 2.8, label: 'Подбросить дрова',
       act: () => { ctx.fireBoost = 12; ctx.ui.toast('Огонь разгорелся — тепло до ушей.'); },
     });
     ctx.animated.push((tt) => {
@@ -461,10 +469,10 @@ export function createVillage(ctx) {
     leg1.position.set(-0.9, 0.22, 0);
     const leg2 = leg1.clone(); leg2.position.x = 0.9;
     seat.add(seatMesh, leg1, leg2);
-    seat.position.set(-9, 0, 11.4);
+    seat.position.set(FIRE.x, 0, FIRE.z + 2.6);
     ctx.scene.add(seat);
     const seat2 = seat.clone(); seat2.rotation.y = Math.PI / 2;
-    seat2.position.set(-12.4, 0, 8.5);
+    seat2.position.set(FIRE.x - 2.6, 0, FIRE.z);
     ctx.scene.add(seat2);
 
     // бочки, ящики, мешки и повозки убраны из деревни — теперь всё в амбаре (см. world/barn.js)

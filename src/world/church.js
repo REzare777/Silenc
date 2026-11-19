@@ -246,7 +246,9 @@ export function buildChurchInterior(M, glowTex) {
     { x: TX1 - LW / 2, z: TZ1 - 2.8, hx: LW / 2, hz: 0.8, y: BELL_Y },
   ];
   for (const p of landings) {
-    B.put('plank', p.hx * 2, 0.16, p.hz * 2, p.x, p.y - 0.08, p.z, 1.2);
+    // Настил площадки на 5 см ниже верхней ступени: при точном совпадении
+    // верхних граней ступени и площадки на стыке шло мерцание (z-fighting).
+    B.put('plank', p.hx * 2, 0.16, p.hz * 2, p.x, p.y - 0.13, p.z, 1.2);
     platforms.push({ cx: p.x, cz: p.z, hx: p.hx, hz: p.hz, ang: 0, y: p.y });
   }
   // перила на промежуточных площадках — по открытым краям
@@ -555,6 +557,9 @@ export function buildChurchInterior(M, glowTex) {
 
   return {
     scene, group, colliders, platforms, floors: [], climbs: [],
+    // Метрики лестницы: верх настила площадки на 5 см ниже верхней ступени —
+    // плоскости не совпадают, поэтому на стыке нет мерцания.
+    stairsGeom: { deckTop: landings[0].y - 0.05, stepTop: landings[0].y },
     /** Вход с улицы — южный портал нефа. */
     spawn: { x: 0, z: nz(-D / 2 + 1.2), yaw: Math.PI },
     /** Вход с задней стороны храма — звонарная, у двери наружу. */

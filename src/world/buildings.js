@@ -30,14 +30,23 @@ export function localOriented(px, pz, ry, lx, lz, w, d, ang, y = 0) {
 }
 
 /** Каркас из бруса на фасаде (-z). Раскосы — только в свободных местах. */
-function timberFrame(B, w, h, d, matKey = 'timber', braceXs = null, center = true) {
+function timberFrame(B, w, h, d, matKey = 'timber', braceXs = null, center = true, doorHalf = 0) {
   const t = 0.19, z = -d / 2 - 0.05;
   for (const sx of [-1, 1]) B.put(matKey, t, h, t, sx * (w / 2 - t / 2 - 0.02), h / 2, z);
   // центральная стойка делит фасад пополам и выглядит как балка посередине
   // дома — для жилых домов она не нужна: проём двери обрамляют косяки
   if (w > 5 && center) B.put(matKey, t, h, t, 0, h / 2, z);
   B.put(matKey, w, t, t, 0, h - t / 2 - 0.02, z);
-  B.put(matKey, w, t, t, 0, 0.18, z);
+  // Нижняя обвязка прерывается у дверного проёма: раньше брус шёл
+  // поперёк двери и дом выглядел «поломанным».
+  if (doorHalf > 0) {
+    const seg = (w - doorHalf * 2) / 2;
+    for (const sx of [-1, 1]) {
+      B.put(matKey, seg, t, t, sx * (doorHalf + seg / 2), 0.18, z);
+    }
+  } else {
+    B.put(matKey, w, t, t, 0, 0.18, z);
+  }
   // небольшие угловые раскосы под коньком — не пересекают окна
   for (const sx of [-1, 1]) {
     const g = box(t * 0.8, 0.95, t, 1);
@@ -349,7 +358,7 @@ export function cottage(M, opts = {}) {
   // интерьер: пол, очаг, стол, сундук, полка
   const interior = houseInterior(B, { w, d, wallH, floors, variant: opts.variant || 0 });
 
-  timberFrame(B, w, wallH, d, 'timber', null, false);
+  timberFrame(B, w, wallH, d, 'timber', null, false, doorW / 2 + 0.28);
   for (const sx of [-1, 1]) {
     B.put('timber', 0.16, wallH, 0.19, sx * (w / 2 + 0.02), 0.5 + wallH / 2, -d / 2 + 0.3);
     B.put('timber', 0.16, wallH, 0.19, sx * (w / 2 + 0.02), 0.5 + wallH / 2, d / 2 - 0.3);
@@ -357,6 +366,12 @@ export function cottage(M, opts = {}) {
 
   // дверь: косяки, перемычка, распахнутая внутрь створка (проём свободен)
   const dx = 0;
+  // Метрики двери для проверок: плоскости створки и косяков не должны
+  // совпадать — иначе дверь «фризит» (z-fighting).
+  const doorGeom = {
+    jambZ: -d / 2 - 0.07, jambHalf: doorW / 2,          // край проёма
+    leafZ: -d / 2 - 0.02, leafHalf: (doorW - 0.024) / 2, // створка на 1,2 см уже
+  };
   B.put('timber', 0.16, 2.1, 0.24, dx - doorW / 2 - 0.08, FLOOR_Y + 1.05, -d / 2 - 0.07);
   B.put('timber', 0.16, 2.1, 0.24, dx + doorW / 2 + 0.08, FLOOR_Y + 1.05, -d / 2 - 0.07);
   B.put('timber', doorW + 0.32, 0.18, 0.24, dx, FLOOR_Y + 2.1, -d / 2 - 0.07);
@@ -374,9 +389,34 @@ export function cottage(M, opts = {}) {
       }
     } else {
       // закрытая дверь: створка в проёме, замок и кольцо (без грубых перевязей)
-      B.add(box(doorW, 1.95, 0.12, 1), 'plank', mat(dx, FLOOR_Y + 0.98, -d / 2 + 0.06));
-      B.add(box(0.16, 0.22, 0.09, 1), 'iron', mat(dx + doorW / 2 - 0.18, FLOOR_Y + 1.05, -d / 2 - 0.04));
-      B.add(torus(0.11, 0.028, 5, 10), 'iron', mat(dx + doorW / 2 - 0.18, FLOOR_Y + 0.86, -d / 2 - 0.05, 0, Math.PI / 2));
+      // Створка уже проёма на 1,2 см и стоит на 5 см ближе к наблюдателю,
+      // чем плоскость косяков: грани не совпадают (нет z-fighting), а щель
+      // слишком узкая, чтобы просвечивать светлой полосой.
+      const leafW = doorW - 0.024;
+      const leafZ = -d / 2 - 0.02;
+      // тьма за щелями: подложка шире и выше проёма, чтобы узкий зазор
+      // между створкой и косяками не просвечивал светлой полосой,
+      // а над створкой не было чёрного провала
+      B.add(box(doorW + 0.12, 2.1, 0.04, 1), 'timber', mat(dx, FLOOR_Y + 1.05, -d / 2 + 0.03));
+      // цельная створка: между досками не должно быть просветов,
+      // которые читались светлыми полосами
+      B.add(box(leafW, 1.98, 0.08, 1), 'oakDoor', mat(dx, FLOOR_Y + 1.0, leafZ));
+      // накладные тёмные доски — классическая дощатая дверь
+      for (const ox of [-leafW / 2 + 0.13, 0, leafW / 2 - 0.13]) {
+        B.add(box(0.19, 1.84, 0.04, 1), 'timber', mat(dx + ox, FLOOR_Y + 1.0, leafZ - 0.055));
+      }
+      // обвязки
+      for (const by of [FLOOR_Y + 0.45, FLOOR_Y + 1.62]) {
+        B.add(box(leafW, 0.12, 0.05, 1), 'timber', mat(dx, by, leafZ + 0.06));
+      }
+      // петли
+      for (const by of [FLOOR_Y + 0.45, FLOOR_Y + 1.62]) {
+        B.add(box(0.07, 0.16, 0.06, 1), 'iron', mat(dx - leafW / 2 + 0.04, by, leafZ - 0.02));
+      }
+      // засов и кольцо
+      B.add(box(0.3, 0.1, 0.06, 1), 'iron', mat(dx + leafW / 2 - 0.22, FLOOR_Y + 1.05, leafZ + 0.05));
+      B.add(torus(0.1, 0.026, 5, 10), 'iron',
+        mat(dx + leafW / 2 - 0.3, FLOOR_Y + 0.92, leafZ + 0.03, 0, Math.PI / 2));
     }
   }
   B.put('stone', doorW + 0.5, 0.14, 0.7, dx, FLOOR_Y + 0.05, -d / 2 - 0.3);
@@ -418,12 +458,31 @@ export function cottage(M, opts = {}) {
     for (const g of ps.edges) B.add(g, roofMat, mat(dx, FLOOR_Y + 2.32, -d / 2 - 0.55));
   }
 
+  // фонарь над входом: подсвечивает створку и косяки, чтобы дверь
+  // не читалась чёрным провалом на затенённом фасаде
+  let doorLampPos = null;
+  if (!doorOpen) {
+    const lx = dx + doorW / 2 + 0.26, ly = FLOOR_Y + 1.98, lz = -d / 2 - 0.26;
+    B.add(box(0.05, 0.05, 0.3, 1), 'iron', mat(lx - 0.13, ly + 0.16, lz + 0.12));
+    B.add(box(0.2, 0.24, 0.2, 1), 'iron', mat(lx, ly, lz));
+    B.add(box(0.14, 0.16, 0.14, 1), 'windowLit', mat(lx, ly, lz - 0.01));
+    doorLampPos = new THREE.Vector3(lx, ly, lz - 0.22);
+  }
+
   const group = B.build(M, null, { name: 'cottage' });
   // тёплый свет внутри: дом не должен быть тёмной коробкой
   const inner = new THREE.PointLight(0xffb45a, 1.15, 9, 1.7);
   inner.position.set(0.2, 1.9, 0.2);
   group.add(inner);
-  const out = { group, colliders: [], platforms: [], windowLights: [], chimney: new THREE.Vector3() };
+  if (doorLampPos) {
+    const lamp = new THREE.PointLight(0xffc074, 2.3, 7.5, 1.6);
+    lamp.position.copy(doorLampPos);
+    group.add(lamp);
+  }
+  const out = {
+    group, colliders: [], platforms: [], windowLights: [], chimney: new THREE.Vector3(),
+    doorGeom,
+  };
   out.place = (px, pz, ry = 0) => {
     group.position.set(px, 0, pz);
     group.rotation.y = ry;
@@ -1045,9 +1104,13 @@ export function windmill(M, opts = {}) {
   const exitA = steps[NSTEP - 1].theta;
   // верхняя площадка лестницы: перемыкает зазор между последней ступенью
   // и смотровой площадкой, чтобы переход был сплошным
-  const landR2 = 2.05, landW2 = 1.5, landD2 = 1.35;
+  // Перемычка на 14 см ниже площадки: иначе верхние грани совпадали
+  // и на стыке смотрелось мерцание.
+  const galIn0 = rIn(h) - 0.01;
+  const landD2 = 1.15, landW2 = 1.25;
+  const landR2 = galIn0 - landD2 / 2;
   B.add(box(landW2, 0.14, landD2, 1), 'plank',
-    mat(Math.sin(exitA) * landR2, h - 0.07, Math.cos(exitA) * landR2, exitA));
+    mat(Math.sin(exitA) * landR2, h - 0.21, Math.cos(exitA) * landR2, exitA));
 
   // ---------- край башни: круглое ограждение ----------
   // Настила нет, поэтому край башни огорожен: иначе игрок на смотровой
@@ -1145,8 +1208,13 @@ export function windmill(M, opts = {}) {
   }
 
   // ---------- крылья (крепятся к шапке) ----------
+  // Метрика стыка перемычки и смотровой площадки: верхние грани не должны
+  // совпадать — иначе на стыке шло мерцание.
+  const landingGeom = { bridgeTop: h - 0.14, deckTop: h };
   const group = B.build(M, null, { name: 'windmill' });
-  const out = { group, colliders: [], platforms: [], circles: [], blades: null, cap: null };
+  const out = {
+    group, colliders: [], platforms: [], circles: [], blades: null, cap: null, landingGeom,
+  };
   const capGroup = new THREE.Group();
   capGroup.position.set(0, h, 0);
   group.add(capGroup);

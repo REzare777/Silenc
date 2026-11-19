@@ -15,7 +15,7 @@
  */
 
 import * as THREE from 'three';
-import { Builder, box, cyl, sphere, cone, mat, plane } from './geo.js';
+import { Builder, box, cyl, sphere, cone, torus, mat, plane } from './geo.js';
 
 const W = 6.2;          // ширина комнаты
 const D = 5.2;          // глубина
@@ -107,7 +107,18 @@ export function buildHomeInterior(M, glowTex, variant) {
   B.put(wallMat, W, H, T, 0, H / 2, D / 2 - T / 2, 2.2);
   B.put(wallMat, T, H, D - T * 2, -W / 2 + T / 2, H / 2, 0, 2.2);
   B.put(wallMat, T, H, D - T * 2, W / 2 - T / 2, H / 2, 0, 2.2);
-  B.put(wallMat, W, H, T, 0, H / 2, -D / 2 + T / 2, 2.2);
+  // Передняя стена — с настоящим проёмом двери: раньше она была сплошной,
+  // и створка «утопала» в стене, из-за чего дверь выглядела сломанной.
+  {
+    // Проём смещён к правому краю, поэтому части стены разной длины:
+    // при равных частях стена вылезала за габариты и в стене зияла дыра.
+    const dx = 1.7, dw = 1.2;
+    const leftW = dx - dw / 2 + W / 2;
+    const rightW = W / 2 - (dx + dw / 2);
+    B.put(wallMat, leftW, H, T, -W / 2 + leftW / 2, H / 2, -D / 2 + T / 2, 2.2);
+    B.put(wallMat, rightW, H, T, W / 2 - rightW / 2, H / 2, -D / 2 + T / 2, 2.2);
+    B.put(wallMat, dw, H - 2.2, T, dx, 2.2 + (H - 2.2) / 2, -D / 2 + T / 2, 2.2);
+  }
   // потолочные балки
   for (let i = 0; i < 5; i++) {
     B.put('timber', W - T * 2, 0.16, 0.16, 0, H - 0.08, -D / 2 + 0.8 + i * 0.9, 1.2);
@@ -125,14 +136,32 @@ export function buildHomeInterior(M, glowTex, variant) {
     // занавеска
     B.put(v % 2 ? 'redCloth' : 'greenCloth', 0.5, 1.5, 0.08, wx - 0.72, wy + 0.1, wz - 0.12, 1.2);
   }
-  // дверь (та, через которую вышли) — с лавкой рядом
+  // дверь (та, через которую вышли): косяки по краям проёма, створка с
+  // зазором — плоскости не соприкасаются, поэтому дверь не «фризит»
   {
     const dx = 1.7;
-    B.put('timber', 0.18, 2.2, 0.26, dx - 0.62, 1.1, -D / 2 + T / 2, 1.2);
-    B.put('timber', 0.18, 2.2, 0.26, dx + 0.62, 1.1, -D / 2 + T / 2, 1.2);
-    B.put('timber', 1.42, 0.2, 0.26, dx, 2.2, -D / 2 + T / 2, 1.2);
-    B.put('plank', 1.05, 2.0, 0.1, dx, 1.0, -D / 2 + T / 2 + 0.02, 1.2);
-    B.put('iron', 0.1, 0.1, 0.08, dx + 0.35, 1.05, -D / 2 + T / 2 - 0.06, 1.2);
+    B.put('timber', 0.16, 2.2, 0.26, dx - 0.68, 1.1, -D / 2 + T / 2, 1.2);
+    B.put('timber', 0.16, 2.2, 0.26, dx + 0.68, 1.1, -D / 2 + T / 2, 1.2);
+    B.put('timber', 1.52, 0.18, 0.26, dx, 2.2, -D / 2 + T / 2, 1.2);
+    // тьма за проёмом — глубже створки, иначе перекрывала её
+    // подложка шире проёма: узкая щель между створкой и косяком
+    // не просвечивает светлой полосой
+    B.add(box(1.34, 2.1, 0.05, 1), 'dark', mat(dx, 1.04, -D / 2 + 0.04));
+    // доски створки
+    // зазор 1,2 см с каждой стороны: плоскости не соприкасаются,
+    // но щель не просвечивает светлой полосой
+    const leafW = 1.176, leafZ = -D / 2 + T / 2 + 0.03;
+    for (let i = 0; i < 4; i++) {
+      const px = dx - leafW / 2 + (i + 0.5) * (leafW / 4);
+      B.add(box(leafW / 4 - 0.012, 2.0, 0.07, 1), 'oakDoor', mat(px, 1.0, leafZ));
+    }
+    // обвязка, петли и кольцо
+    B.add(box(leafW, 0.12, 0.04, 1), 'timber', mat(dx, 1.72, leafZ + 0.05));
+    for (const by of [0.5, 1.72]) {
+      B.add(box(0.06, 0.15, 0.05, 1), 'iron', mat(dx - leafW / 2 + 0.03, by, leafZ - 0.02));
+    }
+    B.add(torus(0.09, 0.024, 5, 10), 'iron',
+      mat(dx + leafW / 2 - 0.18, 1.02, leafZ + 0.03, 0, Math.PI / 2));
   }
 
   /* ---------------- набор мебели по варианту ---------------- */
@@ -363,9 +392,10 @@ export function buildHomeInterior(M, glowTex, variant) {
   // передняя стена — с проёмом двери (справа)
   {
     const dx = 1.7, doorW = 1.2;
-    const sideW = (W - doorW) / 2;
-    wall(-(doorW / 2 + sideW / 2), -D / 2 + T / 2, sideW / 2, T / 2);
-    wall(doorW / 2 + sideW / 2 + 1.7, -D / 2 + T / 2, sideW / 2, T / 2);
+    const leftW = dx - doorW / 2 + W / 2;
+    const rightW = W / 2 - (dx + doorW / 2);
+    wall(-W / 2 + leftW / 2, -D / 2 + T / 2, leftW / 2, T / 2);
+    wall(W / 2 - rightW / 2, -D / 2 + T / 2, rightW / 2, T / 2);
   }
   // мебель — как препятствия (только крупные предметы)
   const solid = (x, z, hx, hz) => colliders.boxes.push({ cx: x, cz: z, hx, hz, ang: 0 });
@@ -382,6 +412,9 @@ export function buildHomeInterior(M, glowTex, variant) {
     lines: SPOT_LINES[v] || SPOT_LINES[0],
     // место для «твёрдой» мебели — заполняется ниже по вариантам
     solid,
+    // Метрики двери: створка уже проёма и стоит глубже косяков,
+    // поэтому плоскости не совпадают и дверь не «фризит».
+    doorGeom: { jambZ: -D / 2 + T / 2, jambHalf: 0.6, leafZ: -D / 2 + T / 2 + 0.03, leafHalf: 0.588 },
     lamp,
   };
 }

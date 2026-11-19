@@ -200,7 +200,8 @@ ctx.mode = 'play';
 ctx.doors = { barnExit: { x: -40, z: -8, ry: 0 }, tavern: null, tavernRy: 0 };
 
 /** Мельница: полный объект, лопасти и вращающаяся шапка. */
-ctx.mill = { ref: null, blades: null, cap: null };
+ctx.mill = { ref: null, blades: null, cap: null, landingGeom: null };
+ctx.campfirePos = { x: 0, z: 0 };
 
 /** Кострёный огонь: всплеск жара после «подбросить дрова». */
 ctx.fireBoost = 0;
