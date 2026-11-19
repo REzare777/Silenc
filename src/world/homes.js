@@ -375,7 +375,7 @@ export function buildHomeInterior(M, glowTex, variant) {
 
   return {
     scene, group, colliders, platforms, floors: [], climbs: [],
-    spawn: { x: 1.7, z: -D / 2 + 1.1, yaw: 0 },
+    spawn: { x: 1.7, z: -D / 2 + 1.1, yaw: Math.PI },
     exitDoor,
     name: HOME_NAMES[v],
     spots,

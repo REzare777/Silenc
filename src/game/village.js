@@ -196,7 +196,7 @@ export function createVillage(ctx) {
       const out = facadePos(3, 44, chRy, 0, -14.2, 0);
       ctx.doors.church = { x: out.x, z: out.z, ry: chRy };
     }
-    // сзади храма — сломанная дверь нефа: через неё попадают в звонарку
+    // сзади храма — рабочая дверь нефа: через неё попадают в звонарку
     addInteract(
       facadePos(3, 44, chRy, 0, 9.4, 1.4), 2.6, 'Войти в звонарку',
       () => ctx.systems.locations.setLocation('church', 'back'),
@@ -215,6 +215,16 @@ export function createVillage(ctx) {
       ctx.lanterns.push(cl);
       addInteract(cl.pos.clone(), 2.0, 'Погасить фонарь',
         () => { cl.setLit(!cl.lit); ctx.ui.toast(cl.lit ? 'Фонарь снова горит.' : 'Фонарь погашен.'); });
+    }
+    // Свет у задней двери: северный фасад в тени, и без подсветки
+    // проём с дверью читался как чёрная дыра. Фонарь на кронштейне —
+    // в buildings.js, здесь только источник света.
+    {
+      const lp = facadePos(3, 44, chRy, 0, 9.35, 0);
+      const dl = new THREE.PointLight(0xffcf8a, 7, 8.5, 1.6);
+      dl.position.set(lp.x, 3.0, lp.z);
+      dl.castShadow = false;
+      ctx.scene.add(dl);
     }
 
     /* --- амбар --- */

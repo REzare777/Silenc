@@ -49,6 +49,15 @@ const res = await page.evaluate(async () => {
   const p = d.player;
   const f0 = ch.platforms.find((pl) => pl.ramp);
   out.rampCount = ch.platforms.filter((pl) => pl.ramp).length;
+  // уникальные направления пролётов: у П-образной лестницы их три
+  const dirs = new Set();
+  for (const pl of ch.platforms) {
+    if (!pl.ramp) continue;
+    const dx = pl.ramp.x1 - pl.ramp.x0, dz = pl.ramp.z1 - pl.ramp.z0;
+    const L = Math.hypot(dx, dz) || 1;
+    dirs.add(`${Math.round(dx / L)},${Math.round(dz / L)}`);
+  }
+  out.rampDirs = dirs.size;
   const r = f0.ramp;
   p.teleport(r.x0, r.z0, 0);
   p.y = 0.02; p.groundY = 0.02; p.vy = 0; p.keys.clear();
@@ -160,7 +169,7 @@ const checks = [
   ['вход в храм есть', res.enterExists],
   ['вход ведёт в башню колокольни', res.inChurch],
   ['колокол недоступен с пола', res.bellReachableFromFloor === false],
-  ['лестница в башне: три пролёта', res.rampCount === 3],
+  ['лестница в башне: три пролёта', res.rampDirs === 3 && res.rampCount >= 9],
   ['игрок поднимается по лестнице', res.climbed],
   ['наверху есть интеракт удара в колокол', res.bellOnTower],
   ['из нефа можно пройти в звонарную', res.passageToNave],

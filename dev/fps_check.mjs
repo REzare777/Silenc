@@ -51,6 +51,7 @@ const measure = async (label, setup) => {
 };
 
 await measure('деревня   ', 'd.ctx.env.setTimeOfDay("day", true); d.ctx.systems.locations.setLocation("village");');
+await measure('у храма   ', 'd.ctx.env.setTimeOfDay("day", true); d.ctx.systems.locations.setLocation("village"); d.player.enabled = false; d.camera.position.set(6, 2.4, 29); d.camera.lookAt(3, 4.2, 44); d.camera.updateMatrixWorld();');
 await measure('таверна   ', 'd.ctx.systems.locations.setLocation("tavern");');
 await measure('храм      ', 'd.ctx.systems.locations.setLocation("church");');
 await measure('подземелье', 'd.ctx.systems.locations.setLocation("dungeon");');

@@ -120,7 +120,8 @@ ok('Esc закрывает диалог и возвращает управлен
 const night = await page.evaluate(() => {
   const d = window.__dbg;
   d.env.setTimeOfDay('night', true);
-  for (let i = 0; i < 10; i++) d.updateNpc(1 / 30, i / 30);
+  // бармен уходит через заднюю дверь — нужно время, чтобы он дошёл до неё
+  for (let i = 0; i < 600; i++) d.updateNpc(1 / 30, i / 30);
   const b = d.npcs.barkeep;
   const p = d.player;
   p.teleport(b.x, b.z + 1.2, 0);
