@@ -123,9 +123,14 @@ const res = await page.evaluate(() => {
     out.homeMoved = homes.some((h) => Math.abs(h.x + 40) < 0.6 && Math.abs(h.z + 8) < 0.6);
     out.oldHomeGone = !homes.some((h) => Math.abs(h.x + 29) < 0.6 && Math.abs(h.z + 22) < 0.6);
     const barnFp = fp.find((f) => f.name && f.name.indexOf('амбар') === 0)
-      || fp.find((f) => Math.abs(f.x + 44) < 1 && Math.abs(f.z - 13) < 3);
+      || fp.find((f) => Math.abs(f.x + 11) < 1 && Math.abs(f.z - 40) < 1);
     out.barn = barnFp ? { x: +barnFp.x.toFixed(1), z: +barnFp.z.toFixed(1) } : null;
-    out.barnMoved = !!barnFp && Math.abs(barnFp.x + 44) < 1 && Math.abs(barnFp.z - 13) < 1;
+    // амбар переехал к краю поля — рядом с тем местом, где зреет хлеб
+    out.barnMoved = !!barnFp && Math.abs(barnFp.x + 11) < 1 && Math.abs(barnFp.z - 40) < 1;
+    // лесная делянка на опушке: избушка лесоруба вместо амбара
+    const yardFp = fp.find((f) => f.name === 'лесная делянка');
+    out.yard = yardFp ? { x: +yardFp.x.toFixed(1), z: +yardFp.z.toFixed(1) } : null;
+    out.yardOk = !!yardFp && Math.abs(yardFp.x + 45) < 1 && Math.abs(yardFp.z - 13) < 1;
     // пустой забор в лесу убран: поля только за озером
     out.fields = fields.map((f) => `${Math.round(f.x)},${Math.round(f.z)}`);
     out.emptyPlotGone = !fields.some((f) => Math.abs(f.x + 44) < 2 && Math.abs(f.z - 16) < 2);
@@ -154,6 +159,9 @@ const res = await page.evaluate(() => {
     const last = (tr) => (tr && tr.pts.length ? tr.pts[tr.pts.length - 1] : null);
     const bLast = last(barnTrail), hLast = last(homeTrail);
     out.barnTrail = bLast ? [+bLast[0].toFixed(1), +bLast[1].toFixed(1)] : null;
+    const woodsTrail = trails.find((t) => t.id === 'woods');
+    const wLast = last(woodsTrail);
+    out.woodsTrail = wLast ? [+wLast[0].toFixed(1), +wLast[1].toFixed(1)] : null;
     out.homeTrail = hLast ? [+hLast[0].toFixed(1), +hLast[1].toFixed(1)] : null;
     const doors = ctx.doors.homes || [];
     const movedHome = homes.find((h) => Math.abs(h.x + 40) < 0.6 && Math.abs(h.z + 8) < 0.6);
@@ -226,10 +234,13 @@ const checks = [
   ['колокол достижим с винта', !!res.bellOk],
   ['пустой забор в лесу убран', res.emptyPlotGone],
   ['дом за трактиром переехал на место амбара', res.homeMoved && res.oldHomeGone],
-  ['амбар уехал к лесу', res.barnMoved],
+  ['амбар стоит у поля', res.barnMoved],
+  ['на опушке — лесная делянка', res.yardOk],
   ['амбар не заходит в овечий загон', res.barnOutPasture],
   ['тропинка ведёт к новому дому', res.homeTrailOk],
   ['тропинка ведёт к амбару', res.barnTrailOk],
+  ['тропинка ведёт к лесной делянке', !!(res.woodsTrail && res.yard
+    && Math.hypot(res.woodsTrail[0] - res.yard.x, res.woodsTrail[1] - res.yard.z) < 8)],
   ['пёс ждёт у дома с табличкой', res.dogAtBoard && res.dogStays && res.dogMovedFromTavern],
 ];
 

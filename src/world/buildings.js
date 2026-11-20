@@ -991,6 +991,43 @@ export function barn(M, opts = {}) {
   return out;
 }
 
+/* ---------------------------- лесорубная избушка ---------------------------- */
+/**
+ * Лесорубная избушка на опушке: сруб из брёвен на каменном цоколе,
+ * соломенная крыша, дверь с кольцом и одно окошко.
+ *
+ * Это не локация, а часть лесной делянки — рядом с поленницей,
+ * чурбаном и колодкой.
+ *
+ * @param {object} M набор материалов
+ * @param {object} [opts] размеры
+ * @returns {object} постройка с методом place
+ */
+export function woodcuttersHut(M, opts = {}) {
+  const { w = 5, d = 4.2, h = 2.5 } = opts;
+  const B = new Builder();
+  B.put('stone', w + 0.24, 0.34, d + 0.24, 0, 0.17, 0, 1.1);
+  B.put('plank', w, h, d, 0, 0.34 + h / 2, 0, 1.6);
+  // венцы брёвен — стена выглядит срубом, а не ящиком
+  for (let i = 0; i < 4; i++) {
+    B.put('timber', w + 0.07, 0.16, d + 0.07, 0, 0.62 + i * (h / 4.3), 0, 1.2);
+  }
+  // дверь
+  B.put('oakDoor', 1.0, 1.85, 0.12, 0, 0.34 + 0.93, -d / 2 - 0.04, 1);
+  B.put('timber', 1.18, 0.13, 0.07, 0, 0.34 + 1.76, -d / 2 - 0.11, 1);
+  B.add(torus(0.08, 0.02, 5, 10), 'iron', mat(0.33, 1.25, -d / 2 - 0.12, 0, Math.PI / 2));
+  addWindow(B, -w * 0.28, 0.34 + 1.5, -d / 2 - 0.02, 0.62, 0.62, 'z', true);
+  addRoof(B, w, d, 1.9, 'thatch', 'plank', 0.55, true, 0.34 + h);
+  const group = B.build(M, null, { name: 'woodcuttersHut' });
+  const out = { group, colliders: [] };
+  out.place = (px, pz, ry = 0) => {
+    group.position.set(px, 0, pz); group.rotation.y = ry;
+    out.colliders.push(rotatedAABB(px, pz, w / 2, d / 2, ry));
+    return out;
+  };
+  return out;
+}
+
 /* ---------------------------- мельница ---------------------------- */
 /**
  * Мельница: полая каменная башня с проёмом-входом, винтовой лестницей внутри,

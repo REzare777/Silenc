@@ -301,7 +301,7 @@ await page.evaluate(() => {
 await page.waitForTimeout(400);
 await page.evaluate(() => {
   const d = window.__dbg;
-  d.teleport(-34.6, -7.3, 0);
+  d.teleport(-10.9, 35.6, 0);       // дверь амбара у края поля (раунд 47)
 });
 await page.waitForTimeout(500);
 await page.evaluate(() => window.__dbg.doInteract());

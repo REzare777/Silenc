@@ -20,6 +20,7 @@
 import * as THREE from 'three';
 import {
   cottage, tavern, church, barn, windmill, blacksmith, well, marketStall, haystack, localBox,
+  woodcuttersHut,
 } from '../world/buildings.js';
 import {
   scatterGrass, scatterFlowers, wheatField, lantern, campfire, fence, gate, gardenBed,
@@ -28,6 +29,7 @@ import {
 import { denseForest } from '../world/forest.js';
 import { noticeBoard } from '../world/board.js';
 import { chickenCoop, sheepShelter } from '../world/farm.js';
+import { woodcuttersYard } from '../world/woodcutters.js';
 import { Embers } from '../world/particles.js';
 import { Builder, box, cyl, sphere, cone, mat } from '../world/geo.js';
 import {
@@ -96,6 +98,13 @@ const CHURCH_TOWER = {
   z: LAYOUT.church.z - 9.7 * Math.cos(CHURCH_RY),
 };
 
+/**
+ * Лесная делянка на опушке: избушка лесоруба, поленница, чурбан.
+ * Раньше здесь стоял амбар — большой красный сарай посреди леса, он
+ * и читался «не в тему». Теперь это маленькая лесная работа.
+ */
+const WOODS = { x: -45, z: 13 };
+
 const BUILDING_CLEARINGS = [
   [LAYOUT.church.x, LAYOUT.church.z, 11],
   [LAYOUT.church.x + 0.9, LAYOUT.church.z + 13.4, 10],
@@ -106,6 +115,7 @@ const BUILDING_CLEARINGS = [
   [LAYOUT.blacksmith.x, LAYOUT.blacksmith.z, 7],
   [LAYOUT.well.x, LAYOUT.well.z, 5],
   [PASTURE.x, PASTURE.z, 12],          // овечье пастбище — лес вырублен
+  [WOODS.x, WOODS.z, 9],                // лесная делянка на опушке — лес вырублен
 ];
 
 /**
@@ -291,7 +301,7 @@ export function createVillage(ctx) {
     place(barnB, LAYOUT.barn.x, LAYOUT.barn.z, barnRy);
     ctx.footprints.push({ name: 'амбар', x: LAYOUT.barn.x, z: LAYOUT.barn.z, hx: 6.15, hz: 4.15, ry: barnRy });
     addInteract(
-      facadePos(-40, -8, barnRy, 0, -4.4, 1.6), 2.8, 'Войти в амбар',
+      facadePos(LAYOUT.barn.x, LAYOUT.barn.z, barnRy, 0, -4.4, 1.6), 2.8, 'Войти в амбар',
       () => ctx.systems.locations.setLocation('barn'),
     );
 
@@ -593,6 +603,45 @@ export function createVillage(ctx) {
    * ================================================================ */
 
   /** Поставить доску и включить взаимодействие с ней. */
+  /**
+   * Лесная делянка на опушке: избушка лесоруба, поленница, чурбан.
+   *
+   * Раньше здесь стоял амбар, и он читался «не в тему»: большой
+   * красный сарай на тёмном лесном полу, без поля рядом и без дороги.
+   * Теперь это маленькая лесная работа у опушки, а амбар стоит
+   * у края village-поля.
+   */
+  function buildWoodcuttersYard() {
+    const yard = woodcuttersYard(ctx.M, {});
+    const ry = ryToFace([WOODS.x, WOODS.z], [-38, 10]);
+    place(yard, WOODS.x, WOODS.z, ry);
+    ctx.footprints.push({ name: 'лесная делянка', x: WOODS.x, z: WOODS.z, hx: 2.6, hz: 2.2, ry });
+
+    // зелёная прогалина: без неё делянка стоит на тёмном лесном подстилке
+    grassPatch(WOODS.x - 0.5, WOODS.z - 0.5, 7.5);
+
+    // фонарь у избушки — сбоку от крыльца, чтобы не стоял в дверях
+    {
+      const lx = WOODS.x + 3.4, lz = WOODS.z + 2.2;
+      const l = lantern(ctx.M, ctx.glowTex, { height: 3.0, lit: true, intensity: 2.2, distance: 12 });
+      l.place(lx, lz);
+      ctx.scene.add(l.group);
+      ctx.lanterns.push(l);
+      ctx.propSpots.push({ name: 'фонарь', x: lx, z: lz, r: 0.25 });
+      ctx.interactables.push({
+        pos: l.pos.clone(), radius: 2.1,
+        labelFn: () => (l.lit ? 'Погасить фонарь' : 'Зажечь фонарь'),
+        act: () => { l.setLit(!l.lit); ctx.ui.toast(l.lit ? 'Фонарь снова горит.' : 'Фонарь погашен.'); },
+      });
+    }
+
+    // поленница — с подсказкой
+    addInteract(
+      new THREE.Vector3(WOODS.x + 2.4, 1.0, WOODS.z - 1.2), 2.4, 'Осмотреть поленницу',
+      () => ctx.ui.toast('Дрова сухие, хвойные. На зиму хватит — лесоруб складывал всю зиму.', 3800),
+    );
+  }
+
   function buildNoticeBoard() {
     const BX = -23.8, BZ = -29.2, BRY = 0.79;   // у дороги к скале, лицом к деревне
     const board = noticeBoard(ctx.M, { w: 1.9, h: 1.2, postH: 1.35 });
@@ -1192,10 +1241,11 @@ export function createVillage(ctx) {
     buildBuildings();
     buildProps();
     buildFarm();
+    buildWoodcuttersYard();
     buildNoticeBoard();
     buildDungeonGate();
     buildAnimals();
   }
 
-  return { build, buildBuildings, buildProps, buildFarm, buildNoticeBoard, buildDungeonGate };
+  return { build, buildBuildings, buildProps, buildFarm, buildWoodcuttersYard, buildNoticeBoard, buildDungeonGate };
 }

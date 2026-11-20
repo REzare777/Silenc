@@ -319,6 +319,7 @@ const firePos = new THREE.Vector3(0, 0, 0);
 village.buildBuildings();
 village.buildProps();
 village.buildFarm();          // пастбище для овец и курятник
+village.buildWoodcuttersYard();   // лесная делянка на опушке: избушка и поленница
 village.buildNoticeBoard();   // доска у дороги к скале
 firePos.set(ctx.campfirePos.x, 0, ctx.campfirePos.z);   // костёр «за город»
 village.buildDungeonGate();      // вход в подземелье — примерно в 100 м от села
