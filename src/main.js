@@ -638,7 +638,7 @@ function loop() {
   }
   if (ctx.loc === 'dungeon') {
     // подземелье: свой мрачный свет, свой туман, кристаллы пульсируют
-    locations.dungeonLoc.update(dt, t);
+    locations.dungeonLoc.update(dt, t, camera);
     locations.sceneDungeon.background.copy(locations.DUNGEON_BG);
   }
   if (ctx.loc === 'church') {

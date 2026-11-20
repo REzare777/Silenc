@@ -389,6 +389,71 @@ function boneCanvas(size = 64) {
   return c;
 }
 
+/**
+ * Скала для СТЕН подземелья.
+ *
+ * Отдельная от пола: у пола крупные пятна породы смотрятся естественно,
+ * а на стенах они превращались в повторяющиеся «обои». Здесь порода
+ * разбита на мелкие сколы и грани — стена читается как камень, а не
+ * как растр с рисунком.
+ *
+ * @param {number} size размер текстуры в пикселях
+ * @returns {HTMLCanvasElement} готовая текстура
+ */
+function caveWallCanvas(size = 256) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  g.fillStyle = '#3f4254';
+  g.fillRect(0, 0, size, size);
+
+  // мелкие грани породы: много неправильных многоугольников
+  for (let i = 0; i < 520; i++) {
+    const x = hash2(i, 811, 3) * size, y = hash2(i, 823, 5) * size;
+    const r = 3 + hash2(i, 827, 7) * 13;
+    const v = 58 + hash2(i, 829, 11) * 46;
+    const tint = hash2(i, 833, 13);
+    g.fillStyle = `rgba(${(v * 0.96) | 0},${(v * 0.99) | 0},${(v * (1.06 + tint * 0.14)) | 0},0.55)`;
+    g.beginPath();
+    const n = 4 + Math.floor(hash2(i, 839, 17) * 3);
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * Math.PI * 2 + hash2(i + k, 853, 19) * 1.2;
+      const rr = r * (0.62 + hash2(i + k, 857, 23) * 0.55);
+      const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
+      if (k === 0) g.moveTo(px, py); else g.lineTo(px, py);
+    }
+    g.closePath();
+    g.fill();
+    // тень по нижней кромке грани
+    g.strokeStyle = 'rgba(16,18,26,0.2)';
+    g.lineWidth = 0.8;
+    g.stroke();
+  }
+
+  // тонкие трещины
+  g.strokeStyle = 'rgba(14,16,24,0.5)';
+  for (let i = 0; i < 34; i++) {
+    g.lineWidth = 0.6 + hash2(i, 863, 29) * 1.1;
+    g.beginPath();
+    let x = hash2(i, 877, 31) * size, y = hash2(i, 881, 37) * size;
+    g.moveTo(x, y);
+    const steps = 3 + Math.floor(hash2(i, 883, 41) * 4);
+    for (let k = 0; k < steps; k++) {
+      x += (hash2(i + k, 887, 43) - 0.5) * 30;
+      y += (hash2(i + k, 907, 47) - 0.5) * 30;
+      g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+
+  // крапины породы — мелкие и негромкие, иначе стена выглядит грязной
+  for (let i = 0; i < 700; i++) {
+    const x = hash2(i, 911, 53) * size, y = hash2(i, 919, 59) * size;
+    const v = hash2(i, 929, 61);
+    g.fillStyle = v > 0.6 ? 'rgba(126,132,156,0.13)' : 'rgba(24,26,36,0.14)';
+    g.fillRect(x, y, 1 + (v > 0.94 ? 1 : 0), 1);
+  }
+  return c;
+}
+
 function stoneCanvas(size = 256) {
   const c = makeCanvas(size), g = c.getContext('2d');
   g.fillStyle = '#6e6a63'; g.fillRect(0, 0, size, size);
@@ -606,6 +671,7 @@ export function buildTextures() {
     tileSlate: tex(tileCanvas(512, 0x7c848c), 1),
     stone: tex(stoneCanvas(256), 1),
     cave: tex(caveRockCanvas(256), 1),
+    caveWall: tex(caveWallCanvas(256), 1),
     bone: tex(boneCanvas(64), 1),
     windowLit: tex(windowCanvas(128, true), 1),
     windowDark: tex(windowCanvas(128, false), 1),

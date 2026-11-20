@@ -447,7 +447,7 @@ export function createVillage(ctx) {
     // Костёр перенесён с площади за пределы деревни — на поляну у воды,
     // в стороне от домов. Это место для посиделок: брёвна, поленница,
     // фонари и вид на пруд. С площади он убран совсем.
-    const FIRE = { x: 46, z: -30 };
+    const FIRE = { x: 44, z: -32 };   // отодвинут от самого берега: 8,7 м до кромки воды
     ctx.campfirePos = { x: FIRE.x, z: FIRE.z };   // положение костра для проверок
     const fire = campfire(ctx.M, ctx.glowTex);
     fire.group.position.set(FIRE.x, 0, FIRE.z);
@@ -466,15 +466,10 @@ export function createVillage(ctx) {
       fire.glow.scale.setScalar(3.2 + f * 0.9 + ctx.fireBoost * 0.04);
     });
 
-    /* --- поляна кострища: земля, брёвна, поленница, фонари --- */
+    /* --- поляна кострища: брёвна, поленница, фонари --- */
     {
-      // утрамбованная земля под кострищем — «своё» место, а не случайная точка
-      const pad = new THREE.Mesh(new THREE.CircleGeometry(6.2, 28), ctx.M.dirt);
-      pad.rotation.x = -Math.PI / 2;
-      pad.position.set(FIRE.x, 0.04, FIRE.z);
-      pad.receiveShadow = true;
-      ctx.scene.add(pad);
-
+      // Светлого пятна утрамбованной земли здесь больше нет: костёр стоит
+      // прямо на лесной подстилке, без «круглой площадки» под ним.
       const GB = new Builder();
       // четыре бревна-скамейки кругом: сесть можно в любую сторону от огня
       for (let i = 0; i < 4; i++) {

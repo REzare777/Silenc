@@ -17,6 +17,13 @@ export class Ambience {
     this.volume = 0.8;
     /** Звук выключен тумблером */
     this.muted = false;
+    /** Тип пространства: 'outdoor' | 'dungeon' | 'room'. */
+    this.interior = 'outdoor';
+    /** Поверхность под ногами: 'grass' | 'stone' | 'wood'. */
+    this.surface = 'grass';
+    /** Таймеры редких звуков подземелья. */
+    this.nextDrip = 2.5;
+    this.nextGroan = 12;
   }
 
   start() {
@@ -87,6 +94,9 @@ export class Ambience {
     this.wind = windGain;
     this.nodes.noiseBuf = noiseBuf;
 
+    // подземелье: свой низкий гул, своё «дыхание» камня и шина с эхом
+    this.buildCaveBed();
+
     // гул костра / горна
     const fire = ctx.createBufferSource();
     fire.buffer = noiseBuf; fire.loop = true;
@@ -102,6 +112,97 @@ export class Ambience {
 
     this.enabled = true;
     master.gain.setTargetAtTime(this.targetGain(), ctx.currentTime, 1.2);
+    this.applyInterior();
+  }
+
+  /**
+   * Звуковой слой подземелья: низкий гул, «дыхание» камня и шина с эхом.
+   *
+   * Всё, что звучит в пещере (капли, шаги, шаги по воде), уходит в задержку
+   * с обратной связью — получается хвост эха, из-за которого любой звук
+   * в подземелье кажется далёким.
+   */
+  buildCaveBed() {
+    const ctx = this.ctx;
+
+    // шина эха: задержка 0,33 с + обратная связь 0,42
+    const delay = ctx.createDelay(1.5);
+    delay.delayTime.value = 0.33;
+    const fb = ctx.createGain();
+    fb.gain.value = 0.42;
+    const echoLp = ctx.createBiquadFilter();
+    echoLp.type = 'lowpass';
+    echoLp.frequency.value = 1700;
+    delay.connect(echoLp).connect(fb).connect(delay);
+    const wet = ctx.createGain();
+    wet.gain.value = 0.5;
+    delay.connect(wet).connect(this.master);
+    this.caveBus = delay;
+    this.caveWet = wet;
+
+    // низкий гул пещеры: три обертона, еле слышные, но без них зал «мёртвый»
+    const drone = ctx.createGain();
+    drone.gain.value = 0;
+    const droneLp = ctx.createBiquadFilter();
+    droneLp.type = 'lowpass';
+    droneLp.frequency.value = 240;
+    droneLp.Q.value = 0.8;
+    drone.connect(droneLp).connect(this.master);
+    [48.5, 72.8, 97.2].forEach((f, i) => {
+      const o = ctx.createOscillator();
+      o.type = i === 0 ? 'sine' : 'triangle';
+      o.frequency.value = f;
+      o.detune.value = (i - 1) * 7;
+      const g = ctx.createGain();
+      g.gain.value = i === 0 ? 0.55 : 0.2;
+      o.connect(g).connect(drone);
+      o.start();
+    });
+    this.drone = drone;
+
+    // «дыхание» камня: медленный шум с приливом и отливом
+    const air = ctx.createBufferSource();
+    air.buffer = this.nodes.noiseBuf;
+    air.loop = true;
+    const airF = ctx.createBiquadFilter();
+    airF.type = 'lowpass';
+    airF.frequency.value = 240;
+    airF.Q.value = 1.3;
+    const airG = ctx.createGain();
+    airG.gain.value = 0;
+    air.connect(airF).connect(airG).connect(this.master);
+    air.start();
+    const breath = ctx.createOscillator();
+    breath.frequency.value = 0.043;
+    const breathG = ctx.createGain();
+    breathG.gain.value = 0.022;
+    breath.connect(breathG).connect(airG.gain);
+    breath.start();
+    this.caveAir = airG;
+  }
+
+  /**
+   * Переключить звуковое пространство.
+   *
+   * @param {'outdoor'|'dungeon'|'room'} kind тип пространства
+   */
+  setInterior(kind) {
+    this.interior = kind || 'outdoor';
+    this.applyInterior();
+  }
+
+  /** Поверхность под ногами — от неё зависит звук шагов. */
+  setSurface(kind) {
+    this.surface = kind || 'grass';
+  }
+
+  /** Применить текущее пространство к звуковым узлам. */
+  applyInterior() {
+    if (!this.ctx || !this.drone) return;
+    const t = this.ctx.currentTime;
+    const dun = this.interior === 'dungeon';
+    this.drone.gain.setTargetAtTime(dun ? 0.12 : 0, t, 0.9);
+    this.caveAir.gain.setTargetAtTime(dun ? 0.05 : 0, t, 0.9);
   }
 
   noiseBuffer(seconds) {
@@ -146,17 +247,33 @@ export class Ambience {
     const ctx = this.ctx;
     const t = ctx.currentTime;
     this.night = night;
+    const dun = this.interior === 'dungeon';
 
-    // ветер сильнее в ночи и на возвышенностях
-    this.wind.gain.setTargetAtTime(0.035 + night * 0.05, t, 1.5);
+    // ветер сильнее в ночи и на возвышенностях; под землёй его почти не слышно
+    this.wind.gain.setTargetAtTime(dun ? 0.006 : 0.035 + night * 0.05, t, 1.5);
 
-    // треск костра
-    const near = Math.min(1, Math.max(0, 1 - fireDist / 16));
+    // треск костра — только на улице
+    const near = dun ? 0 : Math.min(1, Math.max(0, 1 - fireDist / 16));
     this.fire.gain.setTargetAtTime(near * 0.14, t, 0.4);
     this.nextCrackle -= dt;
     if (this.nextCrackle <= 0) {
       this.nextCrackle = 0.12 + Math.random() * 0.5;
       if (near > 0.05) this.crackle(near);
+    }
+
+    if (dun) {
+      // в пещере: капли из свода, редкий скрип камня, полная тишина вокруг
+      this.nextDrip -= dt;
+      if (this.nextDrip <= 0) {
+        this.nextDrip = 1.1 + Math.random() * 4.2;
+        this.drip();
+      }
+      this.nextGroan -= dt;
+      if (this.nextGroan <= 0) {
+        this.nextGroan = 11 + Math.random() * 16;
+        this.groan();
+      }
+      return;
     }
 
     // птицы
@@ -174,6 +291,51 @@ export class Ambience {
         this.cricket(0.4 + night * 0.6);
       }
     }
+  }
+
+  /**
+   * Капля воды в пещере: короткий «блп» с быстрым подъёмом тона.
+   * Звук уходит в шину эха — капля уходит вдаль и возвращается.
+   */
+  drip() {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    const f0 = 560 + Math.random() * 320;
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(f0 * 2.2, t + 0.06);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.055, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.19);
+    o.connect(g);
+    g.connect(this.master);
+    if (this.caveBus) g.connect(this.caveBus);
+    o.start(t); o.stop(t + 0.24);
+  }
+
+  /** Скрип камня: медленное скольжение тона внизу. */
+  groan() {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    const f = ctx.createBiquadFilter();
+    o.type = 'sawtooth';
+    const f0 = 58 + Math.random() * 34;
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.linearRampToValueAtTime(f0 * 0.72, t + 2.4);
+    f.type = 'bandpass';
+    f.frequency.value = 210;
+    f.Q.value = 5.5;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.05, t + 0.9);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 2.8);
+    o.connect(f).connect(g);
+    g.connect(this.master);
+    if (this.caveBus) g.connect(this.caveBus);
+    o.start(t); o.stop(t + 3);
   }
 
   chirp(vol) {
@@ -255,17 +417,20 @@ export class Ambience {
     src.loop = true;
     const f = ctx.createBiquadFilter();
     f.type = 'lowpass';
-    f.frequency.value = 420;
+    f.frequency.value = this.surface === 'stone' ? 900 : 420;
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.06, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(this.surface === 'stone' ? 0.07 : 0.06, t + 0.008);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
     src.connect(f).connect(g).connect(this.master);
+    if (this.caveBus && this.interior === 'dungeon') g.connect(this.caveBus);
     src.start(t); src.stop(t + 0.18);
   }
 
   step(run) {
     if (!this.ctx || !this.enabled) return;
+    if (this.surface === 'stone') { this.stoneStep(run); return; }
+    if (this.surface === 'wood') { this.woodStep(run); return; }
     const ctx = this.ctx, t = ctx.currentTime;
     const src = ctx.createBufferSource();
     src.buffer = this.nodes.noiseBuf;
@@ -279,6 +444,121 @@ export class Ambience {
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
     src.connect(f).connect(g).connect(this.master);
     src.start(t); src.stop(t + 0.16);
+  }
+
+  /** Шаг по камню: сухой щелчок с коротким призвуком. */
+  stoneStep(run) {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.nodes.noiseBuf;
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = 1500 + Math.random() * 900;
+    f.Q.value = 1.5;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(run ? 0.055 : 0.034, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.075);
+    src.connect(f).connect(g);
+    g.connect(this.master);
+    if (this.caveBus) g.connect(this.caveBus);
+    src.start(t); src.stop(t + 0.12);
+    // глухой низ — каблук по плите
+    const o = ctx.createOscillator();
+    const og = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(160, t);
+    o.frequency.exponentialRampToValueAtTime(78, t + 0.09);
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.exponentialRampToValueAtTime(run ? 0.035 : 0.022, t + 0.006);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+    o.connect(og).connect(this.master);
+    o.start(t); o.stop(t + 0.14);
+  }
+
+  /** Шаг по доскам: глухой стук с лёгким скрипом. */
+  woodStep(run) {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.nodes.noiseBuf;
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = 520 + Math.random() * 320;
+    f.Q.value = 1.1;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(run ? 0.06 : 0.038, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+    src.connect(f).connect(g).connect(this.master);
+    src.start(t); src.stop(t + 0.14);
+    const o = ctx.createOscillator();
+    const og = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(190, t);
+    o.frequency.exponentialRampToValueAtTime(96, t + 0.1);
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.exponentialRampToValueAtTime(run ? 0.04 : 0.026, t + 0.006);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    o.connect(og).connect(this.master);
+    o.start(t); o.stop(t + 0.16);
+  }
+
+  /**
+   * Глухой подземный гром: Врата откликаются на прикосновение.
+   */
+  deepBoom() {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(74, t);
+    o.frequency.exponentialRampToValueAtTime(31, t + 1.6);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.2, t + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 2.4);
+    o.connect(g);
+    g.connect(this.master);
+    if (this.caveBus) g.connect(this.caveBus);
+    o.start(t); o.stop(t + 2.6);
+    // шумовой «хлопок» породы
+    const src = ctx.createBufferSource();
+    src.buffer = this.nodes.noiseBuf;
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 260;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.0001, t);
+    ng.gain.exponentialRampToValueAtTime(0.09, t + 0.02);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.8);
+    src.connect(f).connect(ng);
+    ng.connect(this.master);
+    if (this.caveBus) ng.connect(this.caveBus);
+    src.start(t); src.stop(t + 0.9);
+  }
+
+  /** Тонкий кристаллический звон — отзывается самоцвет. */
+  crystalChime() {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    [1568, 2093, 2637].forEach((f, i) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.value = f * (0.98 + Math.random() * 0.04);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.03 / (i + 1), t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 2.2 - i * 0.4);
+      o.connect(g);
+      g.connect(this.master);
+      if (this.caveBus) g.connect(this.caveBus);
+      o.start(t); o.stop(t + 2.4);
+    });
   }
 
   /** Плеск воды: «блюп» плюс шум всплеска. */

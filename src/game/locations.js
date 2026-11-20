@@ -161,6 +161,18 @@ export function createLocations(ctx) {
     ctx.player.setClimbs(L ? (L.climbs || []) : []);
     ctx.player.dynamicCircles = L ? [] : ctx.animalCircles;
 
+    /* --- звуковое пространство подстраивается под локацию --- */
+    // под землёй — гул и эхо, шаги по камню; в храме — по каменным плитам;
+    // в комнатах — глухие доски; на улице — ветер, птицы и трава под ногами
+    if (ctx.ambience) {
+      ctx.ambience.setInterior(inDungeon ? 'dungeon' : (L ? 'room' : 'outdoor'));
+      const surface = inDungeon ? 'stone'
+        : inChurch ? 'stone'
+          : L ? 'wood'
+            : 'grass';
+      ctx.ambience.setSurface(surface);
+    }
+
     if (L) {
       // в храм можно войти с юга (через башню) и с севера (через заднюю дверь)
       const sp = (inChurch && where === 'back' && L.spawnBack) ? L.spawnBack : L.spawn;
@@ -346,16 +358,25 @@ export function createLocations(ctx) {
     [dungeonLoc.spots.gems[0], 'Осмотреть самоцвет'],
     [dungeonLoc.spots.gems[1], 'Осмотреть самоцвет'],
   ];
-  dungeonSpots.forEach(([v, label], i) => {
+  dungeonSpots.forEach((spot, i) => {
+    const v = spot[0];
+    const label = spot[1];
     add(new THREE.Vector3(v.x, v.y, v.z), 2.6, label,
-      () => ctx.ui.toast(dungeonLines[i % dungeonLines.length], 3600), 'dungeon');
+      () => {
+        // кристаллы и самоцветы отзываются тонким звоном
+        if (label.startsWith('Осмотреть кристалл') || label.startsWith('Осмотреть самоцвет')) {
+          if (ctx.ambience) ctx.ambience.crystalChime();
+        }
+        ctx.ui.toast(dungeonLines[i % dungeonLines.length], 3600);
+      }, 'dungeon');
   });
 
   // прикосновение к Вратам — самый мрачный момент локации
   add(new THREE.Vector3(dungeonLoc.gateHall.x, dungeonLoc.gateHall.y + 1.6, dungeonLoc.gateHall.z - 3.2), 3.0,
     'Прикоснуться к Вратам', () => {
+      if (ctx.ambience) ctx.ambience.deepBoom();
       ctx.ui.toast('Самоцвет холодит ладонь, и на миг кажется, что из глубины '
-        + 'кто-то дотронулся в ответ. Потом всё стихает.', 5200);
+        + 'кто-то дотронулся в ответ. Где-то внизу глухо ударило. Потом всё стихает.', 5200);
     }, 'dungeon');
 
   // ---- комнаты второго этажа: переночевать ----

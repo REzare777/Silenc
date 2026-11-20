@@ -80,7 +80,7 @@ console.log(`\n✓ ${userCopy} — ${mb(userCopy)}`);
 const zip = path.join(WORKSPACE, 'whispervale-village.zip');
 fs.rmSync(zip, { force: true });
 // dev/ в архив тоже кладём: тесты пригодятся тому, кто продолжит работу.
-const items = ['index.html', 'src', 'scripts', 'dev', 'dist', 'package.json',
+const items = ['index.html', 'src', 'scripts', 'dev', 'dist', 'docs', 'package.json',
   'vite.config.js', 'jsconfig.json', '.editorconfig', 'README.md', 'whispervale.html',
   '.github']
   .filter((i) => fs.existsSync(path.join(ROOT, i)));
