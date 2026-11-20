@@ -607,10 +607,10 @@ export function buildDungeon(M, glowTex) {
 
   // наверху шахты — кристаллы и мягкий синий свет: проём вниз должен
   // читаться как спуск, а не как чёрный прямоугольник
-  for (const [sx, sz] of [[-3.4, 7.2], [3.4, 7.2], [0, 12.6]]) {
-    const m = new THREE.Mesh(shardGeo(0.26, 1.5), crystal);
-    m.position.set(sx, Y_TOP - 0.35, sz);
-    m.rotation.z = sx === 0 ? Math.PI : sx > 0 ? -0.3 : 0.3;
+  for (const [sx, sz, tilt] of [[-3.9, 7.4, 1.15], [3.9, 7.4, -1.15], [0, 12.4, Math.PI]]) {
+    const m = new THREE.Mesh(shardGeo(0.15, 0.95), crystal);
+    m.position.set(sx, Y_TOP - 0.5, sz);
+    m.rotation.z = tilt;
     group.add(m);
   }
   const shaftLight = new THREE.PointLight(0x5f8cff, 1.5, 16, 1.5);

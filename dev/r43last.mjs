@@ -1,0 +1,31 @@
+import { chromium } from 'playwright';
+import { LAUNCH } from './browser.mjs';
+import fs from 'fs';
+const browser = await chromium.launch(LAUNCH);
+const page = await browser.newPage({ viewport: { width: 900, height: 560 } });
+page.setDefaultTimeout(240000);
+await page.goto('http://127.0.0.1:4205/?v=' + Date.now(), { waitUntil: 'domcontentloaded' });
+await page.waitForFunction(() => window.__villageReady === true, null, { timeout: 240000 });
+await page.evaluate(() => document.getElementById('begin').click());
+await page.waitForTimeout(1000);
+await page.evaluate(() => window.__dbg.setLocation('dungeon'));
+await page.waitForTimeout(700);
+const shot = async (name, pos, look) => {
+  await page.evaluate(({ pos, look }) => {
+    const d = window.__dbg;
+    d.player.enabled = false;
+    d.camera.position.set(pos[0], pos[1], pos[2]);
+    d.camera.lookAt(look[0], look[1], look[2]);
+    d.camera.updateMatrixWorld();
+  }, { pos, look });
+  await page.waitForTimeout(600);
+  await page.evaluate(() => { window.__grab = { resolve: () => {} }; });
+  await page.waitForFunction(() => window.__frame && window.__frame.length > 100, null, { timeout: 180000 });
+  const frame = await page.evaluate(() => { const f = window.__frame; window.__frame = ''; return f; });
+  fs.writeFileSync(`/workspace/village/shots/L_${name}.jpg`, Buffer.from(frame.split(',')[1], 'base64'));
+  console.log('снимок:', name);
+};
+await shot('shaft', [0, 1.7, 3.5], [0, -1.6, 10]);
+await shot('gate', [0, -2.9, 16], [0, -2.4, 30]);
+await shot('altar', [0, -2.6, 24], [0, -2.0, 31.5]);
+await browser.close();
