@@ -93,6 +93,14 @@ const HENYARD = {
 // Колокольня стоит за северным фасадом храма — ей нужна своя поляна,
 // иначе лес зарастает её вплотную и подхода нет.
 const CHURCH_RY = ryToFace([LAYOUT.church.x, LAYOUT.church.z], [0, 0]);
+// Колокольня за нефом (внешняя): в локальных осях храма её центр
+// на 13,4 м севернее. Проверкам дорог она нужна: без неё тропинка
+// «проходит» сквозь башню.
+const CHURCH_BELL_TOWER = {
+  x: LAYOUT.church.x + 13.4 * Math.sin(CHURCH_RY),
+  z: LAYOUT.church.z + 13.4 * Math.cos(CHURCH_RY),
+};
+
 const CHURCH_TOWER = {
   x: LAYOUT.church.x - 9.7 * Math.sin(CHURCH_RY),
   z: LAYOUT.church.z - 9.7 * Math.cos(CHURCH_RY),
@@ -111,7 +119,7 @@ const BUILDING_CLEARINGS = [
   [CHURCH_TOWER.x, CHURCH_TOWER.z, 9],
   [LAYOUT.mill.x, LAYOUT.mill.z, 9],
   [LAYOUT.tavern.x, LAYOUT.tavern.z, 12],
-  [LAYOUT.barn.x, LAYOUT.barn.z, 10],
+  [LAYOUT.barn.x, LAYOUT.barn.z, 11],
   [LAYOUT.blacksmith.x, LAYOUT.blacksmith.z, 7],
   [LAYOUT.well.x, LAYOUT.well.z, 5],
   [PASTURE.x, PASTURE.z, 12],          // овечье пастбище — лес вырублен
@@ -254,6 +262,10 @@ export function createVillage(ctx) {
     const chRy = ryToFace([LAYOUT.church.x, LAYOUT.church.z], [0, 0]);
     place(ch, LAYOUT.church.x, LAYOUT.church.z, chRy);
     ctx.footprints.push({ name: 'храм', x: LAYOUT.church.x, z: LAYOUT.church.z, hx: 4.75, hz: 8.75, ry: chRy });
+    // Колокольня за нефом и крыльцо-башня на южном фасаде — их тоже надо
+    // знать проверкам: без них дорога может «пройти» сквозь башню.
+    ctx.footprints.push({ name: 'колокольня', x: CHURCH_BELL_TOWER.x, z: CHURCH_BELL_TOWER.z, hx: 4.9, hz: 4.9, ry: chRy });
+    ctx.footprints.push({ name: 'крыльцо храма', x: CHURCH_TOWER.x, z: CHURCH_TOWER.z, hx: 2.3, hz: 2.3, ry: chRy });
     // вход в храм — через башню-колокольню (южный фасад), как и прежде
     addInteract(
       facadePos(3, 44, chRy, 0, -12.4, 1.8), 2.6, 'Войти в храм',
@@ -265,18 +277,21 @@ export function createVillage(ctx) {
       ctx.doors.church = { x: out.x, z: out.z, ry: chRy };
     }
     // сзади храма — рабочая дверь колокольни: через неё попадают в башню
+    // Дверь колокольни — в северной стене башни (локально z = 18,3).
+    // Раньше интеракт стоял на 4 м внутри башни: подойти к нему было
+    // нельзя, и выход из звонарной выбрасывал игрока в камень.
     addInteract(
-      facadePos(3, 44, chRy, 0, 13.9, 1.4), 2.6, 'Войти в колокольню',
+      facadePos(3, 44, chRy, 0, 19.6, 1.4), 2.8, 'Войти в колокольню',
       () => ctx.systems.locations.setLocation('church', 'back'),
     );
     {
       // точка выхода через колокольню — в заднем дворе у двери башни
-      const back = facadePos(3, 44, chRy, 0, 15.1, 0);
+      const back = facadePos(3, 44, chRy, 0, 19.6, 0);
       ctx.doors.churchBack = { x: back.x, z: back.z, ry: chRy };
     }
     // фонарь у двери башни — иначе её не видно
     {
-      const lp = facadePos(3, 44, chRy, 2.2, 13.6, 0);
+      const lp = facadePos(3, 44, chRy, 2.7, 19.4, 0);
       const cl = lantern(ctx.M, ctx.glowTex, { x: lp.x, z: lp.z, height: 3.5, lit: true, intensity: 2.5, distance: 13 });
       ctx.scene.add(cl.group);
       cl.place(lp.x, lp.z);
@@ -288,7 +303,7 @@ export function createVillage(ctx) {
     // проём с дверью читался как чёрная дыра. Фонарь на кронштейне —
     // в buildings.js, здесь только источник света.
     {
-      const lp = facadePos(3, 44, chRy, 0, 9.35, 0);
+      const lp = facadePos(3, 44, chRy, 0, 19.5, 0);
       const dl = new THREE.PointLight(0xffcf8a, 7, 8.5, 1.6);
       dl.position.set(lp.x, 3.0, lp.z);
       dl.castShadow = false;
@@ -300,6 +315,8 @@ export function createVillage(ctx) {
     const barnRy = ryToFace([LAYOUT.barn.x, LAYOUT.barn.z], [-10, -4]);
     place(barnB, LAYOUT.barn.x, LAYOUT.barn.z, barnRy);
     ctx.footprints.push({ name: 'амбар', x: LAYOUT.barn.x, z: LAYOUT.barn.z, hx: 6.15, hz: 4.15, ry: barnRy });
+    // прогалина под амбаром: лес вырублен, но земля — зелёная, не лесная подстилка
+    grassPatch(LAYOUT.barn.x + 1, LAYOUT.barn.z - 1, 10);
     addInteract(
       facadePos(LAYOUT.barn.x, LAYOUT.barn.z, barnRy, 0, -4.4, 1.6), 2.8, 'Войти в амбар',
       () => ctx.systems.locations.setLocation('barn'),
@@ -725,7 +742,7 @@ export function createVillage(ctx) {
     const lanternSpots = [
       [3.6, 3.6, true], [-3.8, 4.2, true], [3.8, -4.4, true], [-4.2, -3.6, true],
       [2.7, 12, true], [-2.9, 12, false], [2.9, -14, true], [-3.0, -18, false],
-      [2.9, 24, false], [-3.0, 27, false], [2.9, 34, false], [-3.0, 38, false],
+      [2.9, 24, false], [-3.0, 27, false], [-2.9, 34, false], [-3.0, 38, false],
       [-10.5, 6.5, false], [10.5, 6.5, false], [-7.6, -4.6, false], [11, -9, false],
     ];
     for (const [lx, lz, withLight] of lanternSpots) {
@@ -841,7 +858,7 @@ export function createVillage(ctx) {
       );
       gates.push({ x: x - gw / 2, z: z - d / 2, ang: 0 });
     };
-    field(-30, 44, 20, 12);   // поле отодвинуто от домов: между ними проход
+    field(-30, 50, 20, 12);   // поле отодвинуто от деревни: между ним и домами лес
     field(31, 44, 19, 14);
     // --- поля за озером: здесь идёт вся добыча зерна ---
     field(82, -20, 20, 12);
@@ -882,7 +899,7 @@ export function createVillage(ctx) {
     }
 
     /* --- поля, трава, цветы --- */
-    ctx.scene.add(wheatField(ctx.M, -30, 44, 20, 12));
+    ctx.scene.add(wheatField(ctx.M, -30, 50, 20, 12));
     ctx.scene.add(wheatField(ctx.M, 31, 44, 19, 14));
     // поля за озером — главная зерновая полоса долины
     ctx.scene.add(wheatField(ctx.M, 82, -20, 20, 12));
@@ -890,7 +907,7 @@ export function createVillage(ctx) {
     ctx.scene.add(wheatField(ctx.M, 80, -2, 18, 12));
     // список полей — для проверок планировки
     ctx.fields = [
-      { x: -30, z: 44, w: 20, d: 12 }, { x: 31, z: 44, w: 19, d: 14 },
+      { x: -30, z: 50, w: 20, d: 12 }, { x: 31, z: 44, w: 19, d: 14 },
       { x: 82, z: -20, w: 20, d: 12 }, { x: 96, z: -6, w: 16, d: 14 },
       { x: 80, z: -2, w: 18, d: 12 },
     ];

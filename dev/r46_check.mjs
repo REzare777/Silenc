@@ -125,8 +125,13 @@ const res = await page.evaluate(() => {
     const barnFp = fp.find((f) => f.name && f.name.indexOf('амбар') === 0)
       || fp.find((f) => Math.abs(f.x + 11) < 1 && Math.abs(f.z - 40) < 1);
     out.barn = barnFp ? { x: +barnFp.x.toFixed(1), z: +barnFp.z.toFixed(1) } : null;
-    // амбар переехал к краю поля — рядом с тем местом, где зреет хлеб
-    out.barnMoved = !!barnFp && Math.abs(barnFp.x + 11) < 1 && Math.abs(barnFp.z - 40) < 1;
+    // амбар — за полем: значит дальше от центра деревни, чем поле
+    const wField = (ctx.fields || []).find((f) => Math.abs(f.x + 30) < 2 && Math.abs(f.z - 50) < 2);
+    out.fieldWest = wField ? { x: wField.x, z: wField.z } : null;
+    out.barnBehindField = !!(wField && barnFp
+      && Math.hypot(barnFp.x, barnFp.z) > Math.hypot(wField.x, wField.z));
+    // амбар уехал за поле, в вырубку леса: дальше от деревни
+    out.barnMoved = !!barnFp && Math.abs(barnFp.x + 30) < 1 && Math.abs(barnFp.z - 64) < 1;
     // лесная делянка на опушке: избушка лесоруба вместо амбара
     const yardFp = fp.find((f) => f.name === 'лесная делянка');
     out.yard = yardFp ? { x: +yardFp.x.toFixed(1), z: +yardFp.z.toFixed(1) } : null;
@@ -234,8 +239,9 @@ const checks = [
   ['колокол достижим с винта', !!res.bellOk],
   ['пустой забор в лесу убран', res.emptyPlotGone],
   ['дом за трактиром переехал на место амбара', res.homeMoved && res.oldHomeGone],
-  ['амбар стоит у поля', res.barnMoved],
+  ['амбар стоит за полем, в вырубке леса', res.barnMoved],
   ['на опушке — лесная делянка', res.yardOk],
+  ['амбар дальше от деревни, чем поле', res.barnBehindField],
   ['амбар не заходит в овечий загон', res.barnOutPasture],
   ['тропинка ведёт к новому дому', res.homeTrailOk],
   ['тропинка ведёт к амбару', res.barnTrailOk],
