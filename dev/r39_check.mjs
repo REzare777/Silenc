@@ -107,7 +107,12 @@ const res = await page.evaluate(() => {
       if (g < minPond) minPond = g;
       if (h.x + h.w / 2 > MEADOW.x0 && h.x - h.w / 2 < MEADOW.x1
         && h.z + h.d / 2 > MEADOW.z0 && h.z - h.d / 2 < MEADOW.z1) onMeadow++;
-      if (!homes.find((o) => o.i !== h.i && Math.abs(o.x + h.x) < 0.6 && Math.abs(o.z - h.z) < 0.6)) noMirror++;
+      // Исключение (раунд 46): дом E на восточной стороне (29, −22).
+      // Его зеркало ((40, −8)) попало бы в пруд, поэтому западный дом E
+      // переехал на окраину (−40, −8) — пара у этой пары одна.
+      const ASYM = new Set([8, 9]);
+      if (!ASYM.has(h.i)
+        && !homes.find((o) => o.i !== h.i && Math.abs(o.x + h.x) < 0.6 && Math.abs(o.z - h.z) < 0.6)) noMirror++;
     }
     out.minPondGap = +minPond.toFixed(2);
     out.onMeadow = onMeadow;

@@ -39,7 +39,7 @@ const res = await page.evaluate(() => {
 
   const others = [
     { name: 'таверна', x: -17, z: -13, hx: 7.5, hz: 9.0 },
-    { name: 'амбар', x: -40, z: -8, hx: 6.0, hz: 4.0 },
+    { name: 'амбар', x: -44, z: 13, hx: 6.0, hz: 4.0 },
     { name: 'кузня', x: 14.5, z: -8, hx: 3.0, hz: 2.5 },
     { name: 'мельница', x: 34, z: -33, r: 4.6 },
     { name: 'церковь', x: 3, z: 44, hx: 4.5, hz: 12.3 },
@@ -107,8 +107,13 @@ const res = await page.evaluate(() => {
   }
 
   // --- симметрия: у каждого дома есть зеркальный ---
+  // Исключение: дом E на восточной стороне (29, −22). Его зеркало
+  // ((40, −8)) попало бы в пруд, поэтому в раунде 46 западный дом E
+  // переехал на окраину (−40, −8) и пара у этой пары — одна.
+  const ASYM = new Set([8, 9]);
   const mirror = [];
   for (const h of homes) {
+    if (ASYM.has(h.i)) continue;
     const m = homes.find((o) => o.i !== h.i && Math.abs(o.x + h.x) < 0.6 && Math.abs(o.z - h.z) < 0.6);
     if (!m) mirror.push(h.i);
   }

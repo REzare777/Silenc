@@ -82,15 +82,13 @@ const res = await page.evaluate(async () => {
   const nearTower = d.ctx.systems.interactions.nearest();
   out.bellOnTower = !!nearTower && nearTower.label === 'Ударить в колокол';
 
-  // проход из нефа в звонарную закрыт (раунд 42): дверь заперта на засов
+  // проход из нефа в башню открыт (раунд 46): дверь распахнута,
+  // из молитвенной можно дойти до винтовой лестницы
   {
     const p2 = d.player;
-    p2.teleport(0, 4.5, 0);
-    p2.y = 0.02; p2.groundY = 0.02; p2.vy = 0; p2.keys.clear();
-    p2.yaw = Math.PI / 2;                   // к двери, вправо
-    for (let i = 0; i < 58; i++) { p2.keys.add('KeyW'); p2.update(1 / 60); }
-    p2.keys.clear();
-    p2.yaw = Math.PI;                       // на север, к двери
+    p2.teleport(-3.95, 8.0, 0);
+    p2.y = 0; p2.groundY = 0; p2.vy = 0; p2.keys.clear();
+    p2.yaw = Math.PI;                       // на север, к проёму
     let got = false;
     for (let i = 0; i < 500; i++) {
       p2.keys.add('KeyW');
@@ -98,8 +96,8 @@ const res = await page.evaluate(async () => {
       if (p2.pos.z > 12.5) { got = true; break; }
     }
     p2.keys.clear();
-    out.passageToNave = got;
-    out.passageBlocked = !got;
+    out.passageToTower = got;
+    out.passageOpen = got;
     out.naveZ = +p2.pos.z.toFixed(2);
   }
 
@@ -174,7 +172,7 @@ const checks = [
   ['лестница в башне: винтовая спираль', res.spiral === true],
   ['игрок поднимается по лестнице', res.climbed],
   ['наверху есть интеракт удара в колокол', res.bellOnTower],
-  ['дверь из нефа закрыта — в звонарную не пройти', res.passageBlocked],
+  ['проход из нефа в башню открыт', res.passageOpen],
   ['вход сзади ведёт в звонарную', res.backEnterExists && res.backEnterLoc === 'church'
     && res.backSpawn && res.backSpawn.z > 12],
   ['задняя дверь нефа открыта на выход', res.backDoorExists && res.backToVillage],

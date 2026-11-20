@@ -55,12 +55,11 @@ const res = await page.evaluate(() => {
   out.reachedAltar = p.pos.z > 6.1;
   out.altarZ = +p.pos.z.toFixed(2);
 
-  // 2. дверь в звонарную (раунд 42): переставлена вправо и закрыта —
-  //    из молитвенной её не видно, сквозь неё не пройти
-  reset(0, 5.0);
-  walk(Math.PI / 2, 300, () => p.pos.x < -2.45);
-  out.sideX = +p.pos.x.toFixed(2);
+  // 2. дверь в башню (раунд 46): распахнута — из молитвенной можно
+  //    дойти до винтовой лестницы
+  reset(-3.95, 8.0);                       // прямо к двери в углу нефа
   walk(Math.PI, 600, () => p.pos.z > 10.3);
+  out.sideX = +p.pos.x.toFixed(2);
   out.reachedTower = p.pos.z > 10.3;
   out.towerZ = +p.pos.z.toFixed(2);
 
@@ -93,8 +92,8 @@ const checks = [
   ['интеракт входа есть', res.doorExists],
   ['вход в локацию храма', res.inChurch],
   ['проход по нефу до алтаря', res.reachedAltar],
-  ['проход сбоку к двери в звонарную', res.sideX !== undefined && res.sideX < -2.3],
-  ['дверь в звонарную закрыта — прохода нет', res.reachedTower === false],
+  ['подход к двери в башню', res.sideX !== undefined && res.sideX < -3.4],
+  ['проход из нефа в башню открыт', res.reachedTower === true],
   ['вход с заднего двора ведёт в звонарную', res.inBelfry],
   ['сквозь портал наружу не пройти', res.noPortalLeak],
   ['сквозь заднюю дверь не пройти', res.noDoorLeak],

@@ -149,16 +149,20 @@ export function createAnimalsSystem(ctx) {
       ctx.critters.ducks.push({ g, a, r: 5.6 + i * 0.9, w: 0.16 + i * 0.03, t: i * 2.1, pond });
     }
 
-    // собака — у двери трактира, на улице (раньше она стояла внутри стен)
+    // собака — у дома с табличкой (там доска у дороги к скале).
+    // Раньше она стояла у трактира, а ждать шла к дому хозяина, которое
+    // менялось вместе с локацией; теперь дом у пса один и постоянный.
     {
       const g = dog();
       g.name = 'dog';
-      const DOG_HOME = { x: -7.2, z: -5.4 };
+      const homeDoor = (ctx.doors.homes || [])[ctx.boardHome];
+      const DOG_HOME = homeDoor ? { x: homeDoor.x, z: homeDoor.z } : { x: -7.2, z: -5.4 };
+      const dogRy = homeDoor ? homeDoor.ry : -2.2;
       g.position.set(DOG_HOME.x, 0, DOG_HOME.z);
-      g.rotation.y = -2.2;
+      g.rotation.y = dogRy;
       ctx.scene.add(g);
       ctx.critters.dog = {
-        g, dir: -2.2, speed: 0.55, t: 0, home: DOG_HOME, r: 7, moving: false,
+        g, dir: dogRy, speed: 0.55, t: 0, home: DOG_HOME, r: 7, moving: false,
         mode: 'follow',          // 'follow' | 'stay' | 'goto' | 'wait'
         target: null, jumpT: 0, cmd: 'Ходит за хозяином',
       };
@@ -470,7 +474,9 @@ export function createAnimalsSystem(ctx) {
   function onLocationChange() {
     const d = ctx.critters.dog;
     if (!d) return;
-    const idx = ctx.playerHome ?? 1;
+    // Дом с табличкой — постоянное место пса; если он неизвестен,
+    // берём дом, из которого игрок последний раз выходил.
+    const idx = ctx.boardHome >= 0 ? ctx.boardHome : (ctx.playerHome ?? 1);
     const home = (ctx.doors.homes || [])[idx];
     if (!home) return;
     d.mode = 'wait';

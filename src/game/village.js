@@ -355,7 +355,7 @@ export function createVillage(ctx) {
       [31, 14, { w: 7, d: 6, h: 3.7, roof: 'tile', floors: 2 }],
       [-26, 29, { w: 6, d: 5, h: 3.45, roof: 'thatch', floors: 1 }],
       [26, 29, { w: 6, d: 5, h: 3.45, roof: 'thatch', floors: 1 }],
-      [-29, -22, { w: 6, d: 5, h: 3.35, roof: 'thatch', floors: 1 }],
+      [-40, -8, { w: 6, d: 5, h: 3.35, roof: 'thatch', floors: 1 }],
       [29, -22, { w: 6, d: 5, h: 3.35, roof: 'thatch', floors: 1 }],
       [-19, -34, { w: 5.5, d: 4.6, h: 3.25, roof: 'thatch', floors: 1 }],
       [19, -34, { w: 5.5, d: 4.6, h: 3.25, roof: 'thatch', floors: 1 }],
@@ -602,6 +602,17 @@ export function createVillage(ctx) {
     ctx.colliders.circles.push({ x: BX, z: BZ, r: 0.45 });
     ctx.propSpots.push({ name: 'доска', x: BX, z: BZ, r: 0.9 });
 
+    // Дом, у которого стоит доска: пёс ждёт именно здесь. Ищем по
+    // расстоянию от доски до крыльца, а не по зашитому номеру.
+    ctx.boardHome = -1;
+    let bestD = 1e9;
+    for (const h of ctx.homes || []) {
+      const door = (ctx.doors.homes || [])[h.i];
+      if (!door) continue;
+      const d = Math.hypot(door.x - BX, door.z - BZ);
+      if (d < bestD) { bestD = d; ctx.boardHome = h.i; }
+    }
+
     // сохранённая надпись (если игрок уже писал)
     let written = '';
     try {
@@ -783,7 +794,6 @@ export function createVillage(ctx) {
     };
     field(-30, 44, 20, 12);   // поле отодвинуто от домов: между ними проход
     field(31, 44, 19, 14);
-    field(-44, 16, 14, 12);
     // --- поля за озером: здесь идёт вся добыча зерна ---
     field(82, -20, 20, 12);
     field(96, -6, 16, 14);
@@ -832,7 +842,6 @@ export function createVillage(ctx) {
     // список полей — для проверок планировки
     ctx.fields = [
       { x: -30, z: 44, w: 20, d: 12 }, { x: 31, z: 44, w: 19, d: 14 },
-      { x: -44, z: 16, w: 14, d: 12 },
       { x: 82, z: -20, w: 20, d: 12 }, { x: 96, z: -6, w: 16, d: 14 },
       { x: 80, z: -2, w: 18, d: 12 },
     ];

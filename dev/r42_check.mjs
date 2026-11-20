@@ -174,23 +174,30 @@ const res = await page.evaluate(() => {
     out.fireOnPlaza = Math.hypot(f.x, f.z) < 15;
   }
 
-  /* ---------- 5. храм: дверь переставлена вправо и закрыта ---------- */
+  /* ---------- 5. храм: проём из нефа в башню открыт (раунд 46) ---------- */
   {
     const ch = d.churchLoc;
     out.naveDoor = ch.naveDoor
       ? { x: +ch.naveDoor.x.toFixed(2), w: +ch.naveDoor.w.toFixed(2), closed: ch.naveDoor.closed }
       : null;
-    // проём закрыт коллайдером: игрок не пройдёт ни через неф, ни сзади
+    // коллайдера на проёме быть не должно: проход свободен
+    // коллайдер, накрывающий сам проём, — это и есть стена; стены рядом
     const doorBoxes = (ch.colliders.boxes || []).filter((b) =>
-      Math.abs(b.cx - ch.naveDoor.x) < 0.8 && Math.abs(b.cz - ch.naveDoor.z) < 0.6);
+      Math.abs(ch.naveDoor.x - b.cx) < b.hx && Math.abs(ch.naveDoor.z - b.cz) < b.hz);
     out.doorCollider = doorBoxes.length;
-    // в бelfry можно попасть только с заднего двора
-    d.setLocation('church', 'back');
-    const inBelfry = Math.abs(p.pos.z - ch.spawnBack.z) < 1.2 && Math.abs(p.pos.x) < 1;
-    out.belfryFromBack = inBelfry;
+    // игрок проходит из нефа в башню
+    d.setLocation('church');
+    p.keys.clear();
+    const dz = ch.naveDoor ? ch.naveDoor.z : 9.8;
+    put(ch.naveDoor ? ch.naveDoor.x : -3.95, dz - 1.6);
+    const z0 = p.pos.z;
+    step(Math.PI, 120, true);              // на север, в башню
+    out.passed = { from: +z0.toFixed(2), to: +p.pos.z.toFixed(2) };
+    out.passedOk = p.pos.z > dz + 0.8;
     d.setLocation('village');
-    out.doorOk = !!out.naveDoor && out.naveDoor.x < -3 && out.naveDoor.closed
-      && out.doorCollider > 0 && out.belfryFromBack;
+    p.keys.clear();
+    out.doorOk = !!out.naveDoor && !out.naveDoor.closed
+      && out.doorCollider === 0 && out.passedOk;
   }
 
   /* ---------- 6. производительность ---------- */
@@ -242,7 +249,8 @@ if (res.fire) {
 if (res.naveDoor) {
   console.log(`дверь храма: x=${res.naveDoor.x} (ширина ${res.naveDoor.w}), закрыта=${res.naveDoor.closed}, ` +
     `коллайдеров на проёме: ${res.doorCollider}`);
-  console.log('  дверь вправо и закрыта, звонарка — с заднего двора:', ok(res.doorOk));
+  console.log(`  проход неф → башня: z ${res.passed.from} → ${res.passed.to}`);
+  console.log('  проход в башню открыт:', ok(res.doorOk));
 }
 if (res.perf) {
   console.log(`производительность: точечных источников ${res.perf.pointLights}, ` +

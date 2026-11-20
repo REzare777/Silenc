@@ -40,7 +40,7 @@ const ALL = [
   'npc_test', 'dungeon_test', 'single_check',
   'house_check', 'church_check', 'time_check', 'town_layout',
   'round36_check', 'r37_check', 'r39_check', 'r40_check', 'r41_check', 'r42_check', 'r43_check', 'r44_check',
-  'home_loc_check', 'focus_check', 'mill_climb', 'r45_check',
+  'home_loc_check', 'focus_check', 'mill_climb', 'r45_check', 'r46_check',
 ];
 
 /** Быстрый набор — для проверки «ничего не сломалось» после правки. */

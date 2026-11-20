@@ -168,7 +168,8 @@ const dogMove = await page.evaluate(() => {
   const before = { x: ctx.critters.dog.g.position.x, z: ctx.critters.dog.g.position.z };
   ctx.systems.locations.setLocation('tavern');
   const after = { x: ctx.critters.dog.g.position.x, z: ctx.critters.dog.g.position.z };
-  const home = (ctx.doors.homes || [])[ctx.playerHome ?? 1];
+  const idx = ctx.boardHome >= 0 ? ctx.boardHome : (ctx.playerHome ?? 1);
+  const home = (ctx.doors.homes || [])[idx];
   ctx.systems.locations.setLocation('village');
   return {
     before, after, mode: ctx.critters.dog.mode,
@@ -189,7 +190,7 @@ const checks = [
   ['на полях не растут деревья', res.treeOnField === 0],
   ['пёс на месте и не внутри трактира', !!res.dog && res.dogOutsideTavern],
   ['кот сидит на крыльце дома', res.catOnPorch],
-  ['пёс уходит к дому при смене локации', dogMove.moved && dogMove.atHome && dogMove.mode === 'wait'],
+  ['пёс ждёт у дома с табличкой', dogMove.atHome && dogMove.mode === 'wait'],
   ['овцы на пастбище', res.sheepInPasture],
   ['куры в курятнике', res.hensInYard],
   ['доска для записки стоит у дороги к скале', res.boardExists && res.boardTowardDungeon],

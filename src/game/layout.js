@@ -23,7 +23,7 @@ import * as THREE from 'three';
  */
 export const LAYOUT = {
   tavern: { x: -17, z: -13 },             // «Уставший вепрь»
-  barn: { x: -40, z: -8 },                // амбар
+  barn: { x: -44, z: 13 },                // амбар — у опушки, рядом с пастбищем
   mill: { x: 34, z: -33, ry: 0.6 },       // мельница
   church: { x: 3, z: 44 },                // церковь
   blacksmith: { x: 14.5, z: -8 },         // кузня

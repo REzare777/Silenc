@@ -94,12 +94,10 @@ const res = await page.evaluate(() => {
     p.y = 0; p.groundY = 9.2; p.vy = 0;   // галерея башни
     const nearBell = d.ctx.systems.interactions.nearest();
     out.bellOk = !!nearBell && nearBell.label === 'Ударить в колокол';
-    // дверь из нефа в звонарную закрыта (раунд 42): прохода быть не должно
-    p.teleport(0, 5.0, 0);
-    p.y = 0.02; p.groundY = 0.02; p.vy = 0; p.keys.clear();
-    p.yaw = Math.PI / 2;
-    for (let i = 0; i < 58; i++) { p.keys.add('KeyW'); p.update(1 / 60); }
-    p.keys.clear();
+    // дверь из нефа в башню открыта (раунд 46): проход должен быть
+    // прямо к двери в северо-западном углу нефа (x = -3.95)
+    p.teleport(-3.95, 8.0, 0);
+    p.y = 0; p.groundY = 0; p.vy = 0; p.keys.clear();
     p.yaw = Math.PI;
     let got = false;
     for (let i = 0; i < 400; i++) {
@@ -109,7 +107,7 @@ const res = await page.evaluate(() => {
     }
     p.keys.clear();
     out.passToTower = got;
-    out.passBlocked = !got;
+    out.passOpen = got;
     out.passZ = +p.pos.z.toFixed(2);
   }
 
@@ -132,7 +130,7 @@ const checks = [
   ['лестница: подъём до площадки с колоколом', res.climbed],
   ['колокол на своей площадке', res.onBellLanding],
   ['наверху есть удар в колокол', res.bellOk],
-  ['дверь из нефа закрыта — прохода нет', res.passBlocked],
+  ['проход из нефа в башню открыт', res.passOpen],
   ['в доме игрок смотрит в комнату', res.homeLooksIn],
   ['в трактире игрок смотрит в зал', res.tavernLooksIn],
 ];
