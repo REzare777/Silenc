@@ -104,29 +104,35 @@ export function createAnimalsSystem(ctx) {
   function build() {
     const critters = ctx.critters;
 
-    // куры — у колодца на площади
-    const henArea = { x: 7.5, z: 13.5, r: 3.0 };
+    // куры — в своём загоне у курятника: отдельная зона, не мельница и не пруд
+    const yard = ctx.henyard || { x: -16, z: 22, w: 6, d: 8 };
+    const henArea = { x: yard.x, z: yard.z, r: 2.2 };
     for (let i = 0; i < 4; i++) {
       const g = chicken(i);
       g.name = 'chicken';
       const a = (i / 4) * Math.PI * 2 + 0.6;
-      g.position.set(henArea.x + Math.cos(a) * (1.2 + i * 0.5), 0, henArea.z + Math.sin(a) * (1.2 + i * 0.5));
+      g.position.set(henArea.x + Math.cos(a) * (0.9 + i * 0.35), 0, henArea.z + Math.sin(a) * (0.9 + i * 0.35));
       g.rotation.y = a + 1.2;
       ctx.scene.add(g);
       ctx.critters.hens.push({ g, dir: a + 1.2, speed: 0.20 + (i % 3) * 0.04, t: i * 1.9, area: henArea, moving: false });
       ctx.animalCircles.push({ x: g.position.x, z: g.position.z, r: 0.24, g });
     }
 
-    // овцы — в загоне за избами
-    const sheepArea = { x: -30, z: 18, r: 5.2 };
+    // овцы — на пастбище: своя огороженная земля, где они пасутся и сидят
+    const pasture = ctx.pasture || { x: -45, z: 31, graze: [{ x: -43, z: 29 }], rest: { x: -49, z: 31 } };
+    const sheepArea = { x: pasture.x + 1.5, z: pasture.z, r: 4.6 };
     for (let i = 0; i < 3; i++) {
-      const g = sheep();
+      const g = sheep(i === 1);          // средний — баран с рогами
       g.name = 'sheep';
+      const spot = pasture.graze[i % pasture.graze.length];
       const a = (i / 3) * Math.PI * 2 + 1.4;
-      g.position.set(sheepArea.x + Math.cos(a) * 3.2, 0, sheepArea.z + Math.sin(a) * 3.2);
+      g.position.set(spot.x + Math.cos(a) * 0.6, 0, spot.z + Math.sin(a) * 0.6);
       g.rotation.y = a;
       ctx.scene.add(g);
-      ctx.critters.sheep.push({ g, dir: a, speed: 0.12 + (i % 2) * 0.03, t: i * 2.7, area: sheepArea, moving: false });
+      ctx.critters.sheep.push({
+        g, dir: a, speed: 0.12 + (i % 2) * 0.03, t: i * 2.7,
+        area: sheepArea, moving: false, rest: pasture.rest,
+      });
       ctx.animalCircles.push({ x: g.position.x, z: g.position.z, r: 0.42, g });
     }
 
@@ -143,16 +149,17 @@ export function createAnimalsSystem(ctx) {
       ctx.critters.ducks.push({ g, a, r: 5.6 + i * 0.9, w: 0.16 + i * 0.03, t: i * 2.1, pond });
     }
 
-    // собака — у таверны
+    // собака — у двери трактира, на улице (раньше она стояла внутри стен)
     {
       const g = dog();
       g.name = 'dog';
-      g.position.set(-13.6, 0, -7.4);
+      const DOG_HOME = { x: -7.2, z: -5.4 };
+      g.position.set(DOG_HOME.x, 0, DOG_HOME.z);
       g.rotation.y = -2.2;
       ctx.scene.add(g);
       ctx.critters.dog = {
-        g, dir: -2.2, speed: 0.55, t: 0, home: { x: -13.6, z: -7.4 }, r: 7, moving: false,
-        mode: 'follow',          // 'follow' | 'stay' | 'goto'
+        g, dir: -2.2, speed: 0.55, t: 0, home: DOG_HOME, r: 7, moving: false,
+        mode: 'follow',          // 'follow' | 'stay' | 'goto' | 'wait'
         target: null, jumpT: 0, cmd: 'Ходит за хозяином',
       };
       ctx.animalCircles.push({ x: g.position.x, z: g.position.z, r: 0.32, g });
@@ -165,17 +172,23 @@ export function createAnimalsSystem(ctx) {
       ctx.critters.dog.interact = dogIt;
     }
 
-    // кот — на крыльце домика (у дома (-16, 19): там перед входом открытое место)
+    // кот — на крыльце одного из домов. Крыльцо ищем по-настоящему:
+    // раньше здесь была зашитая координата несуществующего дома, и кот
+    // оказывался внутри стен, а потом просто пропадал.
     {
       const g = cat();
       g.name = 'cat';
       let porch = null, bestD = 1e9;
-      for (const p of ctx.platforms) {
-        if (Math.abs(p.y - 0.48) > 0.01) continue;
-        const dd = Math.hypot(p.cx + 13.83, p.cz - 16.42);
-        if (dd < bestD) { bestD = dd; porch = p; }
+      for (const h of ctx.homes || []) {
+        const door = (ctx.doors.homes || [])[h.i];
+        if (!door) continue;
+        for (const p of ctx.platforms) {
+          if (p.y < 0.4 || p.y > 0.8) continue;          // это крыльцо, а не пол
+          const dd = Math.hypot(p.cx - door.x, p.cz - door.z);
+          if (dd < bestD && dd < 3.2) { bestD = dd; porch = p; }
+        }
       }
-      const px = porch ? porch.cx : -13.8, pz = porch ? porch.cz : 16.4;
+      const px = porch ? porch.cx : -11.2, pz = porch ? porch.cz : 12.0;
       const pang = porch ? (porch.ang || 0) : -0.7;
       // смещение вдоль края крыльца (в его локальных осях) и поворот наружу
       const ox = 0.5, oz = -0.32;   // ближе к краю крыльца, лицом в сторону двора
@@ -243,14 +256,31 @@ export function createAnimalsSystem(ctx) {
       h.g.userData.update(dt, h.t, h.moving);
     }
 
-    // овцы пасутся, изредка переступают
+    // овцы пасутся на выпасе, изредка переступают — и иногда уходят отдыхать
+    // под навес, где сухо
     for (const s3 of ctx.critters.sheep) {
       s3.t += dt;
       const a = s3.area;
-      const spd = s3.speed * (Math.sin(s3.t * 0.22) > 0.86 ? 1 : 0);
+      // раз в полминуты овца решает: пастись или отдыхать
+      s3.restT = (s3.restT ?? 6 + s3.t * 0.7) - dt;
+      if (s3.restT <= 0) {
+        s3.restT = 26 + Math.random() * 30;
+        s3.wantsRest = !s3.wantsRest;
+      }
+      const rest = s3.rest;
+      const dRest = rest ? Math.hypot(rest.x - s3.g.position.x, rest.z - s3.g.position.z) : 99;
+      let spd = s3.speed * (Math.sin(s3.t * 0.22) > 0.86 ? 1 : 0);
       s3.moving = spd > 0.01;
+      if (s3.wantsRest && rest && dRest > 1.1) {
+        // идём к навесу
+        s3.dir = Math.atan2(rest.z - s3.g.position.z, rest.x - s3.g.position.x);
+        spd = s3.speed * 1.5;
+        s3.moving = true;
+      }
       if (s3.moving) {
-        s3.dir += (Math.sin(s3.t * 0.5) * 0.9 - s3.dir) * dt * 0.6;
+        if (!s3.wantsRest) {
+          s3.dir += (Math.sin(s3.t * 0.5) * 0.9 - s3.dir) * dt * 0.6;
+        }
         s3.dir = pickDir(s3.g, s3.dir, 1.0, 0.42);
         s3.g.position.x += Math.cos(s3.dir) * spd * dt;
         s3.g.position.z += Math.sin(s3.dir) * spd * dt;
@@ -262,8 +292,10 @@ export function createAnimalsSystem(ctx) {
         }
         s3.g.rotation.y = -s3.dir + Math.PI / 2;
       }
+      // дошли до навеса — ложимся
+      s3.resting = !!(s3.wantsRest && rest && dRest <= 1.3);
       unstick(s3.g, 0.42);
-      s3.g.userData.update(dt, s3.t, s3.moving);
+      s3.g.userData.update(dt, s3.t, s3.moving, s3.resting);
     }
 
     // утки бродят по пруду: плывут к цели, чистят пёрышки и пугаются игрока
@@ -322,7 +354,12 @@ export function createAnimalsSystem(ctx) {
       let target = follow ? pd : d.home;
       let hold = false;                              // пёс стоит на месте
 
-      if (d.mode === 'stay') {
+      if (d.mode === 'wait') {
+        // пёс ждёт у дома хозяина: стоит на месте и смотрит на игрока
+        hold = true;
+        d.cmd = 'Ждёт у дома хозяина';
+        if (dist < 12) d.dir = Math.atan2(pdz, pdx);
+      } else if (d.mode === 'stay') {
         hold = true;
         d.cmd = 'Стоит и ждёт приказаний';
       } else if (d.mode === 'goto' && d.target) {
@@ -420,6 +457,30 @@ export function createAnimalsSystem(ctx) {
       c.x = c.g.position.x;
       c.z = c.g.position.z;
     }
+  }
+
+  /* ================================================================
+   *  Пёс уходит к дому, когда игрок сменил локацию
+   * ================================================================ */
+
+  /**
+   * Игрок перешёл в другую локацию — пёс телепортируется к дому
+   * хозяина и ждёт там, пока игрок не подойдёт и не позовёт его.
+   */
+  function onLocationChange() {
+    const d = ctx.critters.dog;
+    if (!d) return;
+    const idx = ctx.playerHome ?? 1;
+    const home = (ctx.doors.homes || [])[idx];
+    if (!home) return;
+    d.mode = 'wait';
+    d.cmd = 'Ждёт у дома хозяина';
+    d.path = null;
+    d.pathTimer = 0;
+    d.target = null;
+    d.g.position.set(home.x, 0, home.z);
+    d.g.rotation.y = home.ry;
+    if (d.interact) d.interact.pos.set(home.x, 0.7, home.z);
   }
 
   /* ================================================================
@@ -530,6 +591,7 @@ export function createAnimalsSystem(ctx) {
     statusText,
     openDogMenu,
     closeDogMenu,
+    onLocationChange,
     dogAim,
     pickGroundPoint,
     /**

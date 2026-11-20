@@ -29,13 +29,15 @@ const DOOR_W = 2.6;   // ширина арки из нефа в звонарну
 const AISLE = 1.5;    // ширина центрального прохода
 const NEZ = 2.0;      // центр нефа по z (звонарная — за северной стеной)
 
-/* ---------------- звонарная (за северной стеной храма) ---------------- */
-const TW = 9.0;       // внутренний размер звонарной (x и z) — по ширине нефа
-const TZ = 14.7;      // центр звонарной по z: её южная стена примыкает к нефу
-                       // (TW изменилось — центр сдвинулся, чтобы стена не заехала внутрь)
-const TH = 8.0;       // высота стен
-const BELL_Y = 4.2;   // высота площадки с колоколом
-const LW = 1.4;       // ширина лестничного пролёта
+/* ---------------- звонарная (башня за северной стеной храма) ---------------- */
+const TW = 9.0;       // внутренний размер башни (x и z) — по ширине нефа
+const TZ = 14.7;      // центр башни по z: её южная стена примыкает к нефу
+const TH = 13.2;      // высота стен — башня должна читаться высокой
+const BELL_Y = 9.2;   // высота галереи, на которой висит колокол
+const NEWEL_R = 0.42; // каменный вал в центре винтовой лестницы
+const STAIR_IN = 0.56;// внутренний радиус ступеней винтовой лестницы
+const STAIR_OUT = 2.5;// наружный радиус ступеней
+const TURNS = 3;      // полных витка лестницы
 const NAVE_DOOR_W = 1.7;  // ширина двери звонарной наружу (сзади храма)
 const ARK_W = 0.9;        // ширина служебной двери из нефа в звонарную
 const ARK_X = -3.95;      // дверь — в самом правом углу нефа, за колоннами:
@@ -43,6 +45,31 @@ const ARK_X = -3.95;      // дверь — в самом правом углу 
 
 /** Название храма — показывается при входе. */
 export const CHURCH_NAME = 'Храм Святого Покрова';
+
+
+/**
+ * Полуциркульная арка из отдельных клиньев.
+ *
+ * Раньше арка делалась целым цилиндром: его нижняя половина свисала
+ * в проём, и изнутри было видно «лезвие» вместо арки.
+ *
+ * @param {Builder} B сборщик
+ * @param {string} matKey материал
+ * @param {number} x центр по x
+ * @param {number} y центр по y (пята арки)
+ * @param {number} z центр по z
+ * @param {number} r радиус арки
+ * @param {number} depth глубина в проём
+ * @param {number} [segs] число клиньев
+ */
+function arch(B, matKey, x, y, z, r, depth, segs = 9) {
+  for (let i = 0; i < segs; i++) {
+    const a = (Math.PI * (i + 0.5)) / segs;
+    const w = 2 * r * Math.sin(Math.PI / segs / 2) * 1.1;
+    B.add(box(w, 0.32, depth, 1), matKey,
+      mat(x + Math.cos(a) * r, y + Math.sin(a) * r, z, 0, 0, a - Math.PI / 2));
+  }
+}
 
 /**
  * Собирает интерьер храма: неф и звонарную с лестницей.
@@ -60,15 +87,29 @@ export function buildChurchInterior(M, glowTex) {
   /** Перевод локальной координаты нефа (от −D/2 до +D/2) в общую. */
   const nz = (z) => z + NEZ;
 
-  /* ================= звонарная ================= */
+  /* ================= звонарная: высокая башня ================= */
+  /* Задняя комната переделана в настоящую башню — по образцу мельницы:
+     высокие каменные стены, винтовая лестница вокруг вала, деревянная
+     галерея наверху и колокол под перекладиной. Снизу — вход с заднего
+     двора, с юга — запертая дверь из нефа. */
   const TX0 = -TW / 2, TX1 = TW / 2;                 // внутренние границы по x
   const TZ0 = TZ - TW / 2, TZ1 = TZ + TW / 2;        // внутренние границы по z
+  const SC = { x: 0, z: TZ0 + 3.7 };                 // центр винтовой лестницы
   {
     // пол звонарной — каменные плиты, кое-где растрескавшиеся
     B.put('stone', TW, 0.16, TW, 0, -0.08, TZ, 1.6);
-    // западная и восточная стены
+    // западная и восточная стены — толстые, с пилястрами
     B.put('stone', T, TH, TW + T * 2, TX0 - T / 2, TH / 2, TZ, 1.6);
     B.put('stone', T, TH, TW + T * 2, TX1 + T / 2, TH / 2, TZ, 1.6);
+    // вертикальные пилястры вдоль стен: башня читается как башня
+    for (const sx of [-1, 1]) {
+      for (let i = 0; i < 4; i++) {
+        const pz = TZ0 + 1.2 + i * 2.2;
+        B.put('stoneDark', 0.34, TH - 0.6, 0.5, sx * (TW / 2 - 0.17), (TH - 0.6) / 2, pz, 1.2);
+        B.put('stoneDark', 0.44, 0.26, 0.6, sx * (TW / 2 - 0.17), TH - 0.75, pz, 1.2);
+        B.put('stoneDark', 0.44, 0.3, 0.6, sx * (TW / 2 - 0.17), 0.15, pz, 1.2);
+      }
+    }
     // южная стена звонарной — общая с нефом, в ней проём к запертой двери
     {
       const aL = ARK_X - ARK_W / 2, aR = ARK_X + ARK_W / 2;
@@ -83,9 +124,21 @@ export function buildChurchInterior(M, glowTex) {
       for (const sx of [-1, 1]) {
         B.put('stoneDark', 0.4, 3.2, 0.5, ARK_X + sx * (ARK_W / 2 + 0.2), 1.6, TZ0 + 0.05, 1.2);
       }
-      B.add(cyl(ARK_W / 2 + 0.2, ARK_W / 2 + 0.2, 0.45, 12, true), 'stoneDark',
-        mat(ARK_X, 3.2, TZ0 + 0.05, 0, Math.PI / 2));
+      arch(B, 'stoneDark', ARK_X, 3.2, TZ0 + 0.05, ARK_W / 2 + 0.2, 0.45, 5);
       colliders.boxes.push({ cx: (aR + TX1) / 2, cz: TZ0 - T / 2, hx: (TX1 - aR) / 2, hz: T / 2, ang: 0 });
+      // С изнанки башни проём тоже закрыт: щит из досок, а не чёрный
+      // провал в стене. Иначе из башни видно «дыру в никуда».
+      {
+        const nb2 = 5, bw2 = ARK_W / nb2;
+        for (let i = 0; i < nb2; i++) {
+          const px = ARK_X - ARK_W / 2 + (i + 0.5) * bw2;
+          B.add(box(bw2 - 0.03, 3.1, 0.1, 1), 'oakDoor', mat(px, 1.55, TZ0 - T / 2 - 0.06));
+        }
+        for (const by of [0.7, 2.4]) {
+          B.put('timber', ARK_W + 0.04, 0.14, 0.05, ARK_X, by, TZ0 - T / 2 - 0.12, 1.1);
+        }
+        B.add(cyl(0.04, 0.04, 2.9, 6), 'timber', mat(ARK_X + ARK_W / 2 - 0.1, 1.55, TZ0 - T / 2 - 0.13, 0, 0, 0.04));
+      }
     }
     // северная стена — с дверью наружу (вход с задней стороны храма)
     {
@@ -126,14 +179,14 @@ export function buildChurchInterior(M, glowTex) {
       // проём закрыт сколоченной створкой: наружу — только через интеракт
       colliders.boxes.push({ cx: 0, cz: TZ1 + T / 2, hx: NAVE_DOOR_W / 2, hz: T / 2, ang: 0 });
     }
-    // свод звонарной: дощатый настил с крестовыми балками
+    // верх башни: дощатый настил с крестовыми балками
     B.put('plank', TW + T * 2, 0.2, TW + T * 2, 0, TH - 0.1, TZ, 1.2);
     for (const s2 of [-1, 1]) {
       B.put('timber', TW + T * 2, 0.26, 0.26, 0, TH - 0.32, TZ + s2 * (TW / 2 - 0.4), 1.2);
       B.put('timber', 0.26, 0.26, TW + T * 2, s2 * (TW / 2 - 0.4), TH - 0.32, TZ, 1.2);
     }
     // бойницы на восточной стене — свет из них падает прямо на колокол
-    for (const bz of [12.9, 14.0]) {
+    for (const bz of [TZ - 1.6, TZ + 0.4]) {
       // каменная ниша-бойница: откосы и заглублённый проём
       B.put('stoneDark', 0.4, 1.8, 0.62, TX1 + 0.2, BELL_Y + 1.6, bz, 1.2);
       B.put('dark', 0.1, 1.45, 0.2, TX1 + 0.36, BELL_Y + 1.6, bz, 1.2);
@@ -167,141 +220,118 @@ export function buildChurchInterior(M, glowTex) {
     }
   }
 
-  /* ---------------- каменная лестница звонарной: три пролёта ---------------- */
-  // Ступени ровные и уложенные, перила-балясины на месте: «заброшенность»
-  // читается в мелочах (щепки, паутина, пыль), а не в развалинах в воздухе.
-  const flight = (x0, z0, x1, z1, y0, y1, opts = {}) => {
-    const dx = x1 - x0, dz = z1 - z0;
-    const L = Math.hypot(dx, dz);
-    const n = Math.max(6, Math.round(L / 0.3));
-    const ang = Math.atan2(dx, dz);
-    const ux = dx / L, uz = dz / L;              // вдоль пролёта
-    const nx = -uz, nz2 = ux;                    // поперёк пролёта
-    for (let i = 0; i < n; i++) {
-      const t = (i + 0.5) / n;
-      const y = y0 + (y1 - y0) * t;
-      // ровная ступень; часть стёсана — старый камень
-      const chip = i % 5 === 2 ? 0.03 : 0;
-      B.add(box(LW, 0.16, L / n + 0.02, 1), 'stone',
-        mat(x0 + dx * t, y - 0.08 - chip, z0 + dz * t, ang));
-      // подступенок — кладка без щелей
-      B.add(box(LW, (y1 - y0) / n + 0.16, 0.1, 1), 'stoneDark',
-        mat(x0 + dx * t - ux * (L / n / 2), y - (y1 - y0) / n / 2 - 0.13,
-          z0 + dz * t - uz * (L / n / 2), ang));
+  /* ---------------- винтовая лестница башни ----------------
+   *
+   * Как в мельнице: вокруг каменного вала идёт непрерывная винтовая
+   * поверхность, а не стопка коробок. Физика спирали живёт в игроке
+   * (`spiralHeight`), поэтому подъём получается ровным.
+   */
+  {
+    // каменный вал в центре башни — вокруг него идёт лестница
+    B.add(cyl(NEWEL_R, NEWEL_R + 0.05, BELL_Y, 12), 'stoneDark', mat(SC.x, BELL_Y / 2, SC.z));
+    for (let y = 1.6; y < BELL_Y - 0.4; y += 2.2) {
+      B.add(cyl(NEWEL_R + 0.07, NEWEL_R + 0.07, 0.14, 12), 'stone', mat(SC.x, y, SC.z));
     }
-    // Каменные опоры: у пристенных пролётов ступени входят в стену сами,
-    // а поперечный пролёт держится на колоннах — никаких ступеней в воздухе.
-    for (const sp of opts.pillars || []) {
-      B.put('stone', 0.6, sp.y, 0.6, sp.x, sp.y / 2, sp.z, 1.4);
-      B.put('stoneDark', 0.78, 0.26, 0.78, sp.x, 0.13, sp.z, 1.4);
-      B.put('stoneDark', 0.72, 0.22, 0.72, sp.x, sp.y - 0.11, sp.z, 1.4);
-    }
-    // Каменный парапет по открытому краю галереи: зубцы идут по ступеням,
-    // поэтому он повторяет наклон и не выглядит «столбиками в воздухе».
-    if (opts.parapet) {
-      const side = opts.parapet;
-      for (let i = 0; i < n; i++) {
-        const t = (i + 0.5) / n;
-        const y = y0 + (y1 - y0) * t;
-        B.add(box(0.2, 0.9, L / n + 0.02, 1), 'stone',
-          mat(x0 + dx * t + nx * side * (LW / 2 - 0.1), y + 0.37,
-            z0 + dz * t + nz2 * side * (LW / 2 - 0.1), ang));
+    // витки: ровно TURNS оборотов, ступени — с заходом друг на друга
+    const NSTEP = Math.max(36, Math.round(BELL_Y / 0.26));
+    const DTH = (Math.PI * 2 * TURNS) / NSTEP;
+    const RISE = BELL_Y / NSTEP;
+    for (let i = 0; i < NSTEP; i++) {
+      const y = (i + 1) * RISE;                       // верх ступени
+      const theta = i * DTH;                          // ступень идёт против часовой
+      const ro = STAIR_OUT;                           // наружный радиус
+      const rm = (STAIR_IN + ro) / 2;
+      const half = rm * DTH / 2;
+      const sx = Math.sin(theta), cz = Math.cos(theta);
+      // ступень — веер из трёх досок: ближе к валу она уже, как и бывает
+      // на настоящей винтовой лестнице. Ширина по дуге — с заходом,
+      // иначе между ступенями остаётся щель.
+      for (let k = 0; k < 3; k++) {
+        const r0 = STAIR_IN + (ro - STAIR_IN) * (k / 3);
+        const r1 = STAIR_IN + (ro - STAIR_IN) * ((k + 1) / 3);
+        const rmk = (r0 + r1) / 2;
+        const w = Math.max(rmk * DTH * 1.3, 0.22);
+        B.add(box(w, 0.14, r1 - r0 + 0.03, 1), 'plank',
+          mat(SC.x + sx * rmk, y - 0.07, SC.z + cz * rmk, theta));
       }
-    }
-    return { x0, z0, x1, z1, y0, y1, ang, len: L };
-  };
-
-  // Лестница убрана в южную половину комнаты: вход с севера (дверь наружу)
-  // встречает свободный пол, а не первую ступень.
-  const flights = [
-    // пролёт A — вдоль западной стены: ступени входят в кладку
-    flight(TX0 + LW / 2, TZ1 - 1.0, TX0 + LW / 2, TZ1 - 4.7, 0, 1.4),
-    // пролёт B — поперёк комнаты, держится на двух каменных колоннах
-    flight(TX0 + LW / 2, TZ1 - 4.7, TX1 - LW / 2, TZ1 - 4.7, 1.4, 2.9, {
-      parapet: 1,
-      pillars: [
-        { x: TX0 + 1.35, z: TZ1 - 4.7, y: 2.55 },
-        { x: TX1 - 1.35, z: TZ1 - 4.7, y: 2.55 },
-      ],
-    }),
-    // пролёт C — вдоль восточной стены, на север, к площадке с колоколом
-    flight(TX1 - LW / 2, TZ1 - 4.7, TX1 - LW / 2, TZ1 - 2.8, 2.9, BELL_Y),
-  ];
-  // Каждый пролёт режется на короткие секции: игрок может подняться только
-  // на 0.46 м выше того места, где стоит, — длинный наклон «терял» игрока.
-  for (const f of flights) {
-    const segs = Math.max(1, Math.ceil((f.y1 - f.y0) / 0.4));
-    for (let i = 0; i < segs; i++) {
-      const t0 = i / segs, t1 = (i + 1) / segs;
-      platforms.push({
-        ramp: {
-          x0: f.x0 + (f.x1 - f.x0) * t0, z0: f.z0 + (f.z1 - f.z0) * t0,
-          x1: f.x0 + (f.x1 - f.x0) * t1, z1: f.z0 + (f.z1 - f.z0) * t1,
-          y0: f.y0 + (f.y1 - f.y0) * t0, y1: f.y0 + (f.y1 - f.y0) * t1,
-          halfWidth: LW / 2 - 0.05,
-        },
+      const stepW = Math.max(ro * DTH * 1.15, half * 2.2);
+      B.add(box(stepW, RISE, 0.07, 1), 'plank',
+        mat(SC.x + sx * (ro - 0.035), y - RISE / 2 - 0.07, SC.z + cz * (ro - 0.035), theta));
+      // балясины перил и короткий сегмент поручня по дуге
+      const rw = Math.max(ro * DTH * 0.82, 0.2);
+      B.add(box(0.08, 0.95, 0.08, 1), 'timber', mat(SC.x + sx * (ro - 0.11), y + 0.47, SC.z + cz * (ro - 0.11), theta));
+      B.add(box(rw, 0.08, 0.08, 1), 'timber', mat(SC.x + sx * (ro - 0.11), y + 0.92, SC.z + cz * (ro - 0.11), theta));
+      // перила — физическое препятствие: на них не провалишься
+      colliders.circles.push({
+        x: SC.x + sx * (ro - 0.11), z: SC.z + cz * (ro - 0.11),
+        r: 0.1, y0: y, y1: y + 0.95,
       });
     }
+    // центральный вал — физический: сквозь него не провалишься внутрь
+    colliders.circles.push({ x: SC.x, z: SC.z, r: NEWEL_R + 0.08, y0: 0, y1: BELL_Y });
+    // лестница — одна непрерывная винтовая поверхность
+    platforms.push({
+      sp: {
+        cx: SC.x, cz: SC.z,
+        rIn: STAIR_IN,
+        rOut0: STAIR_OUT,
+        rOut1: STAIR_OUT,
+        a0: 0,
+        turns: TURNS, steps: NSTEP,
+        y0: 0, y1: BELL_Y,
+        m: 0,
+      },
+    });
+    // нижняя ступень: с неё начинается подъём, площадка перед ней
+    B.add(box(1.5, 0.14, 1.1, 1), 'plank', mat(SC.x, 0.07, SC.z + STAIR_OUT + 0.55));
+    platforms.push({ cx: SC.x, cz: SC.z + STAIR_OUT + 0.55, hx: 0.75, hz: 0.55, ang: 0, y: 0.14 });
   }
 
-  /* ---------------- площадки звонарной ---------------- */
-  const landings = [
-    { x: TX0 + LW / 2, z: TZ1 - 4.7, hx: LW / 2, hz: LW / 2, y: 1.4 },
-    { x: TX1 - LW / 2, z: TZ1 - 4.7, hx: LW / 2, hz: LW / 2, y: 2.9 },
-    { x: TX1 - LW / 2, z: TZ1 - 2.8, hx: LW / 2, hz: 0.8, y: BELL_Y },
-  ];
-  for (const p of landings) {
-    // Настил площадки на 5 см ниже верхней ступени: при точном совпадении
-    // верхних граней ступени и площадки на стыке шло мерцание (z-fighting).
-    B.put('plank', p.hx * 2, 0.16, p.hz * 2, p.x, p.y - 0.13, p.z, 1.2);
-    platforms.push({ cx: p.x, cz: p.z, hx: p.hx, hz: p.hz, ang: 0, y: p.y });
-  }
-  // перила на промежуточных площадках — по открытым краям
-  for (const p of landings.slice(0, 2)) {
-    const edge = (x0, z0, x1, z1) => {
-      const dx = x1 - x0, dz = z1 - z0;
-      const L = Math.hypot(dx, dz);
-      B.add(box(0.11, 0.11, L, 1), 'timber',
-        mat((x0 + x1) / 2, p.y + 0.92, (z0 + z1) / 2, Math.atan2(dx, dz)));
-      const nB = Math.max(2, Math.round(L / 0.5));
-      for (let i = 0; i <= nB; i++) {
-        const t = i / nB;
-        B.add(box(0.07, 0.9, 0.07, 1), 'timber',
-          mat(x0 + dx * t, p.y + 0.45, z0 + dz * t, 0));
-      }
-    };
-    edge(p.x - p.hx, p.z + p.hz, p.x + p.hx, p.z + p.hz);
-  }
-  // ограждение площадки с колоколом: целые перила по трём сторонам
+  /* ---------------- галерея с колоколом ---------------- */
+  const BELL_X = SC.x, BELL_Z = SC.z;
   {
-    const p = landings[2];
-    const rail = (x0, z0, x1, z1) => {
-      const dx = x1 - x0, dz = z1 - z0;
-      const L = Math.hypot(dx, dz);
-      // поручень
-      B.add(box(0.11, 0.11, L, 1), 'timber',
-        mat((x0 + x1) / 2, p.y + 0.92, (z0 + z1) / 2, Math.atan2(dx, dz)));
-      // балясины
-      const nB = Math.max(2, Math.round(L / 0.5));
-      for (let i = 0; i <= nB; i++) {
-        const t = i / nB;
-        B.add(box(0.07, 0.9, 0.07, 1), 'timber',
-          mat(x0 + dx * t, p.y + 0.46, z0 + dz * t, 0));
+    // галерея — кольцо из досок вокруг вала; в ней проём, где выходит лестница
+    const rIn = STAIR_IN + 0.1, rOut = STAIR_OUT + 0.16;
+    const GAP = 0.42;                                 // полуразрыв проёма
+    for (let i = 0; i < 14; i++) {
+      const a = GAP + (Math.PI * 2 - GAP * 2) * (i + 0.5) / 14;
+      const rm = (rIn + rOut) / 2;
+      const chord = 2 * rOut * Math.sin((Math.PI * 2 - GAP * 2) / 14 / 2) * 1.06;
+      const sx = Math.sin(a), cz = Math.cos(a);
+      B.add(box(chord, 0.14, rOut - rIn, 1), 'plank', mat(SC.x + sx * rm, BELL_Y - 0.07, SC.z + cz * rm, a));
+      // балясины по краю галереи
+      if (i % 2 === 0) {
+        B.add(box(0.08, 0.95, 0.08, 1), 'timber',
+          mat(SC.x + sx * (rOut - 0.08), BELL_Y + 0.47, SC.z + cz * (rOut - 0.08), a));
+        colliders.circles.push({
+          x: SC.x + sx * (rOut - 0.08), z: SC.z + cz * (rOut - 0.08),
+          r: 0.1, y0: BELL_Y, y1: BELL_Y + 0.95,
+        });
       }
-    };
-    rail(p.x - p.hx, p.z - p.hz, p.x + p.hx, p.z - p.hz);          // юг
-    rail(p.x - p.hx, p.z - p.hz, p.x - p.hx, p.z + p.hz);          // запад
-    rail(p.x + p.hx, p.z - p.hz, p.x + p.hx, p.z + p.hz - 0.9);   // восток (вход с лестницы)
-  }
-
-  /* ---------------- колокол ---------------- */
-  const BELL_X = landings[2].x, BELL_Z = landings[2].z;
-  {
+    }
+    // поручень по краю галереи — сплошной, кроме проёма лестницы
+    for (let i = 0; i < 28; i++) {
+      const a = GAP + (Math.PI * 2 - GAP * 2) * (i + 0.5) / 28;
+      const sx = Math.sin(a), cz = Math.cos(a);
+      const rm = rOut - 0.08;
+      const chord = 2 * rm * Math.sin((Math.PI * 2 - GAP * 2) / 28 / 2) * 1.08;
+      B.add(box(chord, 0.09, 0.09, 1), 'timber', mat(SC.x + sx * rm, BELL_Y + 0.92, SC.z + cz * rm, a));
+    }
+    // физика галереи: восемь прямоугольных секций кольца (в проёме лестницы их нет)
+    for (let i = 0; i < 8; i++) {
+      const a = GAP + (Math.PI * 2 - GAP * 2) * (i + 0.5) / 8;
+      const rm = (rIn + rOut) / 2;
+      const chord = 2 * rOut * Math.sin((Math.PI * 2 - GAP * 2) / 8 / 2) * 1.04;
+      platforms.push({
+        cx: SC.x + Math.sin(a) * rm, cz: SC.z + Math.cos(a) * rm,
+        hx: chord / 2, hz: (rOut - rIn) / 2, ang: a, y: BELL_Y,
+      });
+    }
     // перекладина: балка от стены до стены — колокол висит под ней
-    B.add(box(TW + 0.4, 0.3, 0.32, 1), 'timber', mat(0, BELL_Y + 2.1, BELL_Z));
-    B.add(box(0.26, 0.26, 0.5, 1), 'timber', mat(-TW / 2 + 0.15, BELL_Y + 2.1, BELL_Z));
-    B.add(box(0.26, 0.26, 0.5, 1), 'timber', mat(TW / 2 - 0.15, BELL_Y + 2.1, BELL_Z));
-    // свеча на перилах площадки
+    B.add(box(TW + 0.4, 0.3, 0.32, 1), 'timber', mat(0, BELL_Y + 3.4, BELL_Z));
+    B.add(box(0.26, 0.26, 0.5, 1), 'timber', mat(-TW / 2 + 0.15, BELL_Y + 3.4, BELL_Z));
+    B.add(box(0.26, 0.26, 0.5, 1), 'timber', mat(TW / 2 - 0.15, BELL_Y + 3.4, BELL_Z));
+    // свеча на перилах галереи
     B.add(cyl(0.05, 0.06, 0.3, 8), 'bone', mat(BELL_X + 1.9, BELL_Y + 0.3, BELL_Z - 0.8));
     B.add(sphere(0.055, 8, 6), 'lampGlass', mat(BELL_X + 1.9, BELL_Y + 0.48, BELL_Z - 0.8));
     // подсвечник на стене нижнего яруса
@@ -311,6 +341,8 @@ export function buildChurchInterior(M, glowTex) {
       B.add(cyl(0.05, 0.06, 0.28, 8), 'bone', mat(cx, 1.72, TZ - 1.2));
       B.add(sphere(0.055, 8, 6), 'lampGlass', mat(cx, 1.9, TZ - 1.2));
     }
+    // верёвочный шкворень от перекладины к языку колокола
+    B.add(cyl(0.03, 0.03, 1.3, 6), 'cloth', mat(BELL_X, BELL_Y + 2.6, BELL_Z));
   }
 
   /* ================= неф ================= */
@@ -331,16 +363,46 @@ export function buildChurchInterior(M, glowTex) {
       B.put('stoneDark', 0.6, 3.8, 0.6, sx * (DOOR_W / 2 + 0.3), 1.9, nz(-D / 2 + 0.1), 1.2);
       B.put('stoneDark', 0.8, 0.3, 0.8, sx * (DOOR_W / 2 + 0.3), 0.15, nz(-D / 2 + 0.1), 1.2);
     }
-    B.add(cyl(DOOR_W / 2 + 0.3, DOOR_W / 2 + 0.3, 0.55, 14, true), 'stoneDark',
-      mat(0, 3.8, nz(-D / 2 + 0.1), 0, Math.PI / 2));
+    arch(B, 'stoneDark', 0, 3.8, nz(-D / 2 + 0.1), DOOR_W / 2 + 0.3, 0.55, 9);
     B.put('stoneDark', DOOR_W + 1.4, 0.35, 0.7, 0, 4.25, nz(-D / 2 + 0.1), 1.2);
-    // распахнутые внутрь створки
-    B.put('dark', DOOR_W, 3.8, 0.3, 0, 1.9, nz(-D / 2 + 0.42), 1.2);
-    for (const sx of [-1, 1]) {
-      const a = sx * 1.15;
-      B.add(box(DOOR_W / 2, 3.4, 0.12, 1), 'oakDoor',
-        mat(sx * (DOOR_W / 2 - 0.05) + Math.sin(a) * (DOOR_W / 4), 1.7,
-          nz(-D / 2 + 0.35) + (1 - Math.cos(a)) * (DOOR_W / 4), a));
+    // Распахнутые внутрь створки. Раньше они стояли криво: центр полотна
+    // считался от центра проёма, а не от петли, — створки уезжали за
+    // косяк и портал выглядел сломанным. Теперь обе створки навешены
+    // на петли у самого проёма и открыты внутрь симметчно.
+    {
+      const leafW = DOOR_W / 2 - 0.04;         // ширина створки
+      const leafH = 3.4;
+      const openA = 0.98;                      // угол открывания внутрь
+      const hingeZ = nz(-D / 2 + 0.42);
+      for (const sx of [-1, 1]) {
+        // створка навешена на петлю в косяке и уходит внутрь храма
+        const hx = sx * (DOOR_W / 2 - 0.03);
+        const dirX = -sx * Math.cos(openA);    // к центру проёма
+        const dirZ = Math.sin(openA);          // вглубь нефа
+        const cx2 = hx + dirX * (leafW / 2);
+        const cz2 = hingeZ + dirZ * (leafW / 2);
+        const ry = sx > 0 ? Math.PI + openA : -openA;
+        B.add(box(leafW, leafH, 0.12, 1), 'oakDoor', mat(cx2, leafH / 2, cz2, ry));
+        // доски-филёнки на полотне
+        for (let i = 0; i < 3; i++) {
+          const off = (i - 1) * (leafW / 3.4);
+          B.add(box(leafW / 5, leafH - 0.7, 0.04, 1), 'timber',
+            mat(cx2 + Math.cos(ry) * off, leafH / 2, cz2 - Math.sin(ry) * off, ry));
+        }
+        // железные обвязки — по поверхности полотна
+        const nx = Math.sin(ry), nz2 = Math.cos(ry);   // нормаль к створке
+        for (const by of [0.62, leafH - 0.55]) {
+          B.add(box(leafW - 0.12, 0.13, 0.05, 1), 'iron',
+            mat(cx2 + nx * 0.08, by, cz2 + nz2 * 0.08, ry));
+        }
+        // петли — у самого косяка
+        for (const by of [0.5, leafH - 0.45]) {
+          B.add(box(0.16, 0.12, 0.1, 1), 'iron', mat(hx + dirX * 0.05, by, hingeZ + dirZ * 0.05, ry));
+        }
+        // кольцо у свободного края створки
+        B.add(torus(0.09, 0.022, 5, 10), 'iron',
+          mat(hx + dirX * (leafW - 0.16), 1.55, hingeZ + dirZ * (leafW - 0.16), 0, Math.PI / 2));
+      }
     }
     colliders.boxes.push({ cx: -sideX, cz: nz(-D / 2 + T / 2), hx: sideW / 2, hz: T / 2, ang: 0 });
     colliders.boxes.push({ cx: sideX, cz: nz(-D / 2 + T / 2), hx: sideW / 2, hz: T / 2, ang: 0 });
@@ -362,8 +424,7 @@ export function buildChurchInterior(M, glowTex) {
     for (const sx of [-1, 1]) {
       B.put('stoneDark', 0.4, 3.2, 0.5, ARK_X + sx * (ARK_W / 2 + 0.2), 1.6, nz(D / 2 - 0.05), 1.2);
     }
-    B.add(cyl(ARK_W / 2 + 0.2, ARK_W / 2 + 0.2, 0.5, 12, true), 'stoneDark',
-      mat(ARK_X, 3.2, nz(D / 2 - 0.05), 0, Math.PI / 2));
+    arch(B, 'stoneDark', ARK_X, 3.2, nz(D / 2 - 0.05), ARK_W / 2 + 0.2, 0.5, 5);
     // Глухая подложка во всю толщу стены: за закрытой дверью — камень,
     // а не чёрный провал в сторону лестницы.
     B.put('dark', ARK_W, 3.1, 0.86, ARK_X, 1.6, nz(D / 2 - 0.02), 1.2);
@@ -485,14 +546,26 @@ export function buildChurchInterior(M, glowTex) {
     spots.push([new THREE.Vector3(-2.9, 1.1, cz), 'Курильница дымит ладаном. Дым витками поднимается к своду.']);
   }
 
-  /* ---------------- образы на стенах ---------------- */
+  /* ---------------- образы на стенах ----------------
+   *
+   * Раньше образы стояли на уровне окон (z = −5.0 и 0.4) — один из них
+   * попадал прямо в витраж и читался как ошибка. Теперь образы висят
+   * МЕЖДУ витражами: окна стоят через 3.3 м, и образы — ровно посередине
+   * между ними, симметрично по обеим стенам.
+   */
+  const ICON_Z = [-3.15, 0.15, 3.45];      // середины между витражами
   for (const sx of [-1, 1]) {
-    for (const z of [-5.0, 0.4]) {
+    for (const z of ICON_Z) {
       const ix = sx * (W / 2 - T - 0.05);
-      B.put('brass', 0.07, 1.3, 1.0, ix, 2.2, nz(z), 1.2);
-      B.put('timber', 0.05, 1.1, 0.8, ix - sx * 0.05, 2.2, nz(z), 1.2);
+      // киот: медная рама, доска-полотно, лампадка и убрус
+      B.put('brass', 0.07, 1.3, 0.92, ix, 2.2, nz(z), 1.2);
+      B.put('timber', 0.05, 1.12, 0.76, ix - sx * 0.05, 2.2, nz(z), 1.2);
+      B.put('brass', 0.06, 0.16, 0.92, ix - sx * 0.05, 2.86, nz(z), 1.2);
+      B.put('brass', 0.06, 0.14, 0.92, ix - sx * 0.05, 1.54, nz(z), 1.2);
       B.put('redCloth', 0.05, 0.42, 0.34, ix - sx * 0.08, 1.92, nz(z), 1.2);
       B.put('bone', 0.05, 0.26, 0.26, ix - sx * 0.08, 2.45, nz(z), 1.2);
+      // подсвечник под образом — образ виден и в сумерках
+      B.add(cyl(0.035, 0.04, 0.16, 6), 'brass', mat(ix - sx * 0.1, 1.36, nz(z)));
     }
   }
 
@@ -507,7 +580,7 @@ export function buildChurchInterior(M, glowTex) {
   const group = B.build(M, null, { name: 'churchInterior' });
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x14121a);
-  scene.fog = new THREE.Fog(0x14121a, 7, 34);
+  scene.fog = new THREE.Fog(0x14121a, 9, 52);
   scene.add(group);
 
   // дневной свет сквозь щели заколоченной двери — видно, что снаружи день
@@ -518,6 +591,31 @@ export function buildChurchInterior(M, glowTex) {
       slat.position.set(gx, 1.25, TZ1 + 0.19);
       group.add(slat);
     }
+  }
+  // За открытыми створками южного портала — дневной свет улицы.
+  // Раньше там была чёрная пустота, и открытая дверь читалась как дыра.
+  {
+    // градиент «небо — земля»: за открытой дверью видно улицу, а не белый лист
+    const cv = document.createElement('canvas');
+    cv.width = 8; cv.height = 64;
+    const g2 = cv.getContext('2d');
+    const grad = g2.createLinearGradient(0, 0, 0, 64);
+    grad.addColorStop(0, '#b9d2ee');
+    grad.addColorStop(0.52, '#e6eef8');
+    grad.addColorStop(0.62, '#d9d2bb');
+    grad.addColorStop(1, '#9d8f74');
+    g2.fillStyle = grad;
+    g2.fillRect(0, 0, 8, 64);
+    const dayTex = new THREE.CanvasTexture(cv);
+    dayTex.colorSpace = THREE.SRGBColorSpace;
+    const day = new THREE.MeshBasicMaterial({ map: dayTex, fog: false });
+    const planeOut = new THREE.Mesh(new THREE.PlaneGeometry(DOOR_W - 0.08, 3.75), day);
+    planeOut.position.set(0, 1.9, nz(-D / 2 - 0.03));
+    group.add(planeOut);
+    // мягкий тёплый отсвет от улицы на пол у портала
+    const portal = new THREE.PointLight(0xffe6c0, 7, 12, 1.6);
+    portal.position.set(0, 2.4, nz(-D / 2 + 1.1));
+    scene.add(portal);
   }
 
   const altar = new THREE.PointLight(0xffb45a, 16, 22, 1.2);
@@ -536,13 +634,19 @@ export function buildChurchInterior(M, glowTex) {
   const sky = new THREE.DirectionalLight(0xa8c4e8, 1.2);
   sky.position.set(-6, 14, NEZ + 4);
   scene.add(sky);
-  // свет в звонарной: холодный сверху и тёплый от свечи
-  const towerLight = new THREE.PointLight(0xbcd4f0, 6, 16, 1.3);
-  towerLight.position.set(1.55, BELL_Y + 1.5, TZ1 - 2.8);
+  // свет в башне: холодный сверху (из бойниц), тёплый у пола и на галерее
+  const towerLight = new THREE.PointLight(0xbcd4f0, 9, 22, 1.2);
+  towerLight.position.set(SC.x + 0.4, BELL_Y + 1.9, SC.z);
   scene.add(towerLight);
-  const shaft = new THREE.PointLight(0xa8c4e8, 2.6, 13, 1.6);
-  shaft.position.set(2.35, BELL_Y + 1.75, TZ1 - 2.8);
+  const shaft = new THREE.PointLight(0xa8c4e8, 5.5, 18, 1.4);
+  shaft.position.set(SC.x + 2.1, BELL_Y + 1.2, SC.z + 0.6);
   scene.add(shaft);
+  const galleryLight = new THREE.PointLight(0xffc07a, 6.5, 13, 1.6);
+  galleryLight.position.set(SC.x - 1.5, BELL_Y + 1.3, SC.z - 1.4);
+  scene.add(galleryLight);
+  const towerFloor = new THREE.PointLight(0xffb45a, 7.5, 16, 1.5);
+  towerFloor.position.set(0.6, 2.4, TZ1 - 1.6);
+  scene.add(towerFloor);
   const candle = new THREE.PointLight(0xffb45a, 2.2, 9, 1.9);
   candle.position.set(TX1 - 0.6, 1.95, TZ - 1.2);
   scene.add(candle);
@@ -551,7 +655,7 @@ export function buildChurchInterior(M, glowTex) {
 
   /* ---------------- колокол (отдельный меш — он качается) ---------------- */
   const bellPivot = new THREE.Group();
-  bellPivot.position.set(BELL_X, BELL_Y + 1.95, BELL_Z - 0.05);
+  bellPivot.position.set(BELL_X, BELL_Y + 3.4, BELL_Z - 0.05);
   const bellMesh = new THREE.Mesh(
     new THREE.CylinderGeometry(0.26, 0.5, 0.72, 12, 1, true), M.brass);
   bellMesh.material.side = THREE.DoubleSide;
@@ -592,7 +696,8 @@ export function buildChurchInterior(M, glowTex) {
     scene, group, colliders, platforms, floors: [], climbs: [],
     // Метрики лестницы: верх настила площадки на 5 см ниже верхней ступени —
     // плоскости не совпадают, поэтому на стыке нет мерцания.
-    stairsGeom: { deckTop: landings[0].y - 0.05, stepTop: landings[0].y },
+    // Винтовая лестница башни: галерея и верхний виток.
+    stairsGeom: { deckTop: BELL_Y - 0.05, stepTop: BELL_Y, spiral: true },
     // Дверь из нефа в звонарную: переставлена вправо и закрыта (раунд 42).
     naveDoor: { x: ARK_X, w: ARK_W, z: nz(D / 2 - T / 2), closed: true },
     /** Вход с улицы — южный портал нефа. */
@@ -624,6 +729,10 @@ export function buildChurchInterior(M, glowTex) {
       east.intensity = 11 * (0.94 + Math.sin(t * 0.6 + 2.1) * 0.05);
       sky.intensity = 1.2 * (0.97 + Math.sin(t * 0.35) * 0.03);
       candle.intensity = 2.2 * (0.85 + Math.sin(t * 7.1) * 0.09 + Math.sin(t * 12.3) * 0.05);
+      towerLight.intensity = 9 * (0.95 + Math.sin(t * 0.6) * 0.04);
+      shaft.intensity = 5.5 * (0.93 + Math.sin(t * 0.9 + 1.1) * 0.06);
+      galleryLight.intensity = 6.5 * (0.88 + Math.sin(t * 6.7 + 0.4) * 0.07 + Math.sin(t * 11.3) * 0.04);
+      towerFloor.intensity = 7.5 * (0.9 + Math.sin(t * 5.3) * 0.06 + Math.sin(t * 9.1) * 0.03);
       doorCandle.intensity = 2.6 * (0.85 + Math.sin(t * 8.3 + 1.1) * 0.1 + Math.sin(t * 14.7) * 0.05);
       for (let i = 0; i < flames.length; i++) {
         const f = flames[i];

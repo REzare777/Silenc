@@ -62,35 +62,36 @@ const res = await page.evaluate(() => {
     p.y = 0.02; p.groundY = 0.02; p.vy = 0; p.keys.clear();
     for (let i = 0; i < 30; i++) p.update(1 / 60);
     out.doorFree = +p.pos.z.toFixed(2);
-    // Подъём по лестнице как живой игрок: внизу → вверх → на восток → к колоколу.
-    const ramps = ch.platforms.filter((pl) => pl.ramp);
-    out.rampCount = ramps.length;
-    const start = ramps[0].ramp;
-    p.teleport(start.x0, start.z0, 0);
-    p.y = 0; p.groundY = 0; p.vy = 0; p.keys.clear();
-    const walk = (yaw, until, maxFrames = 600) => {
-      p.yaw = yaw;
-      for (let i = 0; i < maxFrames; i++) {
+    // Подъём по винтовой лестнице башни (раунд 45)
+    const sp = (ch.platforms.find((pl) => pl.sp) || {}).sp;
+    out.spiral = !!sp;
+    if (sp) {
+      const cx = sp.cx, cz = sp.cz;
+      const a0 = sp.a0 ?? 0;
+      p.teleport(cx + Math.sin(a0) * 1.3, cz + Math.cos(a0) * 1.3, 0);
+      p.y = 0; p.groundY = 0; p.vy = 0; p.keys.clear();
+      let maxY = 0;
+      for (let i = 0; i < 2600; i++) {
+        const a = Math.atan2(p.pos.x - cx, p.pos.z - cz);
+        p.yaw = Math.atan2(-Math.cos(a), Math.sin(a));
         p.keys.add('KeyW');
         p.update(1 / 60);
-        if (until()) break;
+        // высота ног над уровнем пола: на винте поднимается сама опора
+        const h = p.groundY + p.y;
+        if (h > maxY) maxY = h;
+        if (maxY > (sp.y1 ?? 9) - 0.4) break;
       }
       p.keys.clear();
-      return +p.groundY.toFixed(2);
-    };
-    // Звонарная стала шире (9×9 м) — пролёты сместились к новым стенам:
-    // западная стена → поперечная галерея → восточная стена с колоколом.
-    const h1 = walk(0, () => p.pos.z < 14.9);                 // вверх по западной стене
-    const h2 = walk(-Math.PI / 2, () => p.pos.x > 3.2);       // на восток по каменной галерее
-    const h3 = walk(Math.PI, () => p.pos.z > 16.0);           // вверх по восточной стене
-    out.steps = [h1, h2, h3];
-    out.climbMax = Math.max(h1, h2, h3);
-    out.climbTarget = 4.2;
-    out.climbed = h3 > 3.9;
-    out.onBellLanding = h3 > 3.9 && p.pos.z > 15.6 && p.pos.z < 17.2;
+      out.climbMax = +maxY.toFixed(2);
+      out.climbTarget = +(sp.y1 ?? 9).toFixed(2);
+      out.climbed = maxY > (sp.y1 ?? 9) - 0.7;
+      // наверху — галерея: игрок выше пола нефа
+      out.onBellLanding = maxY > 7.5;
+    }
+    out.rampCount = ch.platforms.filter((pl) => pl.ramp).length;
     // колокол на площадке доступен
     p.teleport(ch.bellPoint.x, ch.bellPoint.z, 0);
-    p.y = 0; p.groundY = 4.2; p.vy = 0;
+    p.y = 0; p.groundY = 9.2; p.vy = 0;   // галерея башни
     const nearBell = d.ctx.systems.interactions.nearest();
     out.bellOk = !!nearBell && nearBell.label === 'Ударить в колокол';
     // дверь из нефа в звонарную закрыта (раунд 42): прохода быть не должно

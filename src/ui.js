@@ -70,6 +70,11 @@ export class UI {
       vClose: document.getElementById('vClose'),
       dogCmd: document.getElementById('dogCmd'),
       dogStatus: document.getElementById('dogStatus'),
+      note: document.getElementById('note'),
+      noteInput: document.getElementById('noteInput'),
+      noteOk: document.getElementById('noteOk'),
+      noteCancel: document.getElementById('noteCancel'),
+      noteCount: document.getElementById('noteCount'),
       fish: document.getElementById('fish'),
       fZone: document.getElementById('fZone'),
       fMark: document.getElementById('fMark'),
@@ -321,6 +326,50 @@ export class UI {
   }
   get dogMenuOpen() { return this.el.dogCmd.classList.contains('on'); }
   setDogStatus(t) { this.el.dogStatus.textContent = t; }
+
+  /* ---------- доска для записки ---------- */
+  /**
+   * Открыть окно записи на доске.
+   *
+   * @param {string} current уже написанный текст (если есть)
+   * @param {Function} onSubmit обработчик записи
+   */
+  openNote(current = '', onSubmit = null) {
+    this.el.note.classList.add('on');
+    document.body.classList.add('uiFocus');
+    const inp = this.el.noteInput;
+    inp.value = current || '';
+    this.onNoteSubmit = onSubmit;
+    this._noteCount();
+    inp.oninput = () => this._noteCount();
+    inp.focus();
+    inp.setSelectionRange(inp.value.length, inp.value.length);
+    this.el.noteOk.onclick = () => {
+      const v = inp.value.trim();
+      this.closeNote();
+      if (this.onNoteSubmit) this.onNoteSubmit(v);
+    };
+    this.el.noteCancel.onclick = () => {
+      this.closeNote();
+      if (this.onNoteCancel) this.onNoteCancel();
+    };
+  }
+
+  /** Обновить счётчик символов. */
+  _noteCount() {
+    const n = this.el.noteInput.value.length;
+    this.el.noteCount.textContent = `${n} / ${this.el.noteInput.maxLength}`;
+  }
+
+  /** Закрыть окно записи. */
+  closeNote() {
+    this.el.note.classList.remove('on');
+    document.body.classList.remove('uiFocus');
+    this.el.noteInput.blur();
+  }
+
+  /** Открыто ли окно записи. */
+  get noteOpen() { return this.el.note.classList.contains('on'); }
 
   openMenu() { this.el.menu.classList.add('on'); }
   closeMenu() { this.el.menu.classList.remove('on'); }

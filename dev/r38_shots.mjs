@@ -60,7 +60,7 @@ await page.evaluate(() => {
 await page.waitForTimeout(900);
 await page.evaluate(() => {
   const d = window.__dbg;
-  d.ctx.interactables.find((x) => x.label === 'Войти в звонарку').act();
+  d.ctx.interactables.find((x) => x.label === 'Войти в колокольню').act();
 });
 await page.waitForTimeout(1400);
 await page.evaluate(() => {

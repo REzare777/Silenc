@@ -89,7 +89,7 @@ const res = await page.evaluate(() => {
     p.y = 0.02; p.groundY = 0.02; p.vy = 0; p.keys.clear();
     for (let i = 0; i < 10; i++) p.update(1 / 60);
     const near2 = d.ctx.systems.interactions.nearest();
-    out.backInteract = !!near2 && near2.label === 'Войти в звонарку';
+    out.backInteract = !!near2 && near2.label === 'Войти в колокольню';
     if (near2) near2.act();
     out.inTower = d.ctx.loc === 'church';
     out.towerSpawn = { x: +p.pos.x.toFixed(2), z: +p.pos.z.toFixed(2) };

@@ -8,7 +8,7 @@ import { signMesh } from './props.js';
 
 /** Повёрнутый прямоугольник (OBB) — точная форма стены под любым углом. */
 /** Уровень пола в жилых домах: перепад с землёй ≤ 0.46, чтобы в дом можно было войти без прыжка. */
-const FLOOR_Y = 0.42;
+const FLOOR_Y = 0.56;   // уровень пола в доме: цоколь выше — дом не «проседает»
 
 export function rotatedAABB(cx, cz, hw, hd, ry) {
   return { cx, cz, hx: hw, hz: hd, ang: ry };
@@ -172,14 +172,21 @@ function archWindow(B, x, y, z, side, ww = 1.0, wh = 2.3) {
 function roseWindow(B, x, y, z) {
   // стеклянный круг
   B.add(new THREE.CircleGeometry(0.86, 18), 'windowLit', mat(x, y, z - 0.02, Math.PI));
-  // спицы-гуры
+  // Розетка из лепестков, а не спицы: восемь прямых спиц со ступицей
+  // посередине читались как циферблат часов.
+  const petals = ['stainedRed', 'stainedBlue', 'stainedGold', 'stainedGreen'];
   for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI;
-    B.put('stoneDark', 0.09, 1.6, 0.1, x, y, z - 0.12, 1, [0, 0, a]);
+    const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+    const px = x + Math.cos(a) * 0.46;
+    const py = y + Math.sin(a) * 0.46;
+    B.add(box(0.3, 0.42, 0.06, 1), petals[i % petals.length],
+      mat(px, py, z - 0.1, 0, 0, a - Math.PI / 2));
+    // каменный переплёт между лепестками
+    B.put('stoneDark', 0.07, 0.46, 0.08, x + Math.cos(a + Math.PI / 8) * 0.5, y + Math.sin(a + Math.PI / 8) * 0.5, z - 0.11, 1, [0, 0, a + Math.PI / 8]);
   }
-  // внутреннее кольцо и ступица
-  B.add(torus(0.42, 0.06, 6, 14), 'stoneDark', mat(x, y, z - 0.12));
-  B.add(cyl(0.13, 0.13, 0.16, 8), 'stoneDark', mat(x, y, z - 0.14, 0, Math.PI / 2));
+  // центральная медальон-окно
+  B.add(new THREE.CircleGeometry(0.2, 12), 'stainedGold', mat(x, y, z - 0.1, Math.PI));
+  B.add(torus(0.22, 0.05, 6, 12), 'stoneDark', mat(x, y, z - 0.12));
   // наружное кольцо
   B.add(torus(0.95, 0.16, 8, 18), 'stoneDark', mat(x, y, z - 0.14));
 }
@@ -334,10 +341,10 @@ export function cottage(M, opts = {}) {
 
   // каменный цоколь — кольцом по периметру: сплошной плитой он закрывал
   // собой дощатый пол внутри дома
-  B.put('stone', w + 0.24, 0.42, 0.24, 0, 0.21, -d / 2 - 0.12, 1.1);
-  B.put('stone', w + 0.24, 0.42, 0.24, 0, 0.21, d / 2 + 0.12, 1.1);
-  B.put('stone', 0.24, 0.42, d + 0.24, -w / 2 - 0.12, 0.21, 0, 1.1);
-  B.put('stone', 0.24, 0.42, d + 0.24, w / 2 + 0.12, 0.21, 0, 1.1);
+  B.put('stone', w + 0.24, FLOOR_Y, 0.24, 0, FLOOR_Y / 2, -d / 2 - 0.12, 1.1);
+  B.put('stone', w + 0.24, FLOOR_Y, 0.24, 0, FLOOR_Y / 2, d / 2 + 0.12, 1.1);
+  B.put('stone', 0.24, FLOOR_Y, d + 0.24, -w / 2 - 0.12, FLOOR_Y / 2, 0, 1.1);
+  B.put('stone', 0.24, FLOOR_Y, d + 0.24, w / 2 + 0.12, FLOOR_Y / 2, 0, 1.1);
   const wallH = floors > 1 ? h * 1.74 : h;
   // Стены по периметру, а не сплошной объём: в фасаде (-z) оставлен
   // настоящий дверной проём, в который можно войти.
@@ -514,7 +521,7 @@ export function cottage(M, opts = {}) {
     }
     if (porch) {
       out.platforms.push(localBox(px, pz, ry, dx, -d / 2 - 0.62, doorW + 1.4, 1.0, FLOOR_Y));
-      out.platforms.push(localBox(px, pz, ry, dx, -d / 2 - 1.28, doorW + 0.5, 0.44, 0.24));
+      out.platforms.push(localBox(px, pz, ry, dx, -d / 2 - 1.28, doorW + 0.5, 0.44, 0.3));
     }
     out.windowLights = [];
     group.traverse((o) => {
@@ -540,12 +547,12 @@ export function cottage(M, opts = {}) {
  * (по одному на каждую комнату-нишу) и одно высокое окно над баром.
  */
 export function tavern(M, opts = {}) {
-  const { w = 15, d = 18, h = 3.6, roofH = 3.4 } = opts;
+  const { w = 15, d = 18, h = 4.0, roofH = 3.6 } = opts;
   const B = new Builder();
   const wallH = h * 1.85;
   // Низкий каменный цоколь: пол зала и улица — на одном уровне, иначе
   // трактир будто «утоплен» в землю, а игрок выходит из бара в ступень.
-  const BASE = 0.22;
+  const BASE = 0.38;
 
   B.put('stone', w + 0.3, BASE, d + 0.3, 0, BASE / 2, 0, 1.1);
   B.put('tavernWall', w, wallH, d, 0, BASE + wallH / 2, 0, 2.4);
@@ -764,22 +771,24 @@ export function church(M, opts = {}) {
     }
   }
 
-  // башня-колокольня: стоит перед южным фасадом, как и прежде. Проём —
-  // на южной стороне, через него входят в храм.
+  // Крыльцо перед южным фасадом: невысокая каменная башня с двускатной
+  // крышей. Проём — на южной стороне, через него входят в храм.
+  // Настоящая колокольня стоит сзади, за нефом (см. ниже).
   const tz = -d / 2 - 1.2;
-  const BT = 0.7;                     // толщина стен башни
+  const BT = 0.7;                     // толщина стен крыльца
   const TPD_W = 2.0, TPD_H = 2.9;    // дверной проём
+  const PORCH_H = 7.4;                // высота стен крыльца
   B.put('stone', 5.2, 0.9, 5.2, 0, 0.45, tz, 1.2);
-  // четыре стены башни: северная сплошная, южная — с проёмом
-  B.put('stone', 4.6, towerH, BT, 0, 0.9 + towerH / 2, tz + 2.3 - BT / 2, 1.6);
-  B.put('stone', BT, towerH, 4.6 - BT * 2, -2.3 + BT / 2, 0.9 + towerH / 2, tz, 1.6);
-  B.put('stone', BT, towerH, 4.6 - BT * 2, 2.3 - BT / 2, 0.9 + towerH / 2, tz, 1.6);
+  // четыре стены крыльца: северная сплошная, южная — с проёмом
+  B.put('stone', 4.6, PORCH_H, BT, 0, 0.9 + PORCH_H / 2, tz + 2.3 - BT / 2, 1.6);
+  B.put('stone', BT, PORCH_H, 4.6 - BT * 2, -2.3 + BT / 2, 0.9 + PORCH_H / 2, tz, 1.6);
+  B.put('stone', BT, PORCH_H, 4.6 - BT * 2, 2.3 - BT / 2, 0.9 + PORCH_H / 2, tz, 1.6);
   {
     const sideW = (4.6 - TPD_W) / 2, sideX = TPD_W / 2 + sideW / 2;
     const fz = tz - 2.3 + BT / 2;
-    B.put('stone', sideW, towerH, BT, -sideX, 0.9 + towerH / 2, fz, 1.6);
-    B.put('stone', sideW, towerH, BT, sideX, 0.9 + towerH / 2, fz, 1.6);
-    B.put('stone', TPD_W, towerH - TPD_H, BT, 0, 0.9 + TPD_H + (towerH - TPD_H) / 2, fz, 1.6);
+    B.put('stone', sideW, PORCH_H, BT, -sideX, 0.9 + PORCH_H / 2, fz, 1.6);
+    B.put('stone', sideW, PORCH_H, BT, sideX, 0.9 + PORCH_H / 2, fz, 1.6);
+    B.put('stone', TPD_W, PORCH_H - TPD_H, BT, 0, 0.9 + TPD_H + (PORCH_H - TPD_H) / 2, fz, 1.6);
     // тьма за проёмом — видно, что это вход, а не кладка
     B.put('dark', TPD_W, TPD_H, 0.3, 0, TPD_H / 2, tz - 2.3 + BT + 0.16, 1.2);
     // Двустворчатая дубовая дверь: филёнки, три обвязки, петли и кольцо.
@@ -812,105 +821,134 @@ export function church(M, opts = {}) {
       B.put('stoneDark', 0.4, TPD_H + 0.5, 0.5, sx * (TPD_W / 2 + 0.2), (TPD_H + 0.5) / 2 - 0.25, tz - 2.3 - 0.05, 1.2);
     }
     B.put('stoneDark', TPD_W + 1.2, 0.36, 0.6, 0, TPD_H + 0.45, tz - 2.3 - 0.05, 1.2);
-    // ступени перед башней
+    // ступени перед крыльцом
     B.put('stone', 3.4, 0.45, 0.9, 0, 0.225, tz - 3.1, 1.2);
     B.put('stone', 2.6, 0.22, 0.5, 0, 0.11, tz - 3.6, 1.2);
   }
-  // ------- задняя дверь нефа: рабочие ворота в звонарную -------
-  // Через них игрок попадает в звонарную — сзади храма.
-  {
-    const bw = 2.5, bh = 3.0, bz = d / 2;
-    const fy = 0.6;                       // уровень пола нефа
-    // каменный портал
-    for (const sx of [-1, 1]) {
-      B.put('stoneDark', 0.55, bh + 0.5, 0.62, sx * (bw / 2 + 0.27), fy + (bh + 0.5) / 2 - 0.25, bz + 0.06, 1.2);
-    }
-    B.put('stoneDark', bw + 1.1, 0.5, 0.66, 0, fy + bh + 0.22, bz + 0.06, 1.2);
-    B.put('stoneDark', bw + 1.5, 0.22, 0.85, 0, fy + bh + 0.55, bz + 0.12, 1.2);
-    // Тьма проёма за створками (в сплошной стене нефа проёма нет)
-    B.put('dark', bw - 0.06, bh - 0.04, 0.06, 0, fy + bh / 2, bz + 0.03, 1.2);
-    // Двустворчатая дубовая дверь: доски, обвязки, петли и кольца
-    const planks = 8;
-    for (const sx of [-1, 1]) {
-      const leaf = bw / 2 - 0.03;
-      const cxp = sx * (bw / 4);
-      for (let i = 0; i < planks / 2; i++) {
-        const px = cxp + (i - (planks / 4 - 0.5)) * (bw / planks);
-        B.add(box(bw / planks - 0.03, bh, 0.14, 1), 'oakDoor', mat(px, fy + bh / 2, bz + 0.14));
-      }
-      for (const by of [fy + 0.55, fy + bh - 0.5]) {
-        B.put('iron', leaf - 0.04, 0.13, 0.05, cxp, by, bz + 0.22, 1.1);
-      }
-      B.put('iron', 0.16, 0.13, 0.06, sx * (bw / 2 - 0.12), fy + 1.3, bz + 0.22, 1);
-      B.add(torus(0.09, 0.024, 5, 12), 'iron', mat(sx * (bw / 2 - 0.22), fy + 1.35, bz + 0.24, 0, Math.PI / 2));
-    }
-    // перемычка над дверью
-    B.put('timber', bw + 0.1, 0.18, 0.2, 0, fy + bh + 0.02, bz + 0.16, 1.1);
-    // фонарь на кронштейне над дверью — вход виден даже в сумерках
-    {
-      const ly = fy + bh + 0.62;
-      B.put('iron', 0.09, 0.09, 0.46, 0, ly, bz + 0.4, 1);
-      B.add(cyl(0.15, 0.19, 0.22, 8), 'iron', mat(0, ly - 0.12, bz + 0.6));
-      B.add(cyl(0.11, 0.07, 0.14, 8), 'lampGlass', mat(0, ly - 0.29, bz + 0.6));
-      B.add(cone(0.22, 0.16, 4), 'iron', mat(0, ly + 0.06, bz + 0.6, Math.PI / 4));
-    }
-    // ступени к задней двери
-    B.put('stone', bw + 1.2, 0.2, 0.9, 0, fy - 0.5, bz + 0.55, 1.2);
-    B.put('stone', bw + 0.9, 0.2, 0.6, 0, fy - 0.3, bz + 0.4, 1.2);
-  }
   // угловые пилястры
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    B.put('stoneDark', 0.7, towerH, 0.7, sx * 2.3, 0.9 + towerH / 2, tz + sz * 2.3, 1.2);
+    B.put('stoneDark', 0.7, PORCH_H, 0.7, sx * 2.3, 0.9 + PORCH_H / 2, tz + sz * 2.3, 1.2);
   }
-  // проёмы колокольни с лучковой аркой
-  for (let i = 0; i < 4; i++) {
-    const a = (i * Math.PI) / 2;
-    const nx = Math.sin(a) * 2.32, nz = Math.cos(a) * 2.32;
-    B.put('stoneDark', 1.7, 2.2, 0.4, nx * 0.72, towerH - 0.4, tz + nz * 0.72, 1.2);
-    B.add(cyl(0.85, 0.85, 0.44, 10, true), 'stoneDark',
-      mat(nx * 0.72, towerH + 0.7, tz + nz * 0.72, a, Math.PI / 2, 0));
-    B.add(plane(1.4, 1.9), 'dark', mat(nx * 0.82, towerH - 0.4, tz + nz * 0.82, 0, a));
-    // колокол
-    B.add(cyl(0.22, 0.42, 0.7, 8), 'brass', mat(nx * 0.78, towerH - 0.9, tz + nz * 0.78));
+  // двускатная крыша крыльца — вместо шпиля: это вход, а не колокольня
+  {
+    const RH = 2.6;
+    const chs = roofShell(4.8, 4.8, RH, { overhang: 0.45, thickness: 0.22, scale: 1.6 });
+    for (const g of chs.outer) B.add(g, 'tileSlate', mat(0, 0.9 + PORCH_H - 0.03, tz));
+    for (const g of chs.inner) B.add(g, 'tileSlate', mat(0, 0.9 + PORCH_H - 0.03, tz));
+    for (const g of chs.edges) B.add(g, 'tileSlate', mat(0, 0.9 + PORCH_H - 0.03, tz));
+    B.add(gableEnds(4.86, 4.8, RH, 1.6, chs.D), 'tileSlate', mat(0, 0.9 + PORCH_H - 0.03, tz));
+    B.put('stoneDark', 5.1, 0.2, 0.26, 0, 0.9 + PORCH_H + RH - 0.06, tz, 1.2);
   }
-  // карниз и шпиль
-  B.put('stoneDark', 5.5, 0.36, 5.5, 0, 0.9 + towerH + 0.18, tz, 1.2);
-  B.put('stoneDark', 5.9, 0.16, 5.9, 0, 0.9 + towerH + 0.42, tz, 1.2);
-  B.add(cone(3.15, 5.8, 8), 'tileSlate', mat(0, 0.9 + towerH + 0.5 + 2.9, tz));
-  // флюгер и крест
-  B.put('brass', 0.1, 1.6, 0.1, 0, 0.9 + towerH + 9.3, tz);
-  B.add(sphere(0.24, 8, 6), 'brass', mat(0, 0.9 + towerH + 10.1, tz));
-  B.add(torus(0.4, 0.06, 6, 12), 'brass', mat(0, 0.9 + towerH + 9.6, tz, 0, Math.PI / 2));
+  // роза-окно на южном фасаде крыльца
+  roseWindow(B, 0, 5.4, tz - 2.32);
 
-  // роза-окно на фасаде башни: круглый переплёт с гурями
-  roseWindow(B, 0, 7.2, tz - 2.32);
+  // ------- КОЛОКОЛЬНЯ ЗА СЕВЕРНЫМ ФАСАДОМ -------
+  // За нефом стоит высокая каменная башня: внутри неё винтовая лестница
+  // и галерея с колоколом (локация храма). Снаружи она должна выглядеть
+  // так же — массивный объём, бойницы, карниз, шпиль и крест.
+  const BTW = w + 0.8;             // ширина башни (стены 0,4 + запас)
+  const BTD = 9.8;                 // глубина башни
+  const BTZ = d / 2 + BTD / 2;     // центр башни по z
+  const BTH = 13.8;                // высота стен башни
+  const BTWALL = 0.45;
+  {
+    // цоколь
+    B.put('stone', BTW + 0.5, 0.6, BTD + 0.5, 0, 0.3, BTZ, 1.2);
+    // стены: западная, восточная и северная
+    B.put('stone', BTWALL, BTH, BTD, -BTW / 2 + BTWALL / 2, BTH / 2, BTZ, 1.6);
+    B.put('stone', BTWALL, BTH, BTD, BTW / 2 - BTWALL / 2, BTH / 2, BTZ, 1.6);
+    B.put('stone', BTW, BTH, BTWALL, 0, BTH / 2, BTZ + BTD / 2 - BTWALL / 2, 1.6);
+    // угловые пилястры — башня читается как башня
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      B.put('stoneDark', 0.75, BTH - 0.4, 0.75,
+        sx * (BTW / 2 - 0.3), (BTH - 0.4) / 2, BTZ + sz * (BTD / 2 - 0.3), 1.2);
+    }
+    // окна башни: узкие щели-бойницы
+    for (let i = 0; i < 3; i++) {
+      const wy = 4.4 + i * 3.2;
+      for (const sx of [-1, 1]) {
+        B.put('dark', 0.16, 1.5, 0.5, sx * (BTW / 2 - 0.05), wy, BTZ - 2.4 + i * 2.4, 1.2);
+        B.put('stoneDark', 0.3, 1.8, 0.2, sx * (BTW / 2 + 0.02), wy, BTZ - 2.4 + i * 2.4, 1.2);
+        B.put('stoneDark', 0.3, 0.22, 0.8, sx * (BTW / 2 + 0.02), wy + 0.9, BTZ - 2.4 + i * 2.4, 1.2);
+        B.put('stoneDark', 0.3, 0.22, 0.8, sx * (BTW / 2 + 0.02), wy - 0.9, BTZ - 2.4 + i * 2.4, 1.2);
+      }
+    }
+    // большие проёмы звонницы под карнизом — внутри виден колокол
+    for (let i = 0; i < 4; i++) {
+      const a = (i * Math.PI) / 2;
+      const nx = Math.sin(a) * (BTW / 2 - 0.05), nz2 = Math.cos(a) * (BTD / 2 - 0.05);
+      const ox = nx * 0.0, oz = nz2 * 0.0;
+      B.put('dark', 2.0, 2.6, 0.3, ox + nx, BTH - 1.6, BTZ + oz + nz2, 1.2);
+      B.put('stoneDark', 0.3, 2.9, 0.36, ox + nx * 1.06, BTH - 1.6, BTZ + oz + nz2 * 1.06, 1.2);
+      // колокол в проёме
+      B.add(cyl(0.26, 0.5, 0.8, 10), 'brass', mat(ox + nx * 0.55, BTH - 2.1, BTZ + oz + nz2 * 0.55));
+    }
+    // карниз и шпиль
+    B.put('stoneDark', BTW + 0.7, 0.4, BTD + 0.7, 0, BTH + 0.2, BTZ, 1.2);
+    B.put('stoneDark', BTW + 1.1, 0.2, BTD + 1.1, 0, BTH + 0.48, BTZ, 1.2);
+    B.add(cone(BTW * 0.72, 6.4, 4), 'tileSlate', mat(0, BTH + 0.6 + 3.2, BTZ, Math.PI / 4));
+    // крест на шпиле
+    B.put('brass', 0.12, 1.8, 0.12, 0, BTH + 8.0, BTZ);
+    B.put('brass', 0.9, 0.12, 0.12, 0, BTH + 8.3, BTZ);
+    B.add(sphere(0.22, 8, 6), 'brass', mat(0, BTH + 9.0, BTZ));
+  }
+  // рабочая дверь в колокольню — с северной стороны, с порогом и ступенями
+  const TOWER_DOOR_W = 1.7;
+  {
+    const dw = TOWER_DOOR_W, dh = 2.6;
+    const dz = BTZ + BTD / 2 + 0.02;
+    B.put('dark', dw, dh, 0.24, 0, dh / 2, dz + 0.14, 1.2);
+    B.put('stoneDark', 0.34, dh + 0.4, 0.44, -dw / 2 - 0.17, (dh + 0.4) / 2, dz + 0.1, 1.2);
+    B.put('stoneDark', 0.34, dh + 0.4, 0.44, dw / 2 + 0.17, (dh + 0.4) / 2, dz + 0.1, 1.2);
+    B.put('stoneDark', dw + 0.9, 0.3, 0.5, 0, dh + 0.35, dz + 0.1, 1.2);
+    // створка: доски, обвязки, петли
+    for (let i = 0; i < 7; i++) {
+      const px = -dw / 2 + (i + 0.5) * (dw / 7);
+      B.add(box(dw / 7 - 0.025, dh - 0.16, 0.09, 1), 'oakDoor', mat(px, (dh - 0.16) / 2, dz + 0.24));
+    }
+    for (const by of [0.42, 1.2, 2.1]) {
+      B.put('timber', dw + 0.06, 0.14, 0.05, 0, by, dz + 0.3, 1.1);
+    }
+    B.put('iron', 0.2, 0.15, 0.06, -dw / 2 + 0.1, 1.2, dz + 0.3, 1);
+    B.add(torus(0.1, 0.025, 5, 10), 'iron', mat(dw / 2 - 0.14, 1.25, dz + 0.31, 0, Math.PI / 2));
+    // ступени и фонарь у двери
+    B.put('stone', dw + 1.2, 0.22, 0.9, 0, 0.11, dz + 0.75, 1.2);
+    B.put('stone', dw + 0.9, 0.22, 0.6, 0, 0.32, dz + 0.42, 1.2);
+    B.put('iron', 0.09, 0.09, 0.44, dw / 2 + 0.35, dh + 0.55, dz + 0.2, 1);
+    B.add(cyl(0.14, 0.18, 0.2, 8), 'iron', mat(dw / 2 + 0.55, dh + 0.42, dz + 0.2));
+    B.add(cyl(0.1, 0.07, 0.13, 8), 'lampGlass', mat(dw / 2 + 0.55, dh + 0.28, dz + 0.2));
+  }
+
 
   const group = B.build(M, null, { name: 'church' });
   const out = { group, colliders: [], platforms: [], windowLights: [] };
   out.place = (px, pz, ry = 0) => {
     group.position.set(px, 0, pz); group.rotation.y = ry;
     out.colliders.push(rotatedAABB(px, pz, w / 2, d / 2, ry));
-    // Колокольня — отдельные стены: её дверь закрыта, поэтому игрок
-    // не должен проваливаться внутрь башни.
+    // Крыльцо — отдельные стены: его дверь закрыта, поэтому игрок
+    // не должен проваливаться внутрь.
     out.colliders.push(localBox(px, pz, ry, 0, tz + 2.3 - BT / 2, 4.6, BT));
     out.colliders.push(localBox(px, pz, ry, -2.3 + BT / 2, tz, BT, 4.6));
     out.colliders.push(localBox(px, pz, ry, 2.3 - BT / 2, tz, BT, 4.6));
     out.colliders.push(localBox(px, pz, ry, 0, tz - 2.3 + BT / 2, 4.6, BT));
-    // ступени перед дверью колокольни
+    // Колокольня за нефом: массивный объём, внутрь игрок не попадает —
+    // туда ведёт только дверь с заднего двора.
+    out.colliders.push(localBox(px, pz, ry, -BTW / 2 + BTWALL / 2, BTZ, BTWALL, BTD));
+    out.colliders.push(localBox(px, pz, ry, BTW / 2 - BTWALL / 2, BTZ, BTWALL, BTD));
+    out.colliders.push(localBox(px, pz, ry, 0, BTZ + BTD / 2 - BTWALL / 2, BTW, BTWALL));
+    // ступени перед дверью крыльца
     out.platforms.push(localBox(px, pz, ry, 0, tz - 3.1, 3.4, 0.9, 0.45));
     out.platforms.push(localBox(px, pz, ry, 0, tz - 3.6, 2.6, 0.5, 0.22));
     // Раньше перед фасадом стоял невидимый коллайдер 4,6 × 4,6 м: игрок
     // упирался в пустоту рядом с крыльцом и не мог обойти церковь.
     // Крыльцо низкое (0,72 м) — это площадка, а не стена, поэтому
     // здесь достаточно платформ ступеней.
-    // ступени башни — под её дверью
-    // ступени перед башней-колокольней (южный фасад)
-    out.platforms.push(localBox(px, pz, ry, 0, tz - 3.6, 2.6, 0.5, 0.22));
-    out.platforms.push(localBox(px, pz, ry, 0, tz - 3.1, 3.4, 0.9, 0.45));
-    // ступени к сломанной задней двери нефа
+    // ступени к задней двери нефа
     out.platforms.push(localBox(px, pz, ry, 0, d / 2 + 0.4, 1.7, 0.3, 0.2));
     out.platforms.push(localBox(px, pz, ry, 0, d / 2 + 0.55, 1.85, 0.45, 0.1));
-    out.platforms.push(localBox(px, pz, ry, 0, tz + 3.1, 3.4, 0.9, 0.45));
+    // ступени к двери колокольни (северная сторона)
+    out.platforms.push(localBox(px, pz, ry, 0, BTZ + BTD / 2 + 0.75, TOWER_DOOR_W + 1.2, 0.9, 0.22));
+    out.platforms.push(localBox(px, pz, ry, 0, BTZ + BTD / 2 + 0.42, TOWER_DOOR_W + 0.9, 0.6, 0.32));
     return out;
   };
   return out;

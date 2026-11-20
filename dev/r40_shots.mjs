@@ -81,7 +81,7 @@ await grab('R40_church_back');
 /* ---------- 4. вход в звонарную: свободный пол у двери ---------- */
 await page.evaluate(() => {
   const d = window.__dbg;
-  const enter = d.ctx.interactables.find((x) => x.label === 'Войти в звонарку');
+  const enter = d.ctx.interactables.find((x) => x.label === 'Войти в колокольню');
   if (enter) enter.act();
   d.player.enabled = false;
   d.camera.fov = 66; d.camera.updateProjectionMatrix();

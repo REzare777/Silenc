@@ -18,7 +18,7 @@ const PALETTE = {
   henBeak: 0xe6a83c,
   henLeg: 0xd9a441,
   sheepWool: 0xe9e3d6,
-  sheepSkin: 0x3b332b,
+  sheepSkin: 0x6f6152,
   duckBody: 0xd8d2c4,
   duckHead: 0x2f6b52,
   duckBill: 0xe0b13c,
@@ -121,62 +121,154 @@ export function chicken(hue = 0) {
 }
 
 /* ----------------------------------------------------------------- овца */
-export function sheep() {
-  const wool = mat(PALETTE.sheepWool);
+export function sheep(ram = false) {
+  const wool = mat(PALETTE.sheepWool, { roughness: 0.98 });
+  const woolDark = mat(0xd8d0be, { roughness: 0.98 });
   const skin = mat(PALETTE.sheepSkin);
   const dark = mat(0x1d1813);
+  const horn = mat(0x9c8a6b, { roughness: 0.65 });
 
   const g = new THREE.Group();
+  const SC = ram ? 1.12 : 1;          // баран крупнее овцы
 
-  // шерсть — гроздь шаров разного размера
-  const puffs = [
-    [0, 0.62, 0, 0.20], [0.14, 0.60, 0.07, 0.17], [-0.14, 0.60, 0.07, 0.17],
-    [0.12, 0.63, -0.11, 0.16], [-0.12, 0.63, -0.11, 0.16],
-    [0, 0.66, -0.17, 0.15], [0, 0.50, 0.02, 0.16], [0, 0.73, 0.02, 0.13],
+  /* --- туловище: длиннее и ниже, чем у шара ---
+   * Овца в профиль — не «пуля», а вытянутый овал с широкой грудой. */
+  const torso = new THREE.Group();
+  torso.position.y = 0.56;
+  g.add(torso);
+  const chest = mesh(sphere(0.26, 14, 10), wool, 0, 0, 0.13);
+  chest.scale.set(0.92, 0.86, 1.02);
+  torso.add(chest);
+  const belly = mesh(sphere(0.235, 14, 10), wool, 0, -0.045, -0.05);
+  belly.scale.set(0.95, 0.8, 1.12);
+  torso.add(belly);
+  const rump = mesh(sphere(0.225, 14, 10), wool, 0, -0.02, -0.26);
+  rump.scale.set(0.98, 0.9, 0.95);
+  torso.add(rump);
+  // «клочья» по бокам и на спине — шерсть ложится клочьями
+  const clumps = [
+    [0.16, 0.10, 0.05, 0.13], [-0.16, 0.10, 0.05, 0.13],
+    [0.17, 0.07, -0.12, 0.12], [-0.17, 0.07, -0.12, 0.12],
+    [0.13, 0.14, -0.22, 0.11], [-0.13, 0.14, -0.22, 0.11],
+    [0.0, 0.16, 0.06, 0.13], [0.0, 0.15, -0.16, 0.12],
+    [0.0, 0.13, 0.22, 0.11], [0.0, 0.05, -0.36, 0.09],
   ];
-  for (const [x, y, z, r] of puffs) {
-    const p = mesh(sphere(r, 10, 8), wool, x, y, z);
-    p.scale.set(1, 0.92, 1);
-    g.add(p);
+  for (const [x, y, z, r] of clumps) {
+    const c = mesh(sphere(r, 10, 8), woolDark, x, y, z);
+    c.scale.set(1, 0.9, 1);
+    torso.add(c);
   }
 
-  // голова
+  /* --- шея: короткая, толстая, идёт вперёд-вниз --- */
+  const neck = new THREE.Group();
+  neck.position.set(0, 0.04, 0.26);
+  torso.add(neck);
+  const neckM = mesh(cyl(0.105, 0.135, 0.26, 10), wool, 0, 0.04, 0.06);
+  neckM.rotation.x = 0.55;
+  neck.add(neckM);
+
+  /* --- голова: вытянутая морда, а не шар --- */
   const head = new THREE.Group();
-  head.position.set(0, 0.66, 0.24);
-  const skull = mesh(sphere(0.125, 10, 8), skin, 0, 0, 0.03);
-  skull.scale.set(0.78, 0.85, 1.05);
+  head.position.set(0, 0.13, 0.17);
+  neck.add(head);
+  const skull = mesh(sphere(0.105, 12, 9), skin, 0, 0, 0);
+  skull.scale.set(0.86, 0.92, 1.0);
   head.add(skull);
-  const top = mesh(sphere(0.075, 8, 6), wool, 0, 0.10, 0.01);
-  head.add(top);
+  const muzzle = mesh(sphere(0.072, 10, 8), skin, 0, -0.045, 0.10);
+  muzzle.scale.set(0.78, 0.72, 1.15);
+  head.add(muzzle);
+  // тёмная оконечность морды
+  const nose = mesh(sphere(0.032, 8, 6), dark, 0, -0.055, 0.155);
+  nose.scale.set(1.1, 0.7, 0.8);
+  head.add(nose);
+  // чуб на голове (тёмная прядь между ушами)
+  const tuft = mesh(sphere(0.055, 8, 6), woolDark, 0, 0.085, -0.01);
+  tuft.scale.set(0.9, 1.25, 1.4);
+  head.add(tuft);
+  // уши: лежат в стороны, как у настоящей овцы
   for (const s of [-1, 1]) {
-    const ear = mesh(cone(0.05, 0.13, 6), skin, s * 0.115, 0.025, 0.0);
-    ear.rotation.z = s * 1.25;
-    ear.rotation.x = -0.2;
+    const ear = mesh(sphere(0.055, 8, 6), skin, s * 0.105, 0.015, -0.01);
+    ear.scale.set(1.5, 0.42, 0.8);
+    ear.rotation.z = s * 0.28;
+    ear.rotation.y = s * -0.35;
     head.add(ear);
   }
-  eyes(head, dark, 0, 0.02, 0.115, 0.015, 0.055);
-  g.add(head);
+  eyes(head, dark, 0, 0.015, 0.075, 0.016, 0.058);
 
-  // ноги
+  /* --- рога: у барана закручены вниз по бокам головы --- */
+  if (ram) {
+    for (const s of [-1, 1]) {
+      const hornG = new THREE.Group();
+      hornG.position.set(s * 0.085, 0.07, -0.01);
+      hornG.rotation.z = s * 0.42;
+      head.add(hornG);
+      // три убывающих сегмента — спираль вниз
+      const segs = [
+        [0.0, 0.0, 0.0, 0.13, 0.055, 0],
+        [s * 0.055, -0.075, 0.012, 0.125, 0.05, 0.5],
+        [s * 0.05, -0.15, -0.005, 0.115, 0.042, 0.95],
+        [s * 0.015, -0.205, 0.02, 0.095, 0.032, 1.35],
+      ];
+      for (const [dx, dy, dz, len, r, rz] of segs) {
+        const seg = mesh(cyl(r * 0.86, r, len, 8), horn, dx, dy, dz);
+        seg.rotation.z = rz * (s > 0 ? 1 : 1) + (s > 0 ? 0 : 0);
+        seg.rotation.x = 0.2;
+        hornG.add(seg);
+      }
+      // гладкий кончик
+      const tip = mesh(cone(0.032, 0.075, 7), horn, s * 0.012, -0.255, 0.025);
+      tip.rotation.x = Math.PI;
+      hornG.add(tip);
+    }
+    // широкий воротник из шерсти вокруг шеи — признак барана
+    const ruff = mesh(sphere(0.2, 12, 9), woolDark, 0, 0.02, 0.2);
+    ruff.scale.set(1.15, 0.85, 0.7);
+    neck.add(ruff);
+  }
+
+  /* --- ноги: тонкие, с тёмными копытцами --- */
   const legs = [];
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
     const l = new THREE.Group();
-    l.position.set(sx * 0.115, 0.42, sz * 0.15);
-    l.add(mesh(cyl(0.032, 0.038, 0.42, 6), skin, 0, -0.21, 0));
-    const hoof = mesh(box(0.06, 0.05, 0.08), mat(0x241d18), 0, -0.41, 0.008);
+    l.position.set(sx * 0.115, 0.44, sz * 0.16);
+    const upper = mesh(cyl(0.042, 0.05, 0.2, 6), wool, 0, -0.07, 0);
+    l.add(upper);
+    const lower = mesh(cyl(0.028, 0.036, 0.26, 6), skin, 0, -0.27, 0);
+    l.add(lower);
+    const hoof = mesh(cyl(0.034, 0.028, 0.075, 6), dark, 0, -0.42, 0.008);
     l.add(hoof);
     g.add(l);
     legs.push(l);
   }
 
-  g.userData.update = (dt, t, moving) => {
-    // щиплет траву — голова опускается и поднимается
-    const graze = Math.pow(Math.max(0, Math.sin(t * 0.26 + 1.1)), 3);
+  /* --- хвост: короткий помпон --- */
+  const tail = mesh(sphere(0.055, 8, 6), wool, 0, 0.62, -0.4);
+  tail.scale.set(0.9, 1.1, 0.8);
+  g.add(tail);
+
+  g.scale.setScalar(SC);
+
+  g.userData.update = (dt, t, moving, rest = false) => {
+    // щиплет траву — голова опускается к земле
+    const graze = rest ? 0 : Math.pow(Math.max(0, Math.sin(t * 0.26 + 1.1)), 3);
     head.rotation.x = graze * 0.95;
-    head.position.y = 0.66 - graze * 0.30;
-    const sw = moving ? Math.sin(t * 5.5) : 0;
-    legs[0].rotation.x = sw * 0.4; legs[1].rotation.x = -sw * 0.4;
-    legs[2].rotation.x = -sw * 0.4; legs[3].rotation.x = sw * 0.4;
+    neck.rotation.x = graze * 0.35;
+    head.position.y = 0.13 - graze * 0.12;
+    // когда лёжит — ноги поджаты, корпус ниже
+    const lie = rest ? 1 : 0;
+    torso.position.y = 0.56 - lie * 0.16;
+    torso.rotation.x = lie * 0.12;
+    // шаг: ноги работают крест-накрест, как у настоящей овцы
+    const sw = moving ? Math.sin(t * 4.6) : 0;
+    legs[0].rotation.x = sw * 0.45;
+    legs[3].rotation.x = sw * 0.45;
+    legs[1].rotation.x = -sw * 0.45;
+    legs[2].rotation.x = -sw * 0.45;
+    if (rest) {
+      legs[0].rotation.x = 1.25; legs[1].rotation.x = -1.25;
+      legs[2].rotation.x = -1.25; legs[3].rotation.x = 1.25;
+    }
+    tail.position.y = 0.62 - lie * 0.16 + (moving ? Math.abs(sw) * 0.02 : 0);
   };
   return g;
 }

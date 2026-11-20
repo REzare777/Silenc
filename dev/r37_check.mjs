@@ -47,37 +47,38 @@ const res = await page.evaluate(async () => {
 
   // подъём по лестнице: телепорт к низу лестницы и шаг вверх
   const p = d.player;
-  const f0 = ch.platforms.find((pl) => pl.ramp);
+  // раунд 45: в башне винтовая лестница (спираль), а не П-образная
+  const sp0 = ch.platforms.find((pl) => pl.sp);
+  out.spiral = !!sp0;
   out.rampCount = ch.platforms.filter((pl) => pl.ramp).length;
-  // уникальные направления пролётов: у П-образной лестницы их три
-  const dirs = new Set();
-  for (const pl of ch.platforms) {
-    if (!pl.ramp) continue;
-    const dx = pl.ramp.x1 - pl.ramp.x0, dz = pl.ramp.z1 - pl.ramp.z0;
-    const L = Math.hypot(dx, dz) || 1;
-    dirs.add(`${Math.round(dx / L)},${Math.round(dz / L)}`);
+  const sp = sp0 ? sp0.sp : null;
+  if (sp) {
+    const cx = sp.cx, cz = sp.cz;
+    // старт — нижняя ступень винта
+    const a0 = sp.a0 ?? 0;
+    p.teleport(cx + Math.sin(a0) * 1.3, cz + Math.cos(a0) * 1.3, 0);
+    p.y = 0.02; p.groundY = 0.02; p.vy = 0; p.keys.clear();
+    let maxY = 0;
+    for (let i = 0; i < 2400; i++) {
+      // держим курс по касательной к винту (вверх по спирали)
+      const a = Math.atan2(p.pos.x - cx, p.pos.z - cz);
+      p.yaw = Math.atan2(-Math.cos(a), Math.sin(a));
+      p.keys.add('KeyW');
+      p.update(1 / 60);
+      // высота ног над уровнем пола: на винте поднимается сама опора
+      const h = p.groundY + p.y;
+      if (h > maxY) maxY = h;
+      if (maxY > (sp.y1 ?? 9) - 0.4) break;
+    }
+    p.keys.clear();
+    out.climbHeight = +maxY.toFixed(2);
+    out.climbTarget = +(sp.y1 ?? 9).toFixed(2);
+    out.climbed = maxY > (sp.y1 ?? 9) - 0.6;
   }
-  out.rampDirs = dirs.size;
-  const r = f0.ramp;
-  p.teleport(r.x0, r.z0, 0);
-  p.y = 0.02; p.groundY = 0.02; p.vy = 0; p.keys.clear();
-  // смотрим в сторону подъёма
-  p.yaw = Math.atan2(r.x1 - r.x0, r.z1 - r.z0) + Math.PI;
-  let maxY = 0;
-  for (let i = 0; i < 900; i++) {
-    p.keys.add('KeyW');
-    p.update(1 / 60);
-    if (p.y > maxY) maxY = p.y;
-    if (p.y > (r.y1 - 0.1)) break;
-  }
-  p.keys.clear();
-  out.climbHeight = +maxY.toFixed(2);
-  out.climbTarget = +r.y1.toFixed(2);
-  out.climbed = maxY > r.y1 - 0.35;
 
   // на площадке колокол доступен
   p.teleport(ch.bellPoint.x, ch.bellPoint.z, 0);
-  p.y = 0.02; p.groundY = 4.5; p.vy = 0;
+  p.y = 0; p.groundY = 9.2; p.vy = 0;   // галерея башни
   const nearTower = d.ctx.systems.interactions.nearest();
   out.bellOnTower = !!nearTower && nearTower.label === 'Ударить в колокол';
 
@@ -121,7 +122,7 @@ const res = await page.evaluate(async () => {
   // вход с задней стороны храма — сразу в звонарную
   d.ctx.systems.locations.setLocation('village');
   {
-    const enter = d.ctx.interactables.find((x) => x.label === 'Войти в звонарку');
+    const enter = d.ctx.interactables.find((x) => x.label === 'Войти в колокольню');
     out.backEnterExists = !!enter;
     if (enter) {
       enter.act();
@@ -170,7 +171,7 @@ const checks = [
   ['вход в храм есть', res.enterExists],
   ['вход ведёт в башню колокольни', res.inChurch],
   ['колокол недоступен с пола', res.bellReachableFromFloor === false],
-  ['лестница в башне: три пролёта', res.rampDirs === 3 && res.rampCount >= 9],
+  ['лестница в башне: винтовая спираль', res.spiral === true],
   ['игрок поднимается по лестнице', res.climbed],
   ['наверху есть интеракт удара в колокол', res.bellOnTower],
   ['дверь из нефа закрыта — в звонарную не пройти', res.passageBlocked],

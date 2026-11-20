@@ -17,6 +17,9 @@
 
 import * as THREE from 'three';
 import { fishingRod, fishingLine } from '../world/props.js';
+import {
+  MAIN_W, CROSS_W, TRAIL_W, PLAZA_R, TRAILS,
+} from './roads.js';
 
 /**
  * Пруд: держим далеко от домов — на юго-восточной лужайке.
@@ -89,61 +92,46 @@ export function addGround(ctx) {
 /**
  * Дороги: главная, поперечная, мощёная площадь и тропинки к строениям.
  *
+ * Сеть тропинок описана в `game/roads.js` — там же, где и проверяется,
+ * что дороги не идут по воде и не пересекают постройки.
+ *
  * @param {object} ctx контекст игры
  */
 export function addRoads(ctx) {
-  const main = new THREE.Mesh(new THREE.PlaneGeometry(7.4, 215), pathMat(ctx.T.dirt, 4, 92));
+  // сеть дорог — её проверяют тесты планировки (дорога не идёт по воде
+  // и не пересекает постройки)
+  ctx.roadTrails = TRAILS;
+  const main = new THREE.Mesh(new THREE.PlaneGeometry(MAIN_W, 190), pathMat(ctx.T.dirt, 4, 80));
   main.rotation.x = -Math.PI / 2;
   main.position.set(0, PATH_Y.main, 0);
   main.receiveShadow = true;
   ctx.scene.add(main);
 
-  const cross = new THREE.Mesh(new THREE.PlaneGeometry(175, 5.6), pathMat(ctx.T.dirt, 62, 3));
+  const cross = new THREE.Mesh(new THREE.PlaneGeometry(168, CROSS_W), pathMat(ctx.T.dirt, 60, 3));
   cross.rotation.x = -Math.PI / 2;
   cross.position.set(0, PATH_Y.cross, 0);
   cross.receiveShadow = true;
   ctx.scene.add(cross);
 
-  const plaza = new THREE.Mesh(new THREE.CircleGeometry(11.5, 48), pathMat(ctx.T.cobble, 4.5, 4.5));
+  const plaza = new THREE.Mesh(new THREE.CircleGeometry(PLAZA_R, 48), pathMat(ctx.T.cobble, 4.5, 4.5));
   plaza.rotation.x = -Math.PI / 2;
   plaza.position.set(0, PATH_Y.plaza, 0);
   plaza.receiveShadow = true;
   ctx.scene.add(plaza);
 
-  const paths = [
-    [[-5, -21], [-14, -22.5], [-23.5, -20.2]],   // подход к трактиру с дороги к пещере
-    [[-29, -22], [-32, -12], [-31, -4], [-24, -2], [-12, -2]],  // обход трактира к дому на южной окраине
-    [[14.5, -8], [7, -4]],                           // кузня
-    // --- западная сторона улицы: тропинки идут «лесенкой», мимо домов ---
-    [[-4, 4], [-7, 9], [-13, 14]],                   // дом A
-    [[-7, 9], [-8, 20], [-13, 31]],                  // дом B
-    [[-8, 20], [-20, 18], [-31, 14]],                // дом C — через дворы
-    [[-20, 18], [-24, 25], [-26, 29]],               // дом D
-    [[-24, -30], [-30, -27], [-32, -23], [-29, -22]], // дом E — в обход трактира
-    [[-5, -28], [-12, -32], [-19, -34]],             // дом F — с южного конца улицы
-    // --- восточная сторона улицы ---
-    [[4, 4], [7, 9], [13, 14]],
-    [[7, 9], [8, 20], [13, 31]],
-    [[8, 20], [20, 18], [31, 14]],
-    [[20, 18], [24, 25], [26, 29]],
-    [[24, -30], [30, -27], [32, -23], [29, -22]],
-    [[5, -28], [12, -32], [19, -34]],
-    [[3, 44], [0, 14]],                              // церковь
-    [[-40, -8], [-12, -4]],                          // амбар
-    [[34, -33], [13, -14]],                          // мельница
-    [[44, -2], [37.5, -4.5]],
-    // тропа «за город» — в обход пруда к кострищу на поляне у воды
-    [[48, -1], [62, -7], [64, -16], [59, -25], [50, -29], [44, -32]],
-  ];
-  for (const [a, b] of paths) {
-    const dx = b[0] - a[0], dz = b[1] - a[1];
-    const len = Math.hypot(dx, dz);
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(2.5, len), pathMat(ctx.T.dirt, 1, len / 6));
-    p.rotation.x = -Math.PI / 2;
-    p.rotation.z = -Math.atan2(dx, dz);
-    p.position.set((a[0] + b[0]) / 2, PATH_Y.trail, (a[1] + b[1]) / 2);
-    p.receiveShadow = true;
-    ctx.scene.add(p);
+  for (const t of TRAILS) {
+    for (let i = 0; i < t.pts.length - 1; i++) {
+      const a = t.pts[i], b = t.pts[i + 1];
+      const dx = b[0] - a[0], dz = b[1] - a[1];
+      const len = Math.hypot(dx, dz);
+      if (len < 0.01) continue;
+      const p = new THREE.Mesh(new THREE.PlaneGeometry(TRAIL_W, len), pathMat(ctx.T.dirt, 1, len / 6));
+      p.rotation.x = -Math.PI / 2;
+      p.rotation.z = -Math.atan2(dx, dz);
+      p.position.set((a[0] + b[0]) / 2, PATH_Y.trail, (a[1] + b[1]) / 2);
+      p.receiveShadow = true;
+      ctx.scene.add(p);
+    }
   }
 }
 

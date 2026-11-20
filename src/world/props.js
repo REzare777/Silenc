@@ -207,11 +207,13 @@ export function wheatField(M, x, z, w, d, rows = 26) {
   const head = new THREE.PlaneGeometry(0.13, 0.3);
   head.translate(0, 1.32, 0);
   const merged = mergeTwo(stalk, head);
-  const count = rows * Math.round(rows * (d / w));
+  const cols = Math.round(rows * (w / d));
+  // столько колосков, сколько мест в решётке: иначе поле зарастает
+  // только на треть и остаётся голая земля
+  const count = rows * cols;
   const inst = new THREE.InstancedMesh(merged, M.wheat, count);
   const dummy = new THREE.Object3D();
   const rng = mulberry(5150);
-  const cols = Math.round(rows * (w / d));
   for (let i = 0; i < count; i++) {
     const cx = (i % cols) + 0.5, cz = Math.floor(i / cols) + 0.5;
     dummy.position.set(x + (cx / cols - 0.5) * w, 0, z + (cz / rows - 0.5) * d);

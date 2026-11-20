@@ -26,11 +26,58 @@ import {
   trough, signpost, makeGlow,
 } from '../world/props.js';
 import { denseForest } from '../world/forest.js';
+import { noticeBoard } from '../world/board.js';
+import { chickenCoop, sheepShelter } from '../world/farm.js';
 import { Embers } from '../world/particles.js';
 import { Builder, box, cyl, sphere, cone, mat } from '../world/geo.js';
 import {
   LAYOUT, ryToFace, facadePos, tavernDoor, dungeonGate, dungeonTrail, distToDungeonTrail,
 } from './layout.js';
+import { distToTrails, TRAIL_W } from './roads.js';
+
+
+
+
+
+/**
+ * Овечье пастбище: огороженный луг на западе от деревни.
+ *
+ * Овцам нужна своя земля — отдельная от огородов и от луга у пруда.
+ * Здесь они пасутся, сидят под навесом и жуют траву.
+ */
+const PASTURE = {
+  x: -45, z: 31, w: 13, d: 11,
+  gate: { x: -38.6, z: 31, ang: 0 },
+  fence: [
+    [[-51.5, 25.5], [-38.6, 25.5]],
+    [[-38.6, 25.5], [-38.6, 36.5]],
+    [[-38.6, 36.5], [-51.5, 36.5]],
+    [[-51.5, 36.5], [-51.5, 25.5]],
+  ],
+  // места для животных внутри загона
+  graze: [
+    { x: -43, z: 29 }, { x: -47, z: 33 }, { x: -45, z: 28 },
+  ],
+  rest: { x: -49, z: 31 },
+};
+
+/**
+ * Курятник: маленький загон между домами, на западной стороне улицы.
+ *
+ * Куры не должны шляться по площади, мельнице и пруду — у них свой закут.
+ */
+const HENYARD = {
+  x: -16, z: 22, w: 6, d: 8,
+  fence: [
+    [[-19, 18], [-13, 18]],
+    [[-13, 18], [-13, 26]],
+    [[-13, 26], [-19, 26]],
+    [[-19, 26], [-19, 18]],
+  ],
+  gate: { x: -13, z: 21.4, ang: Math.PI / 2 },
+  coops: [[-17.4, 20.2], [-17.4, 23.6]],
+};
+
 
 /**
  * Поляны вокруг зданий: здесь деревья не растут.
@@ -41,8 +88,8 @@ import {
  *
  * @type {[number, number, number][]} [x, z, радиус]
  */
-// Башня-колокольня стоит перед южным фасадом храма — ей нужна своя
-// поляна, иначе лес зарастает её вплотную и подхода нет.
+// Колокольня стоит за северным фасадом храма — ей нужна своя поляна,
+// иначе лес зарастает её вплотную и подхода нет.
 const CHURCH_RY = ryToFace([LAYOUT.church.x, LAYOUT.church.z], [0, 0]);
 const CHURCH_TOWER = {
   x: LAYOUT.church.x - 9.7 * Math.sin(CHURCH_RY),
@@ -51,12 +98,14 @@ const CHURCH_TOWER = {
 
 const BUILDING_CLEARINGS = [
   [LAYOUT.church.x, LAYOUT.church.z, 11],
+  [LAYOUT.church.x + 0.9, LAYOUT.church.z + 13.4, 10],
   [CHURCH_TOWER.x, CHURCH_TOWER.z, 9],
   [LAYOUT.mill.x, LAYOUT.mill.z, 9],
   [LAYOUT.tavern.x, LAYOUT.tavern.z, 12],
   [LAYOUT.barn.x, LAYOUT.barn.z, 10],
   [LAYOUT.blacksmith.x, LAYOUT.blacksmith.z, 7],
   [LAYOUT.well.x, LAYOUT.well.z, 5],
+  [PASTURE.x, PASTURE.z, 12],          // овечье пастбище — лес вырублен
 ];
 
 /**
@@ -148,10 +197,17 @@ export function createVillage(ctx) {
 
   /** Расставить все здания деревни. */
   function buildBuildings() {
+    // Габариты построек и реестр уличных предметов: их используют
+    // проверки планировки (дороги не идут сквозь стены, предметы не
+    // стоят внутри дома).
+    ctx.footprints = ctx.footprints || [];
+    ctx.propSpots = ctx.propSpots || [];
+
     /* --- таверна «Уставший вепрь» --- */
     const t = tavern(ctx.M, {});
     const tavernRy = ryToFace([LAYOUT.tavern.x, LAYOUT.tavern.z], [0, 0]);
     const tPlaced = place(t, LAYOUT.tavern.x, LAYOUT.tavern.z, tavernRy);
+    ctx.footprints.push({ name: 'таверна', x: LAYOUT.tavern.x, z: LAYOUT.tavern.z, hx: 7.5, hz: 9, ry: tavernRy });
     // выход через заднюю дверь таверны (сбоку, у восточной стены)
     {
       const back = facadePos(LAYOUT.tavern.x, LAYOUT.tavern.z, tavernRy, 8.5, -6.7, 0);
@@ -168,8 +224,9 @@ export function createVillage(ctx) {
 
     /* --- кузня --- */
     const bs = blacksmith(ctx.M, {});
-    place(bs, LAYOUT.blacksmith.x, LAYOUT.blacksmith.z,
-      ryToFace([LAYOUT.blacksmith.x, LAYOUT.blacksmith.z], [0, -2]));
+    const bsRy = ryToFace([LAYOUT.blacksmith.x, LAYOUT.blacksmith.z], [0, -2]);
+    place(bs, LAYOUT.blacksmith.x, LAYOUT.blacksmith.z, bsRy);
+    ctx.footprints.push({ name: 'кузня', x: LAYOUT.blacksmith.x, z: LAYOUT.blacksmith.z, hx: 3, hz: 2.5, ry: bsRy });
     const forgeLight = new THREE.PointLight(0xff7a28, 2.6, 12, 2);
     forgeLight.position.copy(bs.forge);
     forgeLight.position.y += 0.9;
@@ -186,6 +243,7 @@ export function createVillage(ctx) {
     const ch = church(ctx.M, {});
     const chRy = ryToFace([LAYOUT.church.x, LAYOUT.church.z], [0, 0]);
     place(ch, LAYOUT.church.x, LAYOUT.church.z, chRy);
+    ctx.footprints.push({ name: 'храм', x: LAYOUT.church.x, z: LAYOUT.church.z, hx: 4.75, hz: 8.75, ry: chRy });
     // вход в храм — через башню-колокольню (южный фасад), как и прежде
     addInteract(
       facadePos(3, 44, chRy, 0, -12.4, 1.8), 2.6, 'Войти в храм',
@@ -196,19 +254,19 @@ export function createVillage(ctx) {
       const out = facadePos(3, 44, chRy, 0, -14.2, 0);
       ctx.doors.church = { x: out.x, z: out.z, ry: chRy };
     }
-    // сзади храма — рабочая дверь нефа: через неё попадают в звонарку
+    // сзади храма — рабочая дверь колокольни: через неё попадают в башню
     addInteract(
-      facadePos(3, 44, chRy, 0, 9.4, 1.4), 2.6, 'Войти в звонарку',
+      facadePos(3, 44, chRy, 0, 13.9, 1.4), 2.6, 'Войти в колокольню',
       () => ctx.systems.locations.setLocation('church', 'back'),
     );
     {
-      // точка выхода через звонарную — в заднем дворе у сломанной двери
-      const back = facadePos(3, 44, chRy, 0, 10.6, 0);
+      // точка выхода через колокольню — в заднем дворе у двери башни
+      const back = facadePos(3, 44, chRy, 0, 15.1, 0);
       ctx.doors.churchBack = { x: back.x, z: back.z, ry: chRy };
     }
-    // фонарь у сломанной двери — иначе её не видно
+    // фонарь у двери башни — иначе её не видно
     {
-      const lp = facadePos(3, 44, chRy, 2.35, 9.1, 0);
+      const lp = facadePos(3, 44, chRy, 2.2, 13.6, 0);
       const cl = lantern(ctx.M, ctx.glowTex, { x: lp.x, z: lp.z, height: 3.5, lit: true, intensity: 2.5, distance: 13 });
       ctx.scene.add(cl.group);
       cl.place(lp.x, lp.z);
@@ -231,6 +289,7 @@ export function createVillage(ctx) {
     const barnB = barn(ctx.M, {});
     const barnRy = ryToFace([LAYOUT.barn.x, LAYOUT.barn.z], [-10, -4]);
     place(barnB, LAYOUT.barn.x, LAYOUT.barn.z, barnRy);
+    ctx.footprints.push({ name: 'амбар', x: LAYOUT.barn.x, z: LAYOUT.barn.z, hx: 6.15, hz: 4.15, ry: barnRy });
     addInteract(
       facadePos(-40, -8, barnRy, 0, -4.4, 1.6), 2.8, 'Войти в амбар',
       () => ctx.systems.locations.setLocation('barn'),
@@ -241,6 +300,7 @@ export function createVillage(ctx) {
     ctx.mill.ref = mill;
     const millX = LAYOUT.mill.x, millZ = LAYOUT.mill.z, millRy = LAYOUT.mill.ry;
     place(mill, millX, millZ, millRy);
+    ctx.footprints.push({ name: 'мельница', x: millX, z: millZ, r: 3.92, ry: millRy });
     ctx.mill.blades = mill.blades;
     ctx.mill.cap = mill.cap;
     ctx.mill.landingGeom = mill.landingGeom || null;   // стык перемычки и площадки
@@ -261,6 +321,7 @@ export function createVillage(ctx) {
     /* --- колодец --- */
     const wl = well(ctx.M, {});
     place(wl, LAYOUT.well.x, LAYOUT.well.z);
+    ctx.footprints.push({ name: 'колодец', x: LAYOUT.well.x, z: LAYOUT.well.z, hx: 1.5, hz: 1.5, ry: 0 });
     ctx.interactables.push({
       pos: new THREE.Vector3(0, 1.2, 0), radius: 2.8, label: 'Набрать воды',
       act: () => ctx.ui.toast('Вода из колодца — ледяная и чистая. Ведро полно.'),
@@ -283,19 +344,21 @@ export function createVillage(ctx) {
     // Участки разнесены по-настоящему: между соседями 7-11 м свободного
     // места, двор от улицы 6+ м, а дом у пруда (пара E) стоит в 12 м от
     // воды и не заходит на лужайку.
+    // Стены подняты на 25-35 см: раньше часть домов читалась «просевшей» —
+    // цоколь почти тонул в земле, а стены выглядели короткими.
     const homes = [
-      [-13, 14, { w: 6, d: 5, h: 3.1, roof: 'thatch', floors: 1 }],
-      [13, 14, { w: 6, d: 5, h: 3.1, roof: 'thatch', floors: 1 }],
-      [-13, 31, { w: 6, d: 5, h: 3.0, roof: 'tile', floors: 1 }],
-      [13, 31, { w: 6, d: 5, h: 3.0, roof: 'tile', floors: 1 }],
-      [-31, 14, { w: 7, d: 6, h: 3.4, roof: 'tile', floors: 2 }],
-      [31, 14, { w: 7, d: 6, h: 3.4, roof: 'tile', floors: 2 }],
-      [-26, 29, { w: 6, d: 5, h: 3.1, roof: 'thatch', floors: 1 }],
-      [26, 29, { w: 6, d: 5, h: 3.1, roof: 'thatch', floors: 1 }],
-      [-29, -22, { w: 6, d: 5, h: 3.0, roof: 'thatch', floors: 1 }],
-      [29, -22, { w: 6, d: 5, h: 3.0, roof: 'thatch', floors: 1 }],
-      [-19, -34, { w: 5.5, d: 4.6, h: 2.9, roof: 'thatch', floors: 1 }],
-      [19, -34, { w: 5.5, d: 4.6, h: 2.9, roof: 'thatch', floors: 1 }],
+      [-13, 14, { w: 6, d: 5, h: 3.45, roof: 'thatch', floors: 1 }],
+      [13, 14, { w: 6, d: 5, h: 3.45, roof: 'thatch', floors: 1 }],
+      [-13, 31, { w: 6, d: 5, h: 3.35, roof: 'tile', floors: 1 }],
+      [13, 31, { w: 6, d: 5, h: 3.35, roof: 'tile', floors: 1 }],
+      [-31, 14, { w: 7, d: 6, h: 3.7, roof: 'tile', floors: 2 }],
+      [31, 14, { w: 7, d: 6, h: 3.7, roof: 'tile', floors: 2 }],
+      [-26, 29, { w: 6, d: 5, h: 3.45, roof: 'thatch', floors: 1 }],
+      [26, 29, { w: 6, d: 5, h: 3.45, roof: 'thatch', floors: 1 }],
+      [-29, -22, { w: 6, d: 5, h: 3.35, roof: 'thatch', floors: 1 }],
+      [29, -22, { w: 6, d: 5, h: 3.35, roof: 'thatch', floors: 1 }],
+      [-19, -34, { w: 5.5, d: 4.6, h: 3.25, roof: 'thatch', floors: 1 }],
+      [19, -34, { w: 5.5, d: 4.6, h: 3.25, roof: 'thatch', floors: 1 }],
     ];
     const wallKinds = ['plaster', 'plasterWarm', 'plasterGrey'];
     const houseLines = [
@@ -338,6 +401,9 @@ export function createVillage(ctx) {
       ctx.doors.homes[i] = { x: doorPos.x, z: doorPos.z, ry: hry };
       // список домов с габаритами — им пользуются проверки планировки
       ctx.homes = ctx.homes || [];
+      ctx.footprints.push({
+        name: `дом ${i}`, x: h[0], z: h[1], hx: h[2].w / 2 + 0.2, hz: h[2].d / 2 + 0.2, ry: hry,
+      });
       ctx.homes[i] = {
         i, x: h[0], z: h[1], w: h[2].w, d: h[2].d, ry: hry,
         doorGeom: placed.doorGeom || null,     // метрики двери для проверок
@@ -394,6 +460,7 @@ export function createVillage(ctx) {
     stalls.forEach(([sx, sz, cl], i) => {
       const st = marketStall(ctx.M, { cloth: cl });
       place(st, sx, sz, ryToFace([sx, sz], [0, 0]) + Math.PI);
+      ctx.propSpots.push({ name: 'прилавок', x: sx, z: sz, r: 1.2 });
       addInteract(
         new THREE.Vector3(sx, 1.2, sz), 2.0, 'Осмотреть прилавок',
         () => ctx.ui.toast(stallLines[i % stallLines.length]),
@@ -401,11 +468,12 @@ export function createVillage(ctx) {
     });
 
     /* --- стога сена --- */
-    // Раньше три стога стояли впритык за амбаром и загораживали обход
-    // вокруг него. Теперь они — у полей и на лугах, как и должно быть.
-    const haystacks = [[-40, 28], [-53, 13], [28, 38], [21, 16]];
+    // Стоги перенесены за озеро, на поля: там, где в этом году собрали
+    // зерно. В деревне они больше не стоят и не загораживают обход.
+    const haystacks = [[75, -13], [88, -26], [99, -8], [69, 4]];
     for (const [hx, hz] of haystacks) {
       place(haystack(ctx.M, { r: 1.5, h: 2.6 }), hx, hz);
+      ctx.propSpots.push({ name: 'стог', x: hx, z: hz, r: 1.5 });
       addInteract(
         new THREE.Vector3(hx, 1.4, hz), 2.1, 'Забраться на стог',
         () => ctx.ui.toast('Сено тёплое и шуршащее. Отсюда видно всю долину.'),
@@ -414,17 +482,191 @@ export function createVillage(ctx) {
   }
 
   /* ================================================================
+   *  ХОЗЯЙСТВО: пастбище и курятник
+   * ================================================================ */
+
+  /**
+   * Зелёная лужайка поверх тёмной лесной подстилки.
+   *
+   * Под лесом земля тёмная — на пастбище и полях это смотрелось бы
+   * странно: луг должен быть зелёным.
+   *
+   * @param {number} cx центр X
+   * @param {number} cz центр Z
+   * @param {number} r радиус
+   */
+  function grassPatch(cx, cz, r) {
+    const m = ctx.M.grass.clone();
+    if (m.map) {
+      m.map = m.map.clone();
+      m.map.needsUpdate = true;
+      m.map.wrapS = m.map.wrapT = THREE.RepeatWrapping;
+      m.map.repeat.set(r / 4, r / 4);
+    }
+    const mesh = new THREE.Mesh(new THREE.CircleGeometry(r, 44), m);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.set(cx, 0.02, cz);
+    mesh.receiveShadow = true;
+    mesh.name = 'grassPatch';
+    ctx.scene.add(mesh);
+  }
+
+  /**
+   * Вспаханная земля под поле — колосья растут из тёмной почвы.
+   *
+   * @param {number} cx центр X
+   * @param {number} cz центр Z
+   * @param {number} w ширина
+   * @param {number} d глубина
+   */
+  function soilPatch(cx, cz, w, d) {
+    const m = ctx.M.dirt.clone();
+    if (m.map) {
+      m.map = m.map.clone();
+      m.map.needsUpdate = true;
+      m.map.wrapS = m.map.wrapT = THREE.RepeatWrapping;
+      m.map.repeat.set(w / 4, d / 4);
+    }
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), m);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.set(cx, 0.021, cz);
+    mesh.receiveShadow = true;
+    mesh.name = 'soilPatch';
+    ctx.scene.add(mesh);
+  }
+
+  /** Поставить пастбище для овец и курятник для кур. */
+  function buildFarm() {
+    // лужайки: пастбище, поля за озером и двор курятника
+    grassPatch(PASTURE.x, PASTURE.z, 11);
+    grassPatch(88, -10, 33);
+    grassPatch(HENYARD.x, HENYARD.z, 6.5);
+    // вспаханная земля под полями за озером
+    soilPatch(82, -20, 20, 12);
+    soilPatch(96, -6, 16, 14);
+    soilPatch(80, -2, 18, 12);
+
+    /* --- овечье пастбище --- */
+    {
+      const shelter = sheepShelter(ctx.M, { w: 3.6, d: 2.6, h: 2.0 });
+      shelter.position.set(PASTURE.rest.x + 0.6, 0, PASTURE.rest.z);
+      shelter.rotation.y = Math.PI / 2;
+      ctx.scene.add(shelter);
+      ctx.colliders.boxes.push(localBox(PASTURE.rest.x + 0.6, PASTURE.rest.z, Math.PI / 2, 0, 0, 1.8, 1.4));
+
+      // поилка у края загона
+      ctx.scene.add(trough(ctx.M, { x: -42.4, z: 27.2, ry: 0.2 }));
+      ctx.colliders.boxes.push(localBox(-42.4, 27.2, 0.2, 0, 0, 2.4, 0.9));
+
+      // трава и цветы на выпасе
+      ctx.scene.add(scatterGrass(ctx.M, [
+        { x: -45, z: 31, r: 6.5 }, { x: -48, z: 34, r: 3.5 },
+      ], 260));
+      const fl = scatterFlowers(ctx.M, [{ x: -45, z: 31, r: 6 }], 26);
+      ctx.scene.add(fl);
+      ctx.scene.userData.flowers = fl;
+      ctx.pasture = PASTURE;
+    }
+
+    /* --- курятник --- */
+    {
+      for (const [cx, cz] of HENYARD.coops) {
+        const coop = chickenCoop(ctx.M, {});
+        coop.position.set(cx, 0, cz);
+        coop.rotation.y = Math.PI / 2 + (cz > 22 ? -0.25 : 0.2);
+        ctx.scene.add(coop);
+        ctx.colliders.boxes.push(localBox(cx, cz, coop.rotation.y, 0, 0, 1.1, 0.8));
+        ctx.propSpots.push({ name: 'курятник', x: cx, z: cz, r: 1.2 });
+      }
+      // солома на земле
+      ctx.scene.add(scatterGrass(ctx.M, [{ x: -16, z: 22, r: 3 }], 90));
+      ctx.henyard = HENYARD;
+    }
+  }
+
+  /* ================================================================
+   *  ДОСКА ДЛЯ ЗАПИСКИ ЗАПИСКИ
+   *
+   *  У маленького домика на отшибе (того, что смотрит в сторону скалы)
+   *  стоит доска. К ней можно подойти и ОДИН раз за игру что-то написать
+   *  углём — надпись остаётся на доске навсегда.
+   * ================================================================ */
+
+  /** Поставить доску и включить взаимодействие с ней. */
+  function buildNoticeBoard() {
+    const BX = -23.8, BZ = -29.2, BRY = 0.79;   // у дороги к скале, лицом к деревне
+    const board = noticeBoard(ctx.M, { w: 1.9, h: 1.2, postH: 1.35 });
+    board.group.position.set(BX, 0, BZ);
+    board.group.rotation.y = BRY;
+    ctx.scene.add(board.group);
+    ctx.colliders.circles.push({ x: BX, z: BZ, r: 0.45 });
+    ctx.propSpots.push({ name: 'доска', x: BX, z: BZ, r: 0.9 });
+
+    // сохранённая надпись (если игрок уже писал)
+    let written = '';
+    try {
+      written = localStorage.getItem('wv.note') || '';
+    } catch (e) { written = ''; }
+    if (written) board.setText(written, 'написано углём');
+    ctx.boardNote = written;
+
+    const it = {
+      pos: new THREE.Vector3(BX, 1.4, BZ),
+      radius: 2.3,
+      labelFn: () => (ctx.boardNote ? 'Прочитать записку' : 'Написать на доске'),
+      act: () => {
+        if (ctx.boardNote) {
+          ctx.ui.toast(`На доске: «${ctx.boardNote}»`, 4200);
+          return;
+        }
+        // открываем окно записи: игра встаёт на паузу, курсор доступен
+        if (ctx.mode === 'inv') ctx.systems.bag.close();
+        if (ctx.mode === 'menu') ctx.ui.closeMenu();
+        ctx.mode = 'note';
+        ctx.player.acceptInput = false;
+        ctx.player.keys.clear();
+        if (document.pointerLockElement === ctx.renderer.domElement) document.exitPointerLock();
+        ctx.ui.onNoteCancel = () => {
+          ctx.mode = 'play';
+          ctx.player.acceptInput = true;
+          ctx.player.enabled = true;
+          ctx.player.keys.clear();
+          ctx.player.requestLock();
+        };
+        ctx.ui.openNote('', (text) => {
+          // окно закрылось — возвращаем управление игроку
+          ctx.mode = 'play';
+          ctx.player.acceptInput = true;
+          ctx.player.enabled = true;
+          ctx.player.keys.clear();
+          ctx.player.requestLock();
+          if (!text) { ctx.ui.toast('Пустая доска. Ладно, в следующий раз.', 2200); return; }
+          ctx.boardNote = text;
+          board.setText(text, 'написано углём');
+          try { localStorage.setItem('wv.note', text); } catch (e) { /* без localStorage — просто не сохраняем */ }
+          ctx.ui.toast('Уголь кончился. Больше написать не получится.', 3200);
+        });
+      },
+    };
+    ctx.interactables.push(it);
+    ctx.boardInteract = it;
+  }
+
+  /* ================================================================
    *  Уличные пропсы
    * ================================================================ */
 
   /** Расставить фонари, костёр, заборы, растительность и лес. */
   function buildProps() {
+    // Реестр уличных предметов: проверки планировки ищут здесь всё, что
+    // стоит на улице, и смотрят, не залезло ли что-нибудь внутрь дома.
+    ctx.propSpots = ctx.propSpots || [];
     /* --- фонари вдоль улицы --- */
     const lanternSpots = [
       [3.6, 3.6, true], [-3.8, 4.2, true], [3.8, -4.4, true], [-4.2, -3.6, true],
       [2.7, 12, true], [-2.9, 12, false], [2.9, -14, true], [-3.0, -18, false],
       [2.9, 24, false], [-3.0, 27, false], [2.9, 34, false], [-3.0, 38, false],
-      [-10.5, 6.5, false], [10.5, 6.5, false], [-11, -9, false], [11, -9, false],
+      [-10.5, 6.5, false], [10.5, 6.5, false], [-7.6, -4.6, false], [11, -9, false],
     ];
     for (const [lx, lz, withLight] of lanternSpots) {
       const l = lantern(ctx.M, ctx.glowTex, {
@@ -434,6 +676,7 @@ export function createVillage(ctx) {
       ctx.scene.add(l.group);
       l.place(lx, lz);
       ctx.lanterns.push(l);
+      ctx.propSpots.push({ name: 'фонарь', x: lx, z: lz, r: 0.25 });
       if (withLight) {
         ctx.interactables.push({
           pos: l.pos.clone(), radius: 2.1,
@@ -514,10 +757,14 @@ export function createVillage(ctx) {
     }
 
     // бочки, ящики, мешки и повозки убраны из деревни — теперь всё в амбаре (см. world/barn.js)
-    ctx.scene.add(trough(ctx.M, { x: -30.2, z: 13.4, ry: 0.3 }));
+    // Поилка — у курятника, а не внутри дома: раньше она стояла в стенах
+    // дома C и была видна только изнутри.
+    ctx.scene.add(trough(ctx.M, { x: 16.2, z: 19.4, ry: 0.3 }));
     ctx.scene.add(signpost(ctx.M, { x: 3.2, z: 13.5, ry: -0.5 }));
+    ctx.propSpots.push({ name: 'поилка', x: 16.2, z: 19.4, r: 1.2 });
+    ctx.propSpots.push({ name: 'указатель', x: 3.2, z: 13.5, r: 0.3 });
     // поилка — по фактическому размеру
-    ctx.colliders.boxes.push(localBox(-30.2, 13.4, 0.3, 0, 0, 2.4, 0.9));
+    ctx.colliders.boxes.push(localBox(16.2, 19.4, 0.3, 0, 0, 2.4, 0.9));
     ctx.colliders.circles.push({ x: 3.2, z: 13.5, r: 0.22 });
 
     /* --- заборы и калитки --- */
@@ -537,6 +784,26 @@ export function createVillage(ctx) {
     field(-30, 44, 20, 12);   // поле отодвинуто от домов: между ними проход
     field(31, 44, 19, 14);
     field(-44, 16, 14, 12);
+    // --- поля за озером: здесь идёт вся добыча зерна ---
+    field(82, -20, 20, 12);
+    field(96, -6, 16, 14);
+    field(80, -2, 18, 12);
+    // --- овечье пастбище (запад) и курятник (между домами) ---
+    PASTURE.fence.forEach((s) => fenceSegs.push(s));
+    PASTURE.fence.forEach((s) => {
+      const [a, b] = s;
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const n = Math.max(1, Math.round(len / 0.6));
+      for (let i = 0; i <= n; i++) {
+        const t = i / n;
+        ctx.colliders.circles.push({
+          x: a[0] + (b[0] - a[0]) * t,
+          z: a[1] + (b[1] - a[1]) * t,
+          r: 0.26,
+        });
+      }
+    });
+    gates.push({ x: PASTURE.gate.x, z: PASTURE.gate.z, ang: PASTURE.gate.ang });
     fenceSegs.push([[-13, -6], [-13, 1]], [[13, -6], [13, 1]]);
     ctx.scene.add(fence(ctx.M, fenceSegs));
     for (const g of gates) ctx.scene.add(gate(ctx.M, g));
@@ -558,13 +825,25 @@ export function createVillage(ctx) {
     /* --- поля, трава, цветы --- */
     ctx.scene.add(wheatField(ctx.M, -30, 44, 20, 12));
     ctx.scene.add(wheatField(ctx.M, 31, 44, 19, 14));
+    // поля за озером — главная зерновая полоса долины
+    ctx.scene.add(wheatField(ctx.M, 82, -20, 20, 12));
+    ctx.scene.add(wheatField(ctx.M, 96, -6, 16, 14));
+    ctx.scene.add(wheatField(ctx.M, 80, -2, 18, 12));
+    // список полей — для проверок планировки
+    ctx.fields = [
+      { x: -30, z: 44, w: 20, d: 12 }, { x: 31, z: 44, w: 19, d: 14 },
+      { x: -44, z: 16, w: 14, d: 12 },
+      { x: 82, z: -20, w: 20, d: 12 }, { x: 96, z: -6, w: 16, d: 14 },
+      { x: 80, z: -2, w: 18, d: 12 },
+    ];
 
     const spots = [
       { x: -12, z: 4, r: 5 }, { x: 12, z: 4, r: 5 }, { x: -18, z: -16, r: 5 },
       { x: 18, z: -15, r: 5 }, { x: -6, z: 22, r: 6 }, { x: 8, z: 25, r: 6 },
       { x: -20, z: 6, r: 6 }, { x: 21, z: 7, r: 6 }, { x: 0, z: 34, r: 7 },
       { x: 26, z: 24, r: 6 }, { x: -30, z: -28, r: 7 }, { x: 30, z: -26, r: 7 },
-      { x: 38, z: 6, r: 6 },
+      { x: 38, z: 6, r: 6 }, { x: 74, z: -30, r: 6 }, { x: 92, z: -28, r: 5 },
+      { x: 66, z: 6, r: 5 }, { x: 100, z: -16, r: 5 },
     ];
     ctx.scene.add(scatterGrass(ctx.M, spots, 1100));
     const flowers = scatterFlowers(ctx.M, spots, 70);
@@ -578,7 +857,8 @@ export function createVillage(ctx) {
       center: [0, 0],
       inner: 44,
       keepClear: (x, z) => {
-        if (Math.abs(x) < 8 && Math.abs(z) < 100) return true;      // главная дорога вдоль Z
+        if (Math.abs(x) < 8 && Math.abs(z) < 96) return true;      // главная дорога вдоль Z
+        if (Math.abs(z) < 4.2 && x > -52 && x < 74) return true;   // поперечная дорога
         if (x > 36 && x < 73 && z > -35 && z < 7) return true;       // лужайка у пруда
         if (Math.hypot(x - LAYOUT.campfire.x, z - LAYOUT.campfire.z) < 11) return true; // поляна кострища
         if (distToDungeonTrail(x, z) < 3.4) return true;             // узкая тропа к пещере
@@ -586,6 +866,10 @@ export function createVillage(ctx) {
         // подступает вплотную и полностью закрывает скалу от взгляда
         if (Math.hypot(x - LAYOUT.dungeon.x, z - LAYOUT.dungeon.z) < 11) return true;
         if (Math.abs(x) < 46 && Math.abs(z) < 46) return true;       // поля и огороды деревни
+        // поля за озером — вырубка: здесь будет зерно
+        if (x > 60 && x < 104 && z > -34 && z < 16) return true;
+        // вдоль тропинок лес не растёт — дороги должны быть видны
+        if (distToTrails(x, z) < TRAIL_W / 2 + 1.6) return true;
         // вокруг зданий — поляна: деревья не растут вплотную к стенам
         for (const b of BUILDING_CLEARINGS) {
           if (Math.hypot(x - b[0], z - b[1]) < b[2]) return true;
@@ -594,7 +878,8 @@ export function createVillage(ctx) {
       },
     });
     ctx.scene.add(forestGroup);
-    ctx.forestChunks = chunks;      // чанки леса: дальние отключаются по расстоянию
+    ctx.forestChunks = chunks;
+    ctx.forestTrees = trees;      // чанки леса: дальние отключаются по расстоянию
     // коллайдеры — только у ближних деревьев (дальние не мешают прогулке)
     for (const t of trees) {
       if (Math.hypot(t.x, t.z) < 80) ctx.colliders.circles.push({ x: t.x, z: t.z, r: 0.34 * t.s });
@@ -897,9 +1182,11 @@ export function createVillage(ctx) {
   function build(buildAnimals) {
     buildBuildings();
     buildProps();
+    buildFarm();
+    buildNoticeBoard();
     buildDungeonGate();
     buildAnimals();
   }
 
-  return { build, buildBuildings, buildProps, buildDungeonGate };
+  return { build, buildBuildings, buildProps, buildFarm, buildNoticeBoard, buildDungeonGate };
 }

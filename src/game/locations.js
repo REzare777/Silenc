@@ -173,6 +173,14 @@ export function createLocations(ctx) {
       ctx.ambience.setSurface(surface);
     }
 
+    // вошёл в дом — значит, это теперь дом хозяина: пёс будет ждать здесь
+    if (current.startsWith('home')) ctx.playerHome = parseInt(current.slice(4), 10);
+
+    // пёс уходит к дому хозяина и ждёт там
+    if (ctx.systems.animals && ctx.systems.animals.onLocationChange) {
+      ctx.systems.animals.onLocationChange();
+    }
+
     if (L) {
       // в храм можно войти с юга (через башню) и с севера (через заднюю дверь)
       const sp = (inChurch && where === 'back' && L.spawnBack) ? L.spawnBack : L.spawn;
@@ -340,7 +348,7 @@ export function createLocations(ctx) {
     if (ctx.ambience && ctx.ambience.bell) ctx.ambience.bell();
     ctx.ui.toast('Колокол над долиной — глухой и тёплый. Звук уходит далеко вниз.', 3200);
   }, 'church');
-  bellAct.y = 4.6;          // на каком уровне ног срабатывает интеракт
+  bellAct.y = 9.2;          // галерея башни: на каком уровне ног срабатывает интеракт
   bellAct.yTol = 1.6;
   churchLoc.spots.forEach((spot, k) => {
     add(spot[0], 2.3, spot[1], () => {

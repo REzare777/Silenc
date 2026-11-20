@@ -109,31 +109,26 @@ const res = await page.evaluate(() => {
     out.turnHeight = +turn.toFixed(2);
   }
 
-  /* ---------- 3. лестница звонарной ---------- */
+  /* ---------- 3. винтовая лестница башни (раунд 45) ---------- */
   {
     d.setLocation('church');
     p.keys.clear();
     const L = ctx.churchLoc || d.churchLoc;
     const plats = (L && L.platforms) || [];
     const ramps = plats.filter((pl) => pl.ramp);
+    const spPl = plats.find((pl) => pl.sp);
     out.ramps = ramps.length;
-    if (ramps.length) {
-      // берём самый нижний участок лестницы и спускаемся по нему
-      const r = ramps.reduce((a, b) => (a.ramp.y0 < b.ramp.y0 ? a : b));
-      const rr = r.ramp;
-      const t = 0.15;
-      const x = rr.x0 + (rr.x1 - rr.x0) * t;
-      const z = rr.z0 + (rr.z1 - rr.z0) * t;
-      put(x, z);
-      p.groundY = rr.y0 + (rr.y1 - rr.y0) * t; p.y = 0;
+    out.churchSpiral = !!spPl;
+    if (spPl) {
+      const sp = spPl.sp;
+      const a0 = sp.a0 ?? 0;
+      put(sp.cx + Math.sin(a0) * 1.3, sp.cz + Math.cos(a0) * 1.3);
+      p.groundY = 0; p.y = 0; p.vy = 0;
       let maxLift = 0;
       let minY = 1e9, maxY = -1e9;
-      for (let i = 0; i < 60; i++) {
-        // спускаемся вдоль участка «назад»
-        const tt = 0.15 + (i / 60) * 0.8;
-        const tx = rr.x0 + (rr.x1 - rr.x0) * tt;
-        const tz = rr.z0 + (rr.z1 - rr.z0) * tt;
-        const yaw = Math.atan2(-(tx - p.pos.x), -(tz - p.pos.z));
+      for (let i = 0; i < 900; i++) {
+        const a = Math.atan2(p.pos.x - sp.cx, p.pos.z - sp.cz);
+        const yaw = Math.atan2(-Math.cos(a), Math.sin(a));
         step(yaw, 1, true);
         if (p.grounded) maxLift = Math.max(maxLift, p.y);
         minY = Math.min(minY, p.groundY + p.y);
@@ -142,9 +137,10 @@ const res = await page.evaluate(() => {
       out.stairs = {
         maxLift: +maxLift.toFixed(3),
         span: +(maxY - minY).toFixed(2),
-        from: +rr.y0.toFixed(2), to: +rr.y1.toFixed(2),
+        from: +(sp.y0 ?? 0).toFixed(2), to: +(sp.y1 ?? 0).toFixed(2),
       };
-      out.stairsOk = out.stairs.maxLift < 0.25;
+      // ноги не «отрываются» от ступени, а подъём реально состоялся
+      out.stairsOk = out.stairs.maxLift < 0.25 && out.stairs.span > 5;
     } else {
       out.stairsOk = false;
     }

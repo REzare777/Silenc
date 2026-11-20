@@ -230,6 +230,26 @@
   .dogBtns button i{font-size:11px;font-style:normal;color:var(--ink-dim)}
   .dogFoot{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--ink-dim)}
   #dogStatus{color:var(--gold)}
+  /* ---------- доска для записки ---------- */
+  #note{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    background:rgba(10,8,6,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:43;cursor:default}
+  #note.on{display:flex}
+  .noteCard{background:linear-gradient(180deg,rgba(34,27,20,.98),rgba(20,16,12,.98));
+    border:1px solid rgba(232,177,99,.22);border-radius:16px;padding:20px 22px 16px;min-width:min(430px,90vw);
+    box-shadow:0 30px 80px rgba(0,0,0,.72);display:flex;flex-direction:column;gap:12px}
+  .noteCard h2{font-size:14px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);margin:0;font-weight:500}
+  .noteSub{margin:0;font-size:12px;color:var(--ink-dim);line-height:1.5}
+  #noteInput{width:100%;min-height:88px;resize:vertical;font-family:inherit;font-size:14px;line-height:1.5;
+    color:var(--ink);background:rgba(0,0,0,.34);border:1px solid rgba(232,177,99,.22);border-radius:10px;padding:10px 12px}
+  #noteInput:focus{outline:none;border-color:rgba(232,177,99,.6)}
+  .noteBtns{display:flex;gap:8px;justify-content:flex-end}
+  .noteBtns button{cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink);
+    background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
+    border:1px solid rgba(232,177,99,.18);border-radius:10px;padding:9px 16px;transition:.15s}
+  .noteBtns button:hover{border-color:rgba(232,177,99,.55);background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.05))}
+  .noteBtns button.primary{color:#1b1209;background:linear-gradient(180deg,#e8b163,#c98f3d);border-color:#e8b163}
+  .noteFoot{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-dim)}
+  #noteCount{color:var(--gold)}
   #inv{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
     background:rgba(10,8,6,.66);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);z-index:40;cursor:default}
   #inv.on{display:flex}
@@ -449,6 +469,19 @@
         <button data-cmd="jump"><b>Прыжок</b><i>прыгнуть через голову</i></button>
       </div>
       <div class="dogFoot"><span><kbd>Esc</kbd> — закрыть</span><span id="dogStatus"></span></div>
+    </div>
+  </div>
+
+  <div id="note">
+    <div class="noteCard">
+      <h2>Доска у дороги</h2>
+      <p class="noteSub">Написать можно только один раз. Что напишете — останется здесь навсегда.</p>
+      <textarea id="noteInput" maxlength="140" placeholder="Например: не ходите к скале после заката"></textarea>
+      <div class="noteBtns">
+        <button id="noteCancel">Отойти</button>
+        <button id="noteOk" class="primary">Написать</button>
+      </div>
+      <div class="noteFoot"><span id="noteCount">0 / 140</span><span><kbd>Esc</kbd> — закрыть</span></div>
     </div>
   </div>
 

@@ -318,6 +318,8 @@ const firePos = new THREE.Vector3(0, 0, 0);
 
 village.buildBuildings();
 village.buildProps();
+village.buildFarm();          // пастбище для овец и курятник
+village.buildNoticeBoard();   // доска у дороги к скале
 firePos.set(ctx.campfirePos.x, 0, ctx.campfirePos.z);   // костёр «за город»
 village.buildDungeonGate();      // вход в подземелье — примерно в 100 м от села
 
@@ -436,6 +438,20 @@ window.addEventListener('keydown', (e) => {
 
   if (ctx.mode === 'dog') {
     if (e.code === 'Escape' || e.code === 'KeyE') { e.preventDefault(); animals.closeDogMenu(); }
+    return;
+  }
+
+  if (ctx.mode === 'note') {
+    // в окне записи печатаем текст: Esc — закрыть, Enter — записать
+    if (e.code === 'Escape') { e.preventDefault(); ctx.ui.closeNote(); ctx.mode = 'play'; player.acceptInput = true; }
+    else if (e.code === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      const v = ui.el.noteInput.value.trim();
+      ui.closeNote();
+      ctx.mode = 'play';
+      player.acceptInput = true;
+      if (ctx.onNoteSubmit) ctx.onNoteSubmit(v);
+    }
     return;
   }
 
