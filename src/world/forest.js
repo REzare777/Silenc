@@ -162,31 +162,75 @@ export function speciesGeometry(type) {
  * ------------------------------------------------------------------ */
 
 /**
+ * Размер чанка леса в метрах.
+ *
+ * Лес — это почти шестнадцать тысяч инстансов. Если держать их в нескольких
+ * огромных мешах, каждый кадр рисуется весь лес целиком — дважды (ещё и в
+ * карту теней). Поэтому лес режется на чанки: дальние отсекаются камерой,
+ * а совсем дальние — ещё и по расстоянию (в тумане их не видно).
+ */
+const CHUNK = 72;
+
+/**
  * Создаёт InstancedMesh по списку записей {x,z,s,r,tilt}.
+ *
+ * Записи раскладываются по чанкам: на каждый — свой InstancedMesh с
+ * посчитанными габаритами, поэтому frustumCulled работает по-настоящему.
  *
  * @param {THREE.BufferGeometry} geo геометрия
  * @param {THREE.Material} material материал
  * @param {object[]} list список записей
  * @param {string} name имя меша
- * @returns {THREE.InstancedMesh}
+ * @param {THREE.Group} group куда добавлять чанки
+ * @param {{x:number,z:number}[]} [chunks] список чанков для отсечения по расстоянию
  */
-function instanced(geo, material, list, name) {
-  const im = new THREE.InstancedMesh(geo, material, list.length);
-  const dummy = new THREE.Object3D();
-  for (let i = 0; i < list.length; i++) {
-    const t = list[i];
-    dummy.position.set(t.x, t.y || 0, t.z);
-    dummy.rotation.set(t.tiltX || 0, t.r || 0, t.tiltZ || 0);
-    dummy.scale.set(t.sx || t.s, t.sy || t.s, t.sz || t.s);
-    dummy.updateMatrix();
-    im.setMatrixAt(i, dummy.matrix);
+function instanced(geo, material, list, name, group, chunks) {
+  const buckets = new Map();
+  for (const t of list) {
+    const key = `${Math.floor(t.x / CHUNK)},${Math.floor(t.z / CHUNK)}`;
+    let b = buckets.get(key);
+    if (!b) { b = []; buckets.set(key, b); }
+    b.push(t);
   }
-  im.instanceMatrix.needsUpdate = true;
-  im.castShadow = true;
-  im.receiveShadow = true;
-  im.name = name;
-  im.frustumCulled = false;   // лес большой — не отсекаем по границам меша
-  return im;
+  const dummy = new THREE.Object3D();
+  for (const [key, items] of buckets) {
+    const im = new THREE.InstancedMesh(geo, material, items.length);
+    for (let i = 0; i < items.length; i++) {
+      const t = items[i];
+      dummy.position.set(t.x, t.y || 0, t.z);
+      dummy.rotation.set(t.tiltX || 0, t.r || 0, t.tiltZ || 0);
+      dummy.scale.set(t.sx || t.s, t.sy || t.s, t.sz || t.s);
+      dummy.updateMatrix();
+      im.setMatrixAt(i, dummy.matrix);
+    }
+    im.instanceMatrix.needsUpdate = true;
+    im.castShadow = true;
+    im.receiveShadow = true;
+    im.name = `${name}#${key}`;
+    im.frustumCulled = true;
+    im.computeBoundingSphere();       // габариты — по матрицам инстансов
+    group.add(im);
+    if (chunks) {
+      let cx = 0, cz = 0;
+      for (const t of items) { cx += t.x; cz += t.z; }
+      chunks.push({ mesh: im, x: cx / items.length, z: cz / items.length });
+    }
+  }
+}
+
+/**
+ * Отключает чанки леса, которые всё равно не видно (туман, расстояние).
+ *
+ * @param {{mesh:THREE.Object3D,x:number,z:number}[]} chunks чанки
+ * @param {{x:number,z:number}} pos где стоит игрок
+ * @param {number} maxDist до скольких метров тянуть лес
+ */
+export function setForestRange(chunks, pos, maxDist = 185) {
+  if (!chunks) return;
+  for (const c of chunks) {
+    const dx = c.x - pos.x, dz = c.z - pos.z;
+    c.mesh.visible = dx * dx + dz * dz < maxDist * maxDist;
+  }
 }
 
 /* ------------------------------------------------------------------ *
@@ -242,6 +286,7 @@ export function denseForest(M, rng, opts = {}) {
   }
 
   /* --- стволы и кроны --- */
+  const chunks = [];
   for (const [type, list] of Object.entries(species)) {
     if (!list.length) continue;
     const g = speciesGeometry(type);
@@ -251,12 +296,12 @@ export function denseForest(M, rng, opts = {}) {
     const autumnList = list.filter((t) => t.autumn);
     const greenList = list.filter((t) => !t.autumn);
 
-    group.add(instanced(g.trunk, M[trunkKey], list, `forestTrunk_${type}`));
+    instanced(g.trunk, M[trunkKey], list, `forestTrunk_${type}`, group, chunks);
     if (greenList.length) {
-      group.add(instanced(g.crown, M[crownKey], greenList, `forestCrown_${type}`));
+      instanced(g.crown, M[crownKey], greenList, `forestCrown_${type}`, group, chunks);
     }
     if (autumnList.length && crownKey !== 'leafAutumn') {
-      group.add(instanced(g.crown, M.leafAutumn, autumnList, `forestCrown_${type}_autumn`));
+      instanced(g.crown, M.leafAutumn, autumnList, `forestCrown_${type}_autumn`, group, chunks);
     }
   }
 
@@ -272,7 +317,7 @@ export function denseForest(M, rng, opts = {}) {
   const bushGeo = crownBlobGeo([
     [0, 0.62, 0, 0.72], [0.5, 0.45, 0.2, 0.5], [-0.45, 0.48, -0.25, 0.46], [0.05, 0.95, -0.1, 0.4],
   ]);
-  group.add(instanced(bushGeo, M.leaf, bushes, 'forestBushes'));
+  instanced(bushGeo, M.leaf, bushes, 'forestBushes', group, chunks);
 
   /* --- подлесок: папоротник и трава --- */
   const ferns = [];
@@ -297,7 +342,7 @@ export function denseForest(M, rng, opts = {}) {
     }
     return mergeGeometries(parts, false);
   })();
-  group.add(instanced(fernGeo, M.leaf, ferns, 'forestFerns'));
+  instanced(fernGeo, M.leaf, ferns, 'forestFerns', group, chunks);
 
   /* --- подлесок: мшистые камни --- */
   const rocks = [];
@@ -314,7 +359,7 @@ export function denseForest(M, rng, opts = {}) {
     g.translate(0, 0.1, 0);
     return g;
   })();
-  group.add(instanced(rockGeo, M.stoneDark, rocks, 'forestRocks'));
+  instanced(rockGeo, M.stoneDark, rocks, 'forestRocks', group, chunks);
 
   /* --- подлесок: пни и упавшие стволы --- */
   const stumps = new THREE.Group();
@@ -363,7 +408,7 @@ export function denseForest(M, rng, opts = {}) {
       stem.translate(0, 0.15, 0);
       return mergeGeometries([cap, stem], false);
     })();
-    group.add(instanced(mushGeo, M.fabric, mushrooms, 'forestMushrooms'));
+    instanced(mushGeo, M.fabric, mushrooms, 'forestMushrooms', group, chunks);
   }
 
   /* --- подстилка: тёмное кольцо под лесом --- */
@@ -377,7 +422,7 @@ export function denseForest(M, rng, opts = {}) {
   floor.name = 'forestFloor';
   group.add(floor);
 
-  return { group, trees, bushes: bushes.length };
+  return { group, trees, bushes: bushes.length, chunks };
 }
 
 /** Линейная интерполяция. */

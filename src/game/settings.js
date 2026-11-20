@@ -45,7 +45,7 @@ export function loadVolume(ctx) {
  */
 export function setQuality(ctx, q) {
   const shadows = q !== 'low';
-  ctx.renderer.setPixelRatio(
+  ctx.setBasePixelRatio(
     q === 'low' ? Math.min(devicePixelRatio, 1)
       : q === 'med' ? Math.min(devicePixelRatio, 1.5)
         : Math.min(devicePixelRatio, 2),
@@ -82,7 +82,6 @@ export function bindSettings(ctx) {
   ctx.ui.onSens = (v) => { ctx.player.sensitivity = v; };
   ctx.ui.onBob = (v) => { ctx.player.bobScale = v; };
   ctx.ui.onRes = (v) => {
-    ctx.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5) * v);
-    ctx.composer.setSize(innerWidth, innerHeight);
+    ctx.setBasePixelRatio(Math.min(devicePixelRatio, 1.5) * v);
   };
 }

@@ -55,7 +55,8 @@ const res = await page.evaluate(() => {
   out.reachedAltar = p.pos.z > 6.1;
   out.altarZ = +p.pos.z.toFixed(2);
 
-  // 2. обход алтаря сбоку и проход через сломанную арку в звонарную
+  // 2. дверь в звонарную (раунд 42): переставлена вправо и закрыта —
+  //    из молитвенной её не видно, сквозь неё не пройти
   reset(0, 5.0);
   walk(Math.PI / 2, 300, () => p.pos.x < -2.45);
   out.sideX = +p.pos.x.toFixed(2);
@@ -63,10 +64,12 @@ const res = await page.evaluate(() => {
   out.reachedTower = p.pos.z > 10.3;
   out.towerZ = +p.pos.z.toFixed(2);
 
-  // 3. обратно в неф
-  walk(0, 400, () => p.pos.z < 9.0);
-  out.backToNave = p.pos.z < 9.0;
-  out.naveZ = +p.pos.z.toFixed(2);
+  // 3. вход с заднего двора ведёт в звонарную
+  const ch = d.ctx.systems.locations.churchLoc;
+  d.ctx.systems.locations.setLocation('church', 'back');
+  out.backEntryZ = +p.pos.z.toFixed(2);
+  out.backEntryX = +p.pos.x.toFixed(2);
+  out.inBelfry = Math.abs(p.pos.z - ch.spawnBack.z) < 1.2 && Math.abs(p.pos.x) < 1;
 
   // 3a. из нефа нельзя выйти наружу сквозь портал, из звонарной — сквозь дверь
   reset(0, -4.0);
@@ -90,9 +93,9 @@ const checks = [
   ['интеракт входа есть', res.doorExists],
   ['вход в локацию храма', res.inChurch],
   ['проход по нефу до алтаря', res.reachedAltar],
-  ['проход сбоку к сломанной арке', res.sideX !== undefined && res.sideX < -2.2],
-  ['арка ведёт в звонарную', res.reachedTower],
-  ['из звонарной можно вернуться в неф', res.backToNave],
+  ['проход сбоку к двери в звонарную', res.sideX !== undefined && res.sideX < -2.3],
+  ['дверь в звонарную закрыта — прохода нет', res.reachedTower === false],
+  ['вход с заднего двора ведёт в звонарную', res.inBelfry],
   ['сквозь портал наружу не пройти', res.noPortalLeak],
   ['сквозь заднюю дверь не пройти', res.noDoorLeak],
   ['интеракт выхода есть', res.exitExists],
@@ -105,7 +108,7 @@ for (const [name, ok] of checks) {
 }
 console.log('детали:', JSON.stringify({
   spawn: res.spawn, altarZ: res.altarZ, sideX: res.sideX,
-  towerZ: res.towerZ, naveZ: res.naveZ, exitDist: res.exitDist,
+  towerZ: res.towerZ, backEntry: [res.backEntryX, res.backEntryZ], exitDist: res.exitDist,
 }));
 console.log('ошибки: ' + (bad + errs.length), errs.slice(0, 3));
 await browser.close();

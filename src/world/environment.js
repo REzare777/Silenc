@@ -138,7 +138,9 @@ export class Environment {
     // свет
     this.sun = new THREE.DirectionalLight(0xffb066, 3.2);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(2048, 2048);
+    // 1536 вместо 2048: тень чуть мягче, зато карта теней вчетверо дешевле
+    // по площади — заметно бодрее на слабых машинах.
+    this.sun.shadow.mapSize.set(1536, 1536);
     const d = 52;
     this.sun.shadow.camera.left = -d; this.sun.shadow.camera.right = d;
     this.sun.shadow.camera.top = d; this.sun.shadow.camera.bottom = -d;

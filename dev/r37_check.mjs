@@ -81,15 +81,15 @@ const res = await page.evaluate(async () => {
   const nearTower = d.ctx.systems.interactions.nearest();
   out.bellOnTower = !!nearTower && nearTower.label === 'Ударить в колокол';
 
-  // проход из нефа в звонарную (арка сбоку от алтаря) свободен
+  // проход из нефа в звонарную закрыт (раунд 42): дверь заперта на засов
   {
     const p2 = d.player;
     p2.teleport(0, 4.5, 0);
     p2.y = 0.02; p2.groundY = 0.02; p2.vy = 0; p2.keys.clear();
-    p2.yaw = Math.PI / 2;                   // к арке, влево
+    p2.yaw = Math.PI / 2;                   // к двери, вправо
     for (let i = 0; i < 58; i++) { p2.keys.add('KeyW'); p2.update(1 / 60); }
     p2.keys.clear();
-    p2.yaw = Math.PI;                       // на север, сквозь арку
+    p2.yaw = Math.PI;                       // на север, к двери
     let got = false;
     for (let i = 0; i < 500; i++) {
       p2.keys.add('KeyW');
@@ -98,6 +98,7 @@ const res = await page.evaluate(async () => {
     }
     p2.keys.clear();
     out.passageToNave = got;
+    out.passageBlocked = !got;
     out.naveZ = +p2.pos.z.toFixed(2);
   }
 
@@ -172,7 +173,7 @@ const checks = [
   ['лестница в башне: три пролёта', res.rampDirs === 3 && res.rampCount >= 9],
   ['игрок поднимается по лестнице', res.climbed],
   ['наверху есть интеракт удара в колокол', res.bellOnTower],
-  ['из нефа можно пройти в звонарную', res.passageToNave],
+  ['дверь из нефа закрыта — в звонарную не пройти', res.passageBlocked],
   ['вход сзади ведёт в звонарную', res.backEnterExists && res.backEnterLoc === 'church'
     && res.backSpawn && res.backSpawn.z > 12],
   ['задняя дверь нефа открыта на выход', res.backDoorExists && res.backToVillage],

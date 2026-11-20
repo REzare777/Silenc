@@ -70,6 +70,7 @@ import { FISH } from './world/fish.js';
 import { createContext, assertContextReady } from './game/context.js';
 import { buildTerrain } from './game/terrain.js';
 import { createVillage } from './game/village.js';
+import { setForestRange } from './world/forest.js';
 import { createAnimalsSystem } from './game/animals.js';
 import { createFishingSystem } from './game/fishing.js';
 import { createLocations } from './game/locations.js';
@@ -109,15 +110,38 @@ window.__villageBooted = true;
  *  Рендер
  * ================================================================== */
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+// antialias у контекста тут бесполезен: сцена рисуется в буфер композитора,
+// а не в кадровый буфер окна. Лишняя память и лишнее разрешение — вонь.
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
 renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
+
+/* --------------------- адаптивное разрешение --------------------- *
+ *
+ * Если кадры идут тяжело (старый ноутбук, слабая видеокарта), картинка
+ * становится мягче, но игра идёт ровно. На программном рендере
+ * (SwiftShader в автотестах) авто-деградация выключена — иначе скриншоты
+ * «плыли» бы от кадра к кадру.
+ */
+const basePixelRatio = { v: Math.min(devicePixelRatio, 1.5) };
+const adaptive = { scale: 1, fps: 60, timer: 0 };
+
+/** Определяем программный рендер (в нём FPS всегда низкий). */
+function isSoftwareGL() {
+  try {
+    const gl = renderer.getContext();
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    const name = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : '').toLowerCase();
+    const soft = ['swift', 'llvmpipe', 'software', 'basic render'];
+    return soft.some((k) => name.includes(k));
+  } catch (e) { return false; }
+}
+const softwareGL = isSoftwareGL();
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(68, innerWidth / innerHeight, 0.08, 620);
@@ -164,6 +188,20 @@ const gradePass = new ShaderPass(GradeShader);
 composer.addPass(gradePass);
 composer.addPass(new OutputPass());
 
+/**
+ * Применить разрешение рендера: базовое из настроек × адаптивный коэффициент.
+ *
+ * @param {number} [pr] базовое соотношение пикселей
+ */
+function applyPixelRatio(pr) {
+  if (pr !== undefined) basePixelRatio.v = pr;
+  const ratio = Math.max(0.5, basePixelRatio.v * adaptive.scale);
+  renderer.setPixelRatio(ratio);
+  composer.setPixelRatio(ratio);
+  composer.setSize(innerWidth, innerHeight);
+}
+applyPixelRatio();
+
 /* ================================================================== *
  *  Ресурсы
  * ================================================================== */
@@ -192,6 +230,8 @@ ctx.ui = ui;
 ctx.ambience = ambience;
 ctx.env = env;
 ctx.rng = mulberry(20261107);
+/** Настройки графики меняют базовое разрешение через эту функцию. */
+ctx.setBasePixelRatio = (pr) => applyPixelRatio(pr);
 
 /** Режим игры: 'play' | 'menu' | 'inv' | 'dog' | 'aim'. */
 ctx.mode = 'play';
@@ -250,8 +290,12 @@ animals.setInventoryCloser(ctx.systems.bag.close);
 buildTerrain(ctx);
 
 // здания и уличные пропсы
+/** Положение костра — берём из контекста, а не из константы: костёр переезжает. */
+const firePos = new THREE.Vector3(0, 0, 0);
+
 village.buildBuildings();
 village.buildProps();
+firePos.set(ctx.campfirePos.x, 0, ctx.campfirePos.z);   // костёр «за город»
 village.buildDungeonGate();      // вход в подземелье — примерно в 100 м от села
 
 // сетка проходимости — для пса (и других, кто ходит по карте)
@@ -292,7 +336,8 @@ const LIGHT_POOL = 8;                 // фиксированное число �
 const lightPool = [];
 for (let i = 0; i < LIGHT_POOL; i++) {
   const l = new THREE.PointLight(0xffc07a, 0, 14, 2);
-  l.visible = false;
+  // Источник остаётся в сцене всегда (интенсивность 0 у неиспользуемых):
+  // так число точечных источников не меняется и шейдеры не пересобираются.
   scene.add(l);
   lightPool.push(l);
 }
@@ -535,7 +580,8 @@ if ('ontouchstart' in window) {
  * ================================================================== */
 
 const forgePos = new THREE.Vector3(14.5, 0, -8);
-const firePos = new THREE.Vector3(-9, 0, 8.5);
+/** Таймер обновления дальности леса. */
+let forestRangeTimer = 0;
 
 function loop() {
   requestAnimationFrame(loop);
@@ -607,6 +653,30 @@ function loop() {
     locations.updateNpc(dt, t);
     locations.sceneTavern.background.copy(locations.TAVERN_BG);
     locations.sceneTavern.fog.color.setHex(0x241408);
+  }
+
+  // Лес подрезается по расстоянию: за туманом он всё равно не виден,
+  // а без этого рисуются все шестнадцать тысяч деревьев.
+  forestRangeTimer -= dtEnv;
+  if (forestRangeTimer <= 0) {
+    forestRangeTimer = 0.4;
+    if (ctx.loc === 'village' && ctx.forestChunks) setForestRange(ctx.forestChunks, player.pos, 185);
+  }
+
+  // Автоматически подстраиваем разрешение под реальную частоту кадров
+  if (!softwareGL) {
+    adaptive.fps = adaptive.fps * 0.93 + (1 / Math.max(0.001, raw)) * 0.07;
+    adaptive.timer -= dtEnv;
+    if (adaptive.timer <= 0) {
+      adaptive.timer = 1.5;
+      if (adaptive.fps < 42 && adaptive.scale > 0.6) {
+        adaptive.scale = Math.max(0.6, adaptive.scale - 0.1);
+        applyPixelRatio();
+      } else if (adaptive.fps > 57 && adaptive.scale < 1) {
+        adaptive.scale = Math.min(1, adaptive.scale + 0.05);
+        applyPixelRatio();
+      }
+    }
   }
 
   const lampBoost = env.lampBoost ?? 0.75;
@@ -759,6 +829,8 @@ window.__dbg = {
   setLocation: locations.setLocation,
   barnLoc: locations.barnLoc, tavernLoc: locations.tavernLoc,
   dungeonLoc: locations.dungeonLoc, sceneDungeon: locations.sceneDungeon,
+  churchLoc: locations.churchLoc, sceneChurch: locations.sceneChurch,
+  homeLocs: locations.homeLocs,
   npcs: locations.npcs, updateNpc: locations.updateNpc,
   sceneTavern: locations.sceneTavern, dialog: ctx.systems.dialog,
   teleport: (x, z, yaw) => player.teleport(x, z, yaw),

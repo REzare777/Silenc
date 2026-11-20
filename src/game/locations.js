@@ -165,7 +165,7 @@ export function createLocations(ctx) {
       // в храм можно войти с юга (через башню) и с севера (через заднюю дверь)
       const sp = (inChurch && where === 'back' && L.spawnBack) ? L.spawnBack : L.spawn;
       ctx.player.teleport(sp.x, sp.z, sp.yaw);
-      ctx.player.y = 0.02; ctx.player.groundY = 0.02; ctx.player.vy = 0;
+      ctx.player.y = 0; ctx.player.vy = 0; ctx.player.camY = null;
       ctx.ui.toast(inDungeon
         ? 'Подземелье. Холодный свет кристаллов и полная тишина. Вглубь — по лестнице в шахте.'
         : inTavern
@@ -202,7 +202,7 @@ export function createLocations(ctx) {
         const rz = barnExit.z + (-5.4) * Math.cos(barnExit.ry);
         ctx.player.teleport(rx, rz, barnExit.ry);
       }
-      ctx.player.y = 0.02; ctx.player.groundY = 0.02; ctx.player.vy = 0;
+      ctx.player.y = 0; ctx.player.vy = 0; ctx.player.camY = null;
       ctx.ui.toast('Вы вернулись в деревню.', 2200);
     }
     ctx.player.keys.clear();

@@ -78,20 +78,22 @@ const res = await page.evaluate(() => {
       p.keys.clear();
       return +p.groundY.toFixed(2);
     };
-    const h1 = walk(0, () => p.pos.z < 11.7);                 // вверх по западной стене
-    const h2 = walk(-Math.PI / 2, () => p.pos.x > 2.2);       // на восток по каменной галерее
-    const h3 = walk(Math.PI, () => p.pos.z > 13.3);           // вверх по восточной стене
+    // Звонарная стала шире (9×9 м) — пролёты сместились к новым стенам:
+    // западная стена → поперечная галерея → восточная стена с колоколом.
+    const h1 = walk(0, () => p.pos.z < 14.9);                 // вверх по западной стене
+    const h2 = walk(-Math.PI / 2, () => p.pos.x > 3.2);       // на восток по каменной галерее
+    const h3 = walk(Math.PI, () => p.pos.z > 16.0);           // вверх по восточной стене
     out.steps = [h1, h2, h3];
     out.climbMax = Math.max(h1, h2, h3);
-    out.climbTarget = 4.5;
-    out.climbed = h3 > 4.0;
-    out.onBellLanding = h3 > 3.9 && p.pos.z > 12.6 && p.pos.z < 14.2;
+    out.climbTarget = 4.2;
+    out.climbed = h3 > 3.9;
+    out.onBellLanding = h3 > 3.9 && p.pos.z > 15.6 && p.pos.z < 17.2;
     // колокол на площадке доступен
     p.teleport(ch.bellPoint.x, ch.bellPoint.z, 0);
-    p.y = 0.02; p.groundY = 4.5; p.vy = 0;
+    p.y = 0; p.groundY = 4.2; p.vy = 0;
     const nearBell = d.ctx.systems.interactions.nearest();
     out.bellOk = !!nearBell && nearBell.label === 'Ударить в колокол';
-    // из нефа в звонарную — проход свободен (дверь распахнута)
+    // дверь из нефа в звонарную закрыта (раунд 42): прохода быть не должно
     p.teleport(0, 5.0, 0);
     p.y = 0.02; p.groundY = 0.02; p.vy = 0; p.keys.clear();
     p.yaw = Math.PI / 2;
@@ -106,6 +108,7 @@ const res = await page.evaluate(() => {
     }
     p.keys.clear();
     out.passToTower = got;
+    out.passBlocked = !got;
     out.passZ = +p.pos.z.toFixed(2);
   }
 
@@ -128,7 +131,7 @@ const checks = [
   ['лестница: подъём до площадки с колоколом', res.climbed],
   ['колокол на своей площадке', res.onBellLanding],
   ['наверху есть удар в колокол', res.bellOk],
-  ['дверь из нефа — рабочая, проход свободен', res.passToTower],
+  ['дверь из нефа закрыта — прохода нет', res.passBlocked],
   ['в доме игрок смотрит в комнату', res.homeLooksIn],
   ['в трактире игрок смотрит в зал', res.tavernLooksIn],
 ];

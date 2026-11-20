@@ -30,14 +30,16 @@ const AISLE = 1.5;    // ширина центрального прохода
 const NEZ = 2.0;      // центр нефа по z (звонарная — за северной стеной)
 
 /* ---------------- звонарная (за северной стеной храма) ---------------- */
-const TW = 6.0;       // внутренний размер звонарной (x и z)
-const TZ = 13.2;      // центр звонарной по z
+const TW = 9.0;       // внутренний размер звонарной (x и z) — по ширине нефа
+const TZ = 14.7;      // центр звонарной по z: её южная стена примыкает к нефу
+                       // (TW изменилось — центр сдвинулся, чтобы стена не заехала внутрь)
 const TH = 8.0;       // высота стен
 const BELL_Y = 4.2;   // высота площадки с колоколом
 const LW = 1.4;       // ширина лестничного пролёта
 const NAVE_DOOR_W = 1.7;  // ширина двери звонарной наружу (сзади храма)
-const ARK_W = 3.0;        // ширина арки из нефа в звонарную
-const ARK_X = -2.3;       // арка сбоку от алтаря — иначе он перекрывает проход
+const ARK_W = 0.9;        // ширина служебной двери из нефа в звонарную
+const ARK_X = -3.95;      // дверь — в самом правом углу нефа, за колоннами:
+//                         из молитвенной её не видно, а проход заперт
 
 /** Название храма — показывается при входе. */
 export const CHURCH_NAME = 'Храм Святого Покрова';
@@ -67,19 +69,22 @@ export function buildChurchInterior(M, glowTex) {
     // западная и восточная стены
     B.put('stone', T, TH, TW + T * 2, TX0 - T / 2, TH / 2, TZ, 1.6);
     B.put('stone', T, TH, TW + T * 2, TX1 + T / 2, TH / 2, TZ, 1.6);
-    // южная стена звонарной — общая с нефом, в ней арка-проход
+    // южная стена звонарной — общая с нефом, в ней проём к запертой двери
     {
       const aL = ARK_X - ARK_W / 2, aR = ARK_X + ARK_W / 2;
-      B.put('stone', aL - TX0, TH, T, (TX0 + aL) / 2, TH / 2, TZ0 - T / 2, 1.6);
+      const leftW = aL - TX0;
+      if (leftW > 0.02) {
+        B.put('stone', leftW, TH, T, (TX0 + aL) / 2, TH / 2, TZ0 - T / 2, 1.6);
+        colliders.boxes.push({ cx: (TX0 + aL) / 2, cz: TZ0 - T / 2, hx: leftW / 2, hz: T / 2, ang: 0 });
+      }
       B.put('stone', TX1 - aR, TH, T, (aR + TX1) / 2, TH / 2, TZ0 - T / 2, 1.6);
       B.put('stone', ARK_W, TH - 3.2, T, ARK_X, 3.2 + (TH - 3.2) / 2, TZ0 - T / 2, 1.6);
       // арка над проходом
       for (const sx of [-1, 1]) {
-        B.put('stoneDark', 0.45, 3.2, 0.5, ARK_X + sx * (ARK_W / 2 + 0.22), 1.6, TZ0 + 0.05, 1.2);
+        B.put('stoneDark', 0.4, 3.2, 0.5, ARK_X + sx * (ARK_W / 2 + 0.2), 1.6, TZ0 + 0.05, 1.2);
       }
-      B.add(cyl(ARK_W / 2 + 0.22, ARK_W / 2 + 0.22, 0.45, 12, true), 'stoneDark',
+      B.add(cyl(ARK_W / 2 + 0.2, ARK_W / 2 + 0.2, 0.45, 12, true), 'stoneDark',
         mat(ARK_X, 3.2, TZ0 + 0.05, 0, Math.PI / 2));
-      colliders.boxes.push({ cx: (TX0 + aL) / 2, cz: TZ0 - T / 2, hx: (aL - TX0) / 2, hz: T / 2, ang: 0 });
       colliders.boxes.push({ cx: (aR + TX1) / 2, cz: TZ0 - T / 2, hx: (TX1 - aR) / 2, hz: T / 2, ang: 0 });
     }
     // северная стена — с дверью наружу (вход с задней стороны храма)
@@ -342,46 +347,70 @@ export function buildChurchInterior(M, glowTex) {
     // портал снаружи закрыт: наружу игрок выходит только через интеракт
     colliders.boxes.push({ cx: 0, cz: nz(-D / 2 + T / 2), hx: DOOR_W / 2, hz: T / 2, ang: 0 });
   }
-  // северная стена нефа — проход в звонарную (арка сбоку от алтаря)
-  // и сломанная дверь в эту арку
+  // северная стена нефа — в правом углу дверь в звонарную, запертая на засов.
+  // Раньше здесь был широкий открытый проём сбоку от алтаря: из молитвенной
+  // были видны лестничный пролёт и чёрный провал. Теперь дверь переставлена
+  // вправо, убрана в угол за колоннами и закрыта — из нефа её не видно,
+  // а в звонарную ведёт ход с заднего двора храма.
   {
     const aL = ARK_X - ARK_W / 2, aR = ARK_X + ARK_W / 2;
     const wL = (aL - (-W / 2)), wR = (W / 2 - aR);
     B.put('stone', wL, H, T, (-W / 2 + aL) / 2, H / 2, nz(D / 2 - T / 2), 2.0);
     B.put('stone', wR, H, T, (aR + W / 2) / 2, H / 2, nz(D / 2 - T / 2), 2.0);
     B.put('stone', ARK_W, H - 3.2, T, ARK_X, 3.2 + (H - 3.2) / 2, nz(D / 2 - T / 2), 2.0);
-    // арка
+    // каменный портал: косяки и полуциркульная перемычка
     for (const sx of [-1, 1]) {
-      B.put('stoneDark', 0.45, 3.2, 0.5, ARK_X + sx * (ARK_W / 2 + 0.22), 1.6, nz(D / 2 - 0.05), 1.2);
+      B.put('stoneDark', 0.4, 3.2, 0.5, ARK_X + sx * (ARK_W / 2 + 0.2), 1.6, nz(D / 2 - 0.05), 1.2);
     }
-    B.add(cyl(ARK_W / 2 + 0.22, ARK_W / 2 + 0.22, 0.45, 12, true), 'stoneDark',
+    B.add(cyl(ARK_W / 2 + 0.2, ARK_W / 2 + 0.2, 0.5, 12, true), 'stoneDark',
       mat(ARK_X, 3.2, nz(D / 2 - 0.05), 0, Math.PI / 2));
-    // Рабочая двустворчатая дверь в звонарную: распахнута внутрь,
-    // с накладками, петлями и кольцами — проход свободен.
+    // Глухая подложка во всю толщу стены: за закрытой дверью — камень,
+    // а не чёрный провал в сторону лестницы.
+    B.put('dark', ARK_W, 3.1, 0.86, ARK_X, 1.6, nz(D / 2 - 0.02), 1.2);
+    // Свеча на стене рядом с дверью: без неё закрытая створка читалась
+    // чёрной щелью, а не дверью.
     {
-      const leaf = ARK_W / 2 - 0.05;
-      for (const sx of [-1, 1]) {
-        const a = sx * 1.05;
-        const dx = ARK_X + sx * (ARK_W / 4) + Math.sin(a) * (ARK_W / 4);
-        const dz = nz(D / 2 - 0.3) + (1 - Math.cos(a)) * (ARK_W / 4);
-        // створка
-        B.add(box(leaf, 2.85, 0.1, 1), 'oakDoor', mat(dx, 1.43, dz, a));
-        // накладки-полосы
-        for (const hy of [0.55, 2.35]) {
-          B.add(box(leaf - 0.14, 0.16, 0.05, 1), 'timber', mat(dx, hy, dz, a));
-        }
-        // кольцо
-        B.add(torus(0.1, 0.026, 5, 12), 'iron', mat(dx + sx * 0.09, 1.35, dz, 0, Math.PI / 2, a));
+      const cx2 = ARK_X + ARK_W / 2 + 0.38;
+      const cz2 = nz(D / 2 - T - 0.07);
+      B.put('iron', 0.11, 0.05, 0.16, cx2, 1.5, cz2, 1.1);
+      B.add(cyl(0.045, 0.05, 0.26, 8), 'bone', mat(cx2, 1.69, cz2));
+      B.add(sphere(0.05, 8, 6), 'lampGlass', mat(cx2, 1.86, cz2));
+    }
+    // Закрытая дубовая дверь: цельное полотно, три обвязки, петли, кольцо
+    // и железный засов — заперта наглухо.
+    {
+      const leafW = ARK_W + 0.1;                // полотно шире проёма — щели нет
+      const leafH = 3.15;
+      const dz = nz(D / 2 - T - 0.07);          // створка перед южной гранью стены
+      // доски полотна
+      const nb = 6, bw = leafW / nb;
+      for (let i = 0; i < nb; i++) {
+        const px = ARK_X - leafW / 2 + (i + 0.5) * bw;
+        B.add(box(bw - 0.02, leafH, 0.1, 1), 'oakDoor', mat(px, leafH / 2, dz));
       }
-      // косяк и перемычка
-      B.put('timber', ARK_W + 0.2, 0.18, 0.2, ARK_X, 2.95, nz(D / 2 - 0.26), 1.1);
-      B.put('timber', 0.14, 2.9, 0.16, ARK_X - ARK_W / 2 - 0.06, 1.45, nz(D / 2 - 0.26), 1.1);
-      B.put('timber', 0.14, 2.9, 0.16, ARK_X + ARK_W / 2 + 0.06, 1.45, nz(D / 2 - 0.26), 1.1);
+      // три железные обвязки
+      for (const by of [0.42, 1.45, 2.5]) {
+        B.put('timber', leafW + 0.04, 0.14, 0.05, ARK_X, by, dz - 0.06, 1.1);
+        for (let i = 0; i < 3; i++) {
+          B.add(sphere(0.032, 6, 5), 'brass',
+            mat(ARK_X - leafW / 2 + 0.16 + i * ((leafW - 0.32) / 2), by, dz - 0.08));
+        }
+      }
+      // петли и кольцо
+      for (const by of [0.55, 2.25]) {
+        B.put('iron', 0.2, 0.15, 0.06, ARK_X - leafW / 2 + 0.1, by, dz - 0.05, 1);
+      }
+      B.add(torus(0.095, 0.024, 5, 12), 'iron', mat(ARK_X + leafW / 2 - 0.13, 1.3, dz - 0.08, 0, Math.PI / 2));
+      // засов — дверь заперта изнутри
+      B.put('iron', leafW + 0.1, 0.1, 0.07, ARK_X, 1.9, dz - 0.1, 1);
+      B.put('iron', 0.12, 0.34, 0.12, ARK_X - leafW / 2 - 0.03, 1.9, dz - 0.1, 1);
     }
     colliders.boxes.push({ cx: (-W / 2 + aL) / 2, cz: nz(D / 2 - T / 2), hx: wL / 2, hz: T / 2, ang: 0 });
     colliders.boxes.push({ cx: (aR + W / 2) / 2, cz: nz(D / 2 - T / 2), hx: wR / 2, hz: T / 2, ang: 0 });
-    spots.push([new THREE.Vector3(ARK_X, 1.4, nz(D / 2 - 1.3)),
-      'Дверь в звонарную распахнута настежь. Отсюда — вверх по лестнице, к колоколу.']);
+    // дверь закрыта — проход заперт
+    colliders.boxes.push({ cx: ARK_X, cz: nz(D / 2 - T / 2), hx: ARK_W / 2, hz: T / 2, ang: 0 });
+    spots.push([new THREE.Vector3(ARK_X + 0.9, 1.4, nz(D / 2 - 1.3)),
+      'Дверь в звонарную заперта на засов. Сюда ведут из заднего двора храма.']);
   }
   // свод и нервюры
   B.put('stoneDark', W - T * 2, 0.34, D - T * 2, 0, H - 0.17, NEZ, 1.6);
@@ -500,6 +529,10 @@ export function buildChurchInterior(M, glowTex) {
   const east = new THREE.PointLight(0x5f9ade, 11, 20, 1.2);
   east.position.set(W / 2 - 1.0, 3.1, NEZ + 1.2);
   scene.add(east);
+  // тёплый огонёк свечи у запертой двери
+  const doorCandle = new THREE.PointLight(0xffb45a, 2.6, 7, 1.8);
+  doorCandle.position.set(ARK_X + ARK_W / 2 + 0.38, 1.9, nz(D / 2 - T - 0.25));
+  scene.add(doorCandle);
   const sky = new THREE.DirectionalLight(0xa8c4e8, 1.2);
   sky.position.set(-6, 14, NEZ + 4);
   scene.add(sky);
@@ -560,6 +593,8 @@ export function buildChurchInterior(M, glowTex) {
     // Метрики лестницы: верх настила площадки на 5 см ниже верхней ступени —
     // плоскости не совпадают, поэтому на стыке нет мерцания.
     stairsGeom: { deckTop: landings[0].y - 0.05, stepTop: landings[0].y },
+    // Дверь из нефа в звонарную: переставлена вправо и закрыта (раунд 42).
+    naveDoor: { x: ARK_X, w: ARK_W, z: nz(D / 2 - T / 2), closed: true },
     /** Вход с улицы — южный портал нефа. */
     spawn: { x: 0, z: nz(-D / 2 + 1.2), yaw: Math.PI },
     /** Вход с задней стороны храма — звонарная, у двери наружу. */
@@ -589,6 +624,7 @@ export function buildChurchInterior(M, glowTex) {
       east.intensity = 11 * (0.94 + Math.sin(t * 0.6 + 2.1) * 0.05);
       sky.intensity = 1.2 * (0.97 + Math.sin(t * 0.35) * 0.03);
       candle.intensity = 2.2 * (0.85 + Math.sin(t * 7.1) * 0.09 + Math.sin(t * 12.3) * 0.05);
+      doorCandle.intensity = 2.6 * (0.85 + Math.sin(t * 8.3 + 1.1) * 0.1 + Math.sin(t * 14.7) * 0.05);
       for (let i = 0; i < flames.length; i++) {
         const f = flames[i];
         const k = 0.82 + Math.sin(t * (5.5 + i * 0.7) + i * 2.1) * 0.12

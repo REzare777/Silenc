@@ -40,6 +40,7 @@ export class Player {
     this.climbs = [];         // вертикальные лестницы (зоны подъёма)
     this.climb = null;        // активный подъём { zone, feetY, phase, t }
     this.groundY = 0;        // высота поверхности под ногами
+    this.camY = null;        // сглаженная высота камеры (без микроподпрыгиваний)
     this.bounds = 118;
     this.touchMove = { x: 0, y: 0 };
     this.lookOnly = false;      // обзор мышью без управления движением
@@ -103,6 +104,8 @@ export class Player {
    * Высота винтовой поверхности под точкой.
    * Спираль много значна по (x,z), поэтому виток угадывается по текущей высоте
    * игрока и запоминается — иначе при подъёме высота прыгала бы на целый виток.
+   *
+   * @param {number} cur высота, по которой ищется виток (рост игрока)
    */
   spiralHeight(sp, x, z, cur) {
     const dx = x - sp.cx, dz = z - sp.cz;
@@ -167,15 +170,29 @@ export class Player {
     return 0;
   }
 
-  /** Высота поверхности под точкой (ступени, крыльца). */
-  groundAt(x, z) {
+  /**
+   * Высота поверхности под точкой (ступени, крыльца, настилы).
+   *
+   * Опорная высота (`refY`) — это высота НОГ игрока, а не высота той опоры,
+   * на которой он стоял секунду назад. Разница критична: пока игрок в прыжке
+   * или падает, его ноги выше прежней опоры, и «потолки» (настилы над головой,
+   * верхние витки винтовой лестницы) не должны приниматься за пол.
+   *
+   * @param {number} x мировая X
+   * @param {number} z мировая Z
+   * @param {number|null} [refY] высота ног; по умолчанию — текущая
+   * @param {number} [tol] насколько поверхность может быть выше ног и всё
+   *   равно считаться полом (ступень); 0 — строго под ногами
+   * @returns {number} высота пола
+   */
+  groundAt(x, z, refY = null, tol = 0.46) {
     let g = this.floorAt(x, z);
-    const cur = this.groundY;
+    const cur = refY === null ? this.groundY + this.y : refY;
     for (const p of this.platforms) {
       // винтовая лестница — непрерывная поверхность
       if (p.sp) {
         const y = this.spiralHeight(p.sp, x, z, cur);
-        if (y === null || y > cur + 0.46) continue;
+        if (y === null || y > cur + tol) continue;
         if (y > g) g = y;
         continue;
       }
@@ -190,13 +207,13 @@ export class Player {
         const lat = Math.hypot(x - (r.x0 + dx * t), z - (r.z0 + dz * t));
         if (lat > r.halfWidth) continue;
         const y = r.y0 + (r.y1 - r.y0) * t;
-        if (y > cur + 0.46) continue;
+        if (y > cur + tol) continue;
         if (r.only && cur < y - 0.3) continue;
         if (y > g) g = y;
         continue;
       }
       // площадка выше головы — это «потолок», а не пол (например, галерея над входом)
-      if (p.y > cur + 0.46) continue;
+      if (p.y > cur + tol) continue;
       // «только сверху»: настил над лестницей не должен подбрасывать игрока снизу
       if (p.only && cur < p.y - 0.3) continue;
       const c = Math.cos(p.ang || 0), s = Math.sin(p.ang || 0);
@@ -271,6 +288,7 @@ export class Player {
       this.pos.z = c.fz + (z.exitZ - c.fz) * e;
       this.groundY = z.y1;
       this.y = 0;
+      this.camY = z.y1;
       this.vel.set(0, 0, 0);
       this.vy = 0;
       if (c.t >= 1) {
@@ -290,6 +308,7 @@ export class Player {
     this.pos.z += (z.z - this.pos.z) * k;
     this.groundY = z.y0;
     this.y = c.h - z.y0;
+    this.camY = this.groundY + this.y;
     this.vel.set(0, 0, 0);
     this.vy = 0;
     this.grounded = false;
@@ -309,6 +328,7 @@ export class Player {
       this.pos.z = z.z;
       this.groundY = z.y0;
       this.y = 0;
+      this.camY = z.y0;
       this.grounded = true;
     }
   }
@@ -325,11 +345,33 @@ export class Player {
   }
 
   applyCamera() {
-    this.camera.position.set(this.pos.x, EYE + this.groundY + this.y + this.bob, this.pos.z);
+    this.camera.position.set(this.pos.x, EYE + (this.camY ?? this.groundY + this.y) + this.bob, this.pos.z);
     this.camera.rotation.set(0, 0, 0);
     this.camera.rotateY(this.yaw);
     this.camera.rotateX(this.pitch);
     this.camera.rotateZ(this.roll);
+  }
+
+  /**
+   * Сглаженная высота камеры.
+   *
+   * Физика меняет опору мгновенно (ступил — ноги на ступени), а камера
+   * едет к новой высоте мягко: иначе на лестнице каждый шаг дёргал кадр.
+   * В полёте сглаживание выключено — там камера должна идти за прыжком точно.
+   *
+   * @param {number} dt кадр
+   */
+  updateCamY(dt) {
+    const target = this.groundY + this.y;
+    if (!this.grounded) { this.camY = target; return; }
+    if (!Number.isFinite(this.camY) || Math.abs(target - this.camY) > 1.5) {
+      this.camY = target;             // телепорт или смена локации — без рывка
+      return;
+    }
+    const diff = target - this.camY;
+    const rate = diff < 0 ? 26 : 16;  // вниз быстрее: не «зависать» над ступенью
+    this.camY += diff * Math.min(1, rate * dt);
+    if (Math.abs(target - this.camY) < 0.003) this.camY = target;
   }
 
   update(dt) {
@@ -400,19 +442,39 @@ export class Player {
       this.vel.x = 0; this.vel.z = 0;
     }
 
-    // поверхность под ногами: ступени и крыльца
-    const gh = this.groundAt(this.pos.x, this.pos.z);
-    if (gh - this.groundY > 0.46) {
-      // слишком крутой подъём — не пускаем
-      this.pos.x = prevX; this.pos.z = prevZ;
-      this.vel.x *= 0.2; this.vel.z *= 0.2;
-    } else if (gh < this.groundY) {
-      // съехали с края — падаем вниз
-      this.y += this.groundY - gh;
-      this.grounded = false;
-      this.vy = Math.min(this.vy, 0);
+    // Опора под ногами. Здесь же решается, что делать с перепадом высоты:
+    //   · ступень или пологий спуск — ноги идут по поверхности;
+    //   · обрыв — игрок падает с прежней высоты;
+    //   · в полёте — высота ног сохраняется, опорой становится место приземления.
+    // Раньше любой спуск трактовался как «падение с края», и высота `y`
+    // копилась кадр за кадром: игрок на лестнице «вырастал» над ступенями.
+    const feet = this.groundY + this.y;
+    if (this.grounded) {
+      const gh = this.groundAt(this.pos.x, this.pos.z);
+      if (gh - this.groundY > 0.46) {
+        // слишком крутой подъём — не пускаем
+        this.pos.x = prevX; this.pos.z = prevZ;
+        this.vel.x *= 0.2; this.vel.z *= 0.2;
+        this.groundY = this.groundAt(prevX, prevZ);
+      } else if (this.groundY - gh > 0.62) {
+        // съехали с края — падаем вниз с прежней высоты
+        this.y = feet - gh;
+        this.groundY = gh;
+        this.grounded = false;
+        this.vy = Math.min(this.vy, 0);
+      } else {
+        // ступень или пологий спуск — ноги следуют за поверхностью
+        this.groundY = gh;
+        this.y = 0;
+      }
+    } else {
+      // в полёте: летим вверх — полом считаются только поверхности не выше ног,
+      // падаем — можно приземлиться и на ступень чуть выше ног
+      const rising = this.vy > 0.01;
+      const gh = this.groundAt(this.pos.x, this.pos.z, feet, rising ? 0 : 0.46);
+      this.groundY = gh;
+      this.y = feet - gh;
     }
-    this.groundY = this.groundAt(this.pos.x, this.pos.z);
 
     // границы мира
     const B = this.bounds;
@@ -450,11 +512,8 @@ export class Player {
     this.bob = Math.sin(this.bobPhase * 2) * 0.045 * bobK;
     this.roll = Math.sin(this.bobPhase) * 0.012 * bobK;
 
-    this.camera.position.set(this.pos.x, EYE + this.groundY + this.y + this.bob, this.pos.z);
-    this.camera.rotation.set(0, 0, 0);
-    this.camera.rotateY(this.yaw);
-    this.camera.rotateX(this.pitch);
-    this.camera.rotateZ(this.roll);
+    this.updateCamY(dt);
+    this.applyCamera();
   }
 
   /**
@@ -555,7 +614,11 @@ export class Player {
   teleport(x, z, yaw) {
     this.pos.set(x, 0, z);
     this.y = 0; this.vy = 0; this.grounded = true;
-    this.groundY = this.groundAt(x, z);
+    // прежняя опора обнуляется: иначе после перехода в другую локацию
+    // «полом» могла считаться старая высота (например, верхний ярус звонарной)
+    this.groundY = 0;
+    this.groundY = this.groundAt(x, z, 0, 0.46);
+    this.camY = null;
     if (yaw !== undefined) this.yaw = yaw;
     this.vel.set(0, 0, 0);
   }

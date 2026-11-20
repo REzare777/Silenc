@@ -327,6 +327,10 @@ export function createVillage(ctx) {
       if (placed.interiorLight) {
         ctx.roomLights.push({ pos: placed.interiorLight, lit: true, power: 1, flicker: i + 7, baseIntensity: 1.9, distance: 8 });
       }
+      // фонарь у двери дома — источник в общем пуле, а не отдельная лампа
+      if (placed.lampPos) {
+        ctx.roomLights.push({ pos: placed.lampPos, lit: true, power: 1, flicker: i + 11, baseIntensity: 2.2, distance: 8 });
+      }
       if (c.chimney) ctx.smokeSources.push({ pos: c.chimney.clone(), rate: 0.11 });
       // дверь дома запоминаем — отсюда игрок вернётся из локации
       const doorPos = facadePos(h[0], h[1], hry, 0, -h[2].d / 2 - 1.5);
@@ -439,10 +443,11 @@ export function createVillage(ctx) {
       }
     }
 
-    /* --- костёр --- */
-    // Костёр перенесён к трактиру: раньше он стоял вплотную к дому
-    // и тропинке к нему — теперь это отдельный «двор», вдали от домов.
-    const FIRE = { x: -6.5, z: -3.5 };
+    /* --- костёр «за город»: поляна у пруда --- */
+    // Костёр перенесён с площади за пределы деревни — на поляну у воды,
+    // в стороне от домов. Это место для посиделок: брёвна, поленница,
+    // фонари и вид на пруд. С площади он убран совсем.
+    const FIRE = { x: 46, z: -30 };
     ctx.campfirePos = { x: FIRE.x, z: FIRE.z };   // положение костра для проверок
     const fire = campfire(ctx.M, ctx.glowTex);
     fire.group.position.set(FIRE.x, 0, FIRE.z);
@@ -461,19 +466,57 @@ export function createVillage(ctx) {
       fire.glow.scale.setScalar(3.2 + f * 0.9 + ctx.fireBoost * 0.04);
     });
 
-    /* --- скамейки у костра --- */
-    const seat = new THREE.Group();
-    const seatMesh = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.14, 0.45), ctx.M.plank);
-    seatMesh.position.y = 0.45; seatMesh.castShadow = true; seatMesh.receiveShadow = true;
-    const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.45, 0.4), ctx.M.timber);
-    leg1.position.set(-0.9, 0.22, 0);
-    const leg2 = leg1.clone(); leg2.position.x = 0.9;
-    seat.add(seatMesh, leg1, leg2);
-    seat.position.set(FIRE.x, 0, FIRE.z + 2.6);
-    ctx.scene.add(seat);
-    const seat2 = seat.clone(); seat2.rotation.y = Math.PI / 2;
-    seat2.position.set(FIRE.x - 2.6, 0, FIRE.z);
-    ctx.scene.add(seat2);
+    /* --- поляна кострища: земля, брёвна, поленница, фонари --- */
+    {
+      // утрамбованная земля под кострищем — «своё» место, а не случайная точка
+      const pad = new THREE.Mesh(new THREE.CircleGeometry(6.2, 28), ctx.M.dirt);
+      pad.rotation.x = -Math.PI / 2;
+      pad.position.set(FIRE.x, 0.04, FIRE.z);
+      pad.receiveShadow = true;
+      ctx.scene.add(pad);
+
+      const GB = new Builder();
+      // четыре бревна-скамейки кругом: сесть можно в любую сторону от огня
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2 + 0.45;
+        const bx = FIRE.x + Math.cos(a) * 3.1;
+        const bz = FIRE.z + Math.sin(a) * 3.1;
+        const ry = a - Math.PI / 2;            // бревно лежит поперёк радиуса
+        // чурбан-сиденье
+        GB.add(cyl(0.26, 0.24, 2.5, 8), 'bark', mat(bx, 0.44, bz, ry, 0, Math.PI / 2, 1));
+        // кочерыги-опоры
+        for (const s of [-1, 1]) {
+          GB.add(cyl(0.11, 0.13, 0.42, 6), 'timber',
+            mat(bx + Math.sin(a) * s * 0.95, 0.21, bz + Math.cos(a) * s * 0.95));
+        }
+        ctx.colliders.circles.push({ x: bx, z: bz, r: 0.9 });
+      }
+      // поленница у края поляны
+      {
+        const wx = FIRE.x + 3.9, wz = FIRE.z - 2.6;
+        for (let i = 0; i < 9; i++) {
+          const row = Math.floor(i / 3), col = i % 3;
+          GB.add(cyl(0.12, 0.12, 1.2, 6), 'timber',
+            mat(wx + (col - 1) * 0.26, 0.14 + row * 0.24, wz, 0, 0.3, Math.PI / 2, 1));
+        }
+        ctx.colliders.circles.push({ x: wx, z: wz, r: 0.75 });
+      }
+      // два валуна у костра — круг кострища
+      for (const [ax, az, rr] of [[-2.2, 1.9, 0.46], [1.6, 2.4, 0.36]]) {
+        GB.add(sphere(rr, 7, 5), 'stone',
+          mat(FIRE.x + ax, rr * 0.45, FIRE.z + az, 0.4, 0.3, 0.2, 1));
+      }
+      ctx.scene.add(GB.build(ctx.M, null, { name: 'fireGlade' }));
+
+      // фонари на столбах по краям поляны: вечером горит целый костёр
+      for (const [ax, az] of [[-5.4, 1.2], [4.6, 3.6]]) {
+        const l = lantern(ctx.M, ctx.glowTex, { height: 3.4, lit: true, intensity: 2.6, distance: 14 });
+        l.place(FIRE.x + ax, FIRE.z + az);
+        ctx.scene.add(l.group);
+        ctx.lanterns.push(l);
+        ctx.colliders.circles.push({ x: FIRE.x + ax, z: FIRE.z + az, r: 0.22 });
+      }
+    }
 
     // бочки, ящики, мешки и повозки убраны из деревни — теперь всё в амбаре (см. world/barn.js)
     ctx.scene.add(trough(ctx.M, { x: -30.2, z: 13.4, ry: 0.3 }));
@@ -536,12 +579,13 @@ export function createVillage(ctx) {
     /* --- лес: плотное кольцо вокруг деревни --- */
     // Лес начинается в 44 м от центра и полностью закрывает дальний обзор:
     // скала с входом в подземелье (≈100 м) не видна с улицы.
-    const { group: forestGroup, trees } = denseForest(ctx.M, ctx.rng, {
+    const { group: forestGroup, trees, chunks } = denseForest(ctx.M, ctx.rng, {
       center: [0, 0],
       inner: 44,
       keepClear: (x, z) => {
         if (Math.abs(x) < 8 && Math.abs(z) < 100) return true;      // главная дорога вдоль Z
         if (x > 36 && x < 73 && z > -35 && z < 7) return true;       // лужайка у пруда
+        if (Math.hypot(x - LAYOUT.campfire.x, z - LAYOUT.campfire.z) < 11) return true; // поляна кострища
         if (distToDungeonTrail(x, z) < 3.4) return true;             // узкая тропа к пещере
         // у самой скалы — только площадка перед входом; дальше лес
         // подступает вплотную и полностью закрывает скалу от взгляда
@@ -555,6 +599,7 @@ export function createVillage(ctx) {
       },
     });
     ctx.scene.add(forestGroup);
+    ctx.forestChunks = chunks;      // чанки леса: дальние отключаются по расстоянию
     // коллайдеры — только у ближних деревьев (дальние не мешают прогулке)
     for (const t of trees) {
       if (Math.hypot(t.x, t.z) < 80) ctx.colliders.circles.push({ x: t.x, z: t.z, r: 0.34 * t.s });

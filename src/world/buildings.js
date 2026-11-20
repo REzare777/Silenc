@@ -470,18 +470,12 @@ export function cottage(M, opts = {}) {
   }
 
   const group = B.build(M, null, { name: 'cottage' });
-  // тёплый свет внутри: дом не должен быть тёмной коробкой
-  const inner = new THREE.PointLight(0xffb45a, 1.15, 9, 1.7);
-  inner.position.set(0.2, 1.9, 0.2);
-  group.add(inner);
-  if (doorLampPos) {
-    const lamp = new THREE.PointLight(0xffc074, 2.3, 7.5, 1.6);
-    lamp.position.copy(doorLampPos);
-    group.add(lamp);
-  }
+  // Света у дома намеренно нет: двадцать четыре точечных источника в сцене
+  // деревни стоили дороже всего остального. Фонарь у двери и окна подсвечивает
+  // общий пул источников (см. main.js) — он берёт ближайшие лампы.
   const out = {
     group, colliders: [], platforms: [], windowLights: [], chimney: new THREE.Vector3(),
-    doorGeom,
+    doorGeom, lampPos: doorLampPos,
   };
   out.place = (px, pz, ry = 0) => {
     group.position.set(px, 0, pz);
