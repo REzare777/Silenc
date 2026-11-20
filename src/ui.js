@@ -40,6 +40,17 @@ export class UI {
       res: document.getElementById('res'),
       bob: document.getElementById('bob'),
       reticle: document.getElementById('reticle'),
+      barHp: document.getElementById('barHp'),
+      barSt: document.getElementById('barSt'),
+      barMp: document.getElementById('barMp'),
+      numHp: document.getElementById('numHp'),
+      numSt: document.getElementById('numSt'),
+      numMp: document.getElementById('numMp'),
+      numCoins: document.getElementById('numCoins'),
+      rowHp: document.getElementById('rowHp'),
+      rowSt: document.getElementById('rowSt'),
+      rowMp: document.getElementById('rowMp'),
+      invCoinsNum: document.getElementById('invCoinsNum'),
       inv: document.getElementById('inv'),
       invGrid: document.getElementById('invGrid'),
       invBelt: document.getElementById('invBelt'),
@@ -214,6 +225,36 @@ export class UI {
     if (this.el.segT) this.el.segT.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.tod === t));
   }
 
+  /* ---------------- характеристики ---------------- */
+
+  /**
+   * Обновить полоски жизни, сил и маны.
+   *
+   * @param {object} s объект характеристик (PlayerStats)
+   */
+  setVitals(s) {
+    if (!s) return;
+    const set = (bar, num, row, value, max) => {
+      if (bar) bar.style.transform = `scaleX(${max ? Math.max(0, Math.min(1, value / max)) : 0})`;
+      if (num) num.textContent = String(Math.ceil(value));
+      if (row) row.classList.toggle('low', value <= max * 0.25);
+    };
+    set(this.el.barHp, this.el.numHp, this.el.rowHp, s.hp, s.maxHp);
+    set(this.el.barSt, this.el.numSt, this.el.rowSt, s.stamina, s.maxStamina);
+    set(this.el.barMp, this.el.numMp, this.el.rowMp, s.mana, s.maxMana);
+  }
+
+  /**
+   * Обновить счётчик монет (в HUD и в инвентаре).
+   *
+   * @param {number} n сколько монет
+   */
+  setCoins(n) {
+    const v = String(Math.max(0, Math.round(n || 0)));
+    if (this.el.numCoins) this.el.numCoins.textContent = v;
+    if (this.el.invCoinsNum) this.el.invCoinsNum.textContent = v;
+  }
+
   /** Громкость 0…1: обновляем положение ползунка и подпись (без побочных эффектов). */
   setVolume(v) {
     const pct = Math.round(Math.max(0, Math.min(1, v)) * 100);
@@ -381,6 +422,7 @@ export class UI {
     this.el.invCount.textContent = st.total
       ? `${st.total} ${plural(st.total, 'рыба', 'рыбы', 'рыб')} · ${st.kinds} ${plural(st.kinds, 'вид', 'вида', 'видов')}`
       : 'пусто';
+    if (this.stats) this.setCoins(this.stats.coins);
     this._paintHeld();
   }
 

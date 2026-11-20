@@ -65,7 +65,7 @@ import { Player, CinematicCam } from './player.js';
 import { Ambience } from './audio.js';
 import { UI } from './ui.js';
 import { NavGrid } from './nav.js';
-import { FISH } from './world/fish.js';
+import { FISH, fishModel } from './world/fish.js';
 
 import { createContext, assertContextReady } from './game/context.js';
 import { buildTerrain } from './game/terrain.js';
@@ -77,6 +77,8 @@ import { createLocations } from './game/locations.js';
 import { createDialog } from './game/dialog.js';
 import { createInteractions } from './game/interactions.js';
 import { createBag } from './game/bag.js';
+import { PlayerStats } from './game/stats.js';
+import { ViewModel } from './game/viewmodel.js';
 import { bindSettings, loadVolume } from './game/settings.js';
 import { createColliderDebug } from './game/debug.js';
 
@@ -258,6 +260,27 @@ ctx.player = player;
 player.onStep = (run) => ambience.step(run);
 player.onJump = () => ambience.jump();
 player.onLand = () => ambience.land();
+
+/* ================================================================== *
+ *  Характеристики игрока и модель «в руках»
+ * ================================================================== */
+
+/** Жизнь, силы, мана и монеты. */
+const stats = new PlayerStats();
+ctx.stats = stats;
+player.stats = stats;
+stats.onChange = () => {
+  ui.setVitals(stats);
+  ui.setCoins(stats.coins);
+};
+
+/** Руки и предмет перед камерой (рисуются поверх игрового кадра). */
+const viewmodel = new ViewModel();
+ctx.viewmodel = viewmodel;
+ui.stats = stats;
+viewmodel.resize(innerWidth, innerHeight);
+ui.setVitals(stats);
+ui.setCoins(stats.coins);
 
 const cine = new CinematicCam(camera);
 cine.active = true;
@@ -461,6 +484,12 @@ window.addEventListener('keydown', (e) => {
     ui.photoMode(photo);
   } else if (e.code === 'KeyM') {
     ui.toggleSound();
+  } else if (e.code === 'KeyQ') {
+    // убрать предмет из рук
+    if (viewmodel.visible) {
+      viewmodel.hideHands();
+      ui.toast('Убрано в сумку.', 1400);
+    }
   } else if (e.code === 'KeyE') {
     if (ctx.mode === 'play') {
       if (fishing.session.state === 'bite') fishing.hookFish();
@@ -738,9 +767,14 @@ function loop() {
   if (started) {
     ambience.update(dt, nightAmt, player.pos.distanceTo(forgePos), player.pos.distanceTo(firePos));
     if (ctx.mode === 'play') fishing.updateFishing(dt);   // в инвентаре и паузе ловля замирает
+    stats.update(dt, { sprinting: player.sprinting });
+    viewmodel.update(dt, camera, player);
+  } else {
+    viewmodel.update(dt, camera, player);
   }
 
   composer.render();
+  viewmodel.render(renderer);
   window.__frames = (window.__frames || 0) + 1;
   if (!window.__villageReady) window.__villageReady = true;
   if (window.__grab) {
@@ -762,6 +796,7 @@ addEventListener('resize', () => {
   composer.setSize(innerWidth, innerHeight);
   bloom.setSize(innerWidth, innerHeight);
   gradePass.uniforms.uResolution.value.set(innerWidth, innerHeight);
+  viewmodel.resize(innerWidth, innerHeight);
 });
 
 /* ================================================================== *
@@ -815,6 +850,15 @@ window.__dbg = {
   updateAnimals: animals.update, doInteract: interactions.doInteract,
   nearestInteractable: interactions.nearest, ui, ambience,
   inventory: bag.inventory, fishing: fishing.session,
+  stats, viewmodel,
+  /** Взять рыбу в руки (для проверок и отладки). */
+  holdFish: (i = 0, opts = {}) => {
+    const spec = FISH[((i % FISH.length) + FISH.length) % FISH.length];
+    const model = fishModel(spec);
+    if (!model) return null;
+    viewmodel.hold(model, { grip: 'two', pose: 'present', scale: 0.16, life: 0, ...opts });
+    return spec.name;
+  },
   startFishing: fishing.startFishing, hookFish: fishing.hookFish,
   updateFishing: fishing.updateFishing, toggleInventory: bag.toggle,
   rollFish: fishing.rollFish, FISH,

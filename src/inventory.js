@@ -113,6 +113,32 @@ export class Inventory {
     if (s.count > 0) this.add(s);
     else this.touch();
   }
+
+  /**
+   * Забрать одну штуку из слота.
+   *
+   * @param {number} i номер слота
+   * @returns {object|null} описание предмета (spec) или null, если слот пуст
+   */
+  takeOne(i) {
+    const s = this.slots[i];
+    if (!s) return null;
+    const spec = s.spec;
+    s.count -= 1;
+    if (s.count <= 0) this.slots[i] = null;
+    this.touch();
+    return spec;
+  }
+
+  /**
+   * Найти первый непустой слот с рыбой.
+   *
+   * @returns {number} номер слота или -1
+   */
+  firstFilled() {
+    for (let i = 0; i < this.slots.length; i++) if (this.slots[i]) return i;
+    return -1;
+  }
 }
 
 /**

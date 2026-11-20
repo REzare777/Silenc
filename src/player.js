@@ -43,6 +43,8 @@ export class Player {
     this.camY = null;        // сглаженная высота камеры (без микроподпрыгиваний)
     this.bounds = 118;
     this.touchMove = { x: 0, y: 0 };
+    this.stats = null;        // характеристики (силы тратятся на бег)
+    this.sprinting = false;   // бежит ли игрок прямо сейчас
     this.lookOnly = false;      // обзор мышью без управления движением
     this.dragging = false;
     this.lookDelta = { x: 0, y: 0 };
@@ -388,7 +390,11 @@ export class Player {
       strafe += this.touchMove.x;
       fwd -= this.touchMove.y;
     }
-    const run = k.has('ShiftLeft') || k.has('ShiftRight');
+    const wantRun = k.has('ShiftLeft') || k.has('ShiftRight');
+    // выдохся — бежать больше нельзя, пока не отдохнёт
+    const canRun = !this.stats || !this.stats.exhausted;
+    let run = wantRun && canRun;
+    this.sprinting = false;
     const len = Math.hypot(fwd, strafe);
     if (len > 1) { fwd /= len; strafe /= len; }
 
@@ -488,6 +494,12 @@ export class Player {
     if (this.stepDistance > stride) {
       this.stepDistance = 0;
       if (this.onStep) this.onStep(run);
+    }
+
+    // бег тратит силы; кончились — приходится идти пешком
+    if (run && moved > 0.0001) {
+      this.sprinting = true;
+      if (this.stats && !this.stats.drainStamina(11 * dt)) run = false;
     }
 
     // прыжок и гравитация

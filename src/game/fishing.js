@@ -19,7 +19,7 @@
  */
 
 import * as THREE from 'three';
-import { FISH, rarityOf } from '../world/fish.js';
+import { FISH, rarityOf, fishModel } from '../world/fish.js';
 import { makeStack } from '../inventory.js';
 import { POND } from './terrain.js';
 
@@ -290,6 +290,11 @@ export function createFishingSystem(ctx) {
     ctx.ui.toast(`Поймана рыба: ${spec.name} — ${rar ? rar.label : ''}, ${f.fish.weight.toFixed(2)} кг`, 3400);
     ctx.ambience.splash(true);
     spawnRipple(f.spot);
+    // рыба остаётся в руках — посмотреть можно, не открывая инвентарь
+    if (ctx.viewmodel) {
+      const model = fishModel(spec);
+      if (model) ctx.viewmodel.hold(model, { grip: 'two', pose: 'present', scale: 0.16, life: 8 });
+    }
     endFishing();
     ctx.ui.hideFishing();
   }

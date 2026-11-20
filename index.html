@@ -88,7 +88,7 @@
   #timebar button:hover{color:var(--ink);background:rgba(255,255,255,.07)}
   #timebar button.on{background:rgba(232,177,99,.18);color:var(--gold);box-shadow:inset 0 0 0 1px rgba(232,177,99,.3)}
   /* ---------- bottom hints ---------- */
-  #hints{position:absolute;left:22px;bottom:88px;display:grid;grid-template-columns:repeat(3,max-content);gap:6px 14px;
+  #hints{position:absolute;left:22px;bottom:142px;display:grid;grid-template-columns:repeat(3,max-content);gap:6px 14px;
     justify-content:center;padding:9px 14px;max-width:92vw}
   #hints div{font-size:11px;color:var(--ink-dim);display:flex;align-items:center;gap:6px;letter-spacing:.04em}
   #hints kbd{font:inherit;font-size:10px;font-weight:600;color:var(--ink);background:rgba(255,255,255,.09);
@@ -98,6 +98,33 @@
     color:var(--ink);opacity:0;transition:opacity .25s;letter-spacing:.03em;white-space:nowrap}
   #prompt.on{opacity:1}
   #prompt kbd{margin-right:7px}
+  /* ---------- характеристики: жизнь, силы, мана, монеты ---------- */
+  #vitals{position:absolute;left:22px;bottom:18px;padding:11px 14px 10px;display:flex;flex-direction:column;gap:7px;
+    min-width:212px}
+  #vitals .vRow{display:flex;align-items:center;gap:9px}
+  #vitals .vIco{width:13px;height:13px;flex:0 0 13px;border-radius:50%;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.45),0 0 7px currentColor}
+  #vitals .vIco.hp{background:#b8433a;color:#e2695e}
+  #vitals .vIco.st{background:#c69a3e;color:#e8c473}
+  #vitals .vIco.mp{background:#4f83bd;color:#79b0e8}
+  #vitals .vTrack{position:relative;flex:1;height:7px;border-radius:4px;overflow:hidden;
+    background:rgba(0,0,0,.5);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+  #vitals .vTrack i{position:absolute;inset:0;transform-origin:left center;border-radius:4px;
+    transition:transform .16s linear;display:block}
+  #vitals .vTrack i.hp{background:linear-gradient(90deg,#8e2f28,#d1554a)}
+  #vitals .vTrack i.st{background:linear-gradient(90deg,#8d6a22,#dcae55)}
+  #vitals .vTrack i.mp{background:linear-gradient(90deg,#2f5f92,#6aa6e2)}
+  #vitals .vNum{font-size:10.5px;color:var(--ink-dim);min-width:26px;text-align:right;
+    font-variant-numeric:tabular-nums;letter-spacing:.02em}
+  #vitals .vRow.low .vNum{color:#e5847a}
+  #vitals .vRow.low .vIco.hp{animation:pulseLow 1s ease-in-out infinite}
+  @keyframes pulseLow{0%,100%{opacity:1}50%{opacity:.42}}
+  #vitals .purse{margin-top:2px;padding-top:6px;border-top:1px solid rgba(255,255,255,.08)}
+  #vitals .coinIco{width:12px;height:12px;flex:0 0 12px;border-radius:50%;
+    background:radial-gradient(circle at 34% 30%,#ffe1a2,#c9973f 62%,#7d5820);
+    box-shadow:0 0 6px rgba(232,177,99,.45),inset 0 0 0 1px rgba(0,0,0,.3)}
+  #vitals .purse .vLbl{font-size:10px;color:var(--ink-dim);opacity:.75}
+  #vitals .purse .vNum{color:var(--gold);font-weight:600}
   /* ---------- reticle ---------- */
   #reticle{position:absolute;left:50%;top:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;
     background:rgba(255,255,255,.5);box-shadow:0 0 6px rgba(0,0,0,.7);transition:.2s}
@@ -209,9 +236,16 @@
   .invCard{background:linear-gradient(180deg,rgba(34,27,20,.98),rgba(20,16,12,.98));
     border:1px solid rgba(232,177,99,.22);border-radius:16px;padding:20px 22px 15px;
     box-shadow:0 30px 80px rgba(0,0,0,.72);display:flex;flex-direction:column;gap:13px}
-  .invHead{display:flex;align-items:baseline;justify-content:space-between}
+  .invHead{display:flex;align-items:baseline;justify-content:space-between;gap:14px}
   .invHead h2{font-size:14px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);margin:0;font-weight:500}
   .invHead span{font-size:11px;color:var(--ink-dim)}
+  .invHeadRight{display:flex;align-items:center;gap:14px}
+  .invCoins{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--gold);
+    padding:3px 9px;border-radius:8px;background:rgba(232,177,99,.1);border:1px solid rgba(232,177,99,.25)}
+  .invCoins b{font-weight:600;font-variant-numeric:tabular-nums}
+  .invCoins i{width:11px;height:11px;border-radius:50%;display:inline-block;
+    background:radial-gradient(circle at 34% 30%,#ffe1a2,#c9973f 62%,#7d5820);
+    box-shadow:0 0 5px rgba(232,177,99,.5)}
   .invBody{display:flex;gap:20px;align-items:flex-start}
   .mcGrid{display:grid;grid-template-columns:repeat(9,52px);gap:4px}
   .slot{width:52px;height:52px;border-radius:3px;position:relative;cursor:pointer;
@@ -361,11 +395,14 @@
     <div><kbd>O</kbd> настройки</div>
     <div><kbd>I</kbd> инвентарь</div>
     <div><kbd>P</kbd> фото-режим</div>
+    <div><kbd>Q</kbd> убрать из рук</div>
   </div>
 
   <div id="inv">
     <div class="invCard">
-      <div class="invHead"><h2>Инвентарь</h2><span id="invCount">пусто</span></div>
+      <div class="invHead"><h2>Инвентарь</h2><div class="invHeadRight">
+        <span class="invCoins" id="invCoins"><i></i><b id="invCoinsNum">0</b> зол.</span>
+        <span id="invCount">пусто</span></div></div>
       <div class="invBody">
         <div class="invCols">
           <div id="invGrid" class="mcGrid"></div>
@@ -438,6 +475,13 @@
 
   <div id="prompt" class="panel"><kbd>E</kbd><span id="promptText"></span></div>
   <div id="reticle"></div>
+
+  <div id="vitals" class="panel">
+    <div class="vRow" id="rowHp"><span class="vIco hp"></span><div class="vTrack"><i class="hp" id="barHp"></i></div><span class="vNum" id="numHp">100</span></div>
+    <div class="vRow" id="rowSt"><span class="vIco st"></span><div class="vTrack"><i class="st" id="barSt"></i></div><span class="vNum" id="numSt">100</span></div>
+    <div class="vRow" id="rowMp"><span class="vIco mp"></span><div class="vTrack"><i class="mp" id="barMp"></i></div><span class="vNum" id="numMp">100</span></div>
+    <div class="vRow purse"><i class="coinIco"></i><span class="vNum" id="numCoins">0</span><span class="vLbl">зол.</span></div>
+  </div>
   <div id="toast" class="panel"></div>
 
   <div id="menu">

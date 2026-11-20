@@ -280,6 +280,20 @@ export function createLocations(ctx) {
     () => ctx.ui.toast('Очаг дышит жаром. Слышно, как потрескивают дрова.'), 'tavern');
   add(new THREE.Vector3(5.0, 1.5, -1.0), 2.4, 'Осмотреть стойку',
     () => ctx.ui.toast('Бутылки на полках — от тёмного эля до прозрачной водки.'), 'tavern');
+  // продажа улова трактирщику: монеты капают в кошелёк
+  add(new THREE.Vector3(4.9, 1.2, 2.2), 2.0, 'Продать рыбу', () => {
+    const inv = ctx.inventory;
+    const slot = inv.firstFilled();
+    if (slot < 0) {
+      ctx.ui.toast('Нечего продавать — в сумке пусто.', 2600);
+      return;
+    }
+    const spec = inv.takeOne(slot);
+    const price = spec.value || 0;
+    ctx.stats.earnCoins(price);
+    ctx.ui.renderInventory(inv);
+    ctx.ui.toast(`Продал ${spec.name} за ${price} зол. В кошельке теперь ${ctx.stats.coins} зол.`, 3400);
+  }, 'tavern');
   add(new THREE.Vector3(-7.0, 2.0, -3.4), 2.0, 'Взять лютню',
     () => ctx.ui.toast('Струны звонкие, но пыльные — их давно не играли.'), 'tavern');
   add(new THREE.Vector3(-2.6, 1.0, 2.0), 2.2, 'Сесть за стол',

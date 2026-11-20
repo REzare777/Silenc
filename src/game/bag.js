@@ -28,6 +28,7 @@ export function createBag(ctx) {
     if (ctx.mode === 'inv') return;
     if (ctx.mode === 'menu') ctx.ui.closeMenu();
     ctx.mode = 'inv';
+    if (ctx.viewmodel) ctx.viewmodel.hideHands();   // в инвентаре руки не нужны
     ctx.ui.renderInventory(inventory);
     ctx.ui.openInv();
     // полный фокус курсора: мышь свободна, игра не принимает ввод
