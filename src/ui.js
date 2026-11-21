@@ -43,6 +43,12 @@ export class UI {
       barHp: document.getElementById('barHp'),
       barSt: document.getElementById('barSt'),
       barMp: document.getElementById('barMp'),
+      barFuel: document.getElementById('barFuel'),
+      numFuel: document.getElementById('numFuel'),
+      rowFuel: document.getElementById('rowFuel'),
+      veil: document.getElementById('veil'),
+      threat: document.getElementById('threat'),
+      dmg: document.getElementById('dmg'),
       numHp: document.getElementById('numHp'),
       numSt: document.getElementById('numSt'),
       numMp: document.getElementById('numMp'),
@@ -247,6 +253,85 @@ export class UI {
     set(this.el.barHp, this.el.numHp, this.el.rowHp, s.hp, s.maxHp);
     set(this.el.barSt, this.el.numSt, this.el.rowSt, s.stamina, s.maxStamina);
     set(this.el.barMp, this.el.numMp, this.el.rowMp, s.mana, s.maxMana);
+  }
+
+  /* ---------------- бой ---------------- */
+
+  /**
+   * Включить или выключить боевой интерфейс (полоса топлива).
+   *
+   * @param {boolean} on активен ли бой
+   */
+  setCombat(on) {
+    document.body.classList.toggle('combat', !!on);
+    if (!on) {
+      if (this.el.veil) this.el.veil.classList.remove('on');
+      if (this.el.threat) this.el.threat.classList.remove('on');
+      if (this.el.reticle) this.el.reticle.classList.remove('target', 'swing');
+    }
+  }
+
+  /**
+   * Полоска топлива факела.
+   *
+   * @param {number} fuel сколько осталось
+   * @param {number} max максимум
+   */
+  setFire(fuel, max) {
+    if (!this.el.barFuel) return;
+    const r = max ? Math.max(0, Math.min(1, fuel / max)) : 0;
+    this.el.barFuel.style.transform = `scaleX(${r})`;
+    if (this.el.numFuel) this.el.numFuel.textContent = String(Math.ceil(fuel));
+    if (this.el.rowFuel) this.el.rowFuel.classList.toggle('low', r <= 0.1);
+  }
+
+  /**
+   * Пипсы «veil» у цели под прицелом.
+   *
+   * @param {number} veil сколько осталось
+   * @param {number} max сколько всего
+   */
+  setVeil(veil, max) {
+    if (!this.el.veil) return;
+    const dots = this.el.veil.children;
+    if (!veil || veil <= 0) { this.el.veil.classList.remove('on'); return; }
+    this.el.veil.classList.add('on');
+    for (let i = 0; i < dots.length; i++) {
+      dots[i].classList.toggle('full', i < veil);
+    }
+  }
+
+  /**
+   * Состояние прицела: цель под прицелом и замах.
+   *
+   * @param {boolean} target есть ли цель в конусе
+   * @param {boolean} swing идёт ли замах
+   */
+  setReticle(target, swing) {
+    if (!this.el.reticle) return;
+    this.el.reticle.classList.toggle('target', !!target);
+    this.el.reticle.classList.toggle('swing', !!swing);
+  }
+
+  /**
+   * Слой угрозы: непрозрачность 0…1.
+   *
+   * @param {number} v уровень угрозы
+   */
+  setThreat(v) {
+    if (!this.el.threat) return;
+    const on = v > 0.02;
+    this.el.threat.classList.toggle('on', on);
+    this.el.threat.style.opacity = on ? String(Math.min(0.55, v * 0.55)) : '0';
+  }
+
+  /**
+   * Вспышка урона по краям экрана.
+   */
+  flashDamage() {
+    if (!this.el.dmg) return;
+    this.el.dmg.classList.add('on');
+    setTimeout(() => this.el.dmg && this.el.dmg.classList.remove('on'), 180);
   }
 
   /**

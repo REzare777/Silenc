@@ -20,7 +20,10 @@ const dbg = () => page.evaluate(() => window.__dbg);
 /* ---- вход в таверну ---- */
 await page.evaluate(() => {
   const d = window.__dbg;
-  d.teleport(-11.0, -12.6, 0);
+  // координаты берём из самой игры, а не из зашитых чисел:
+  // трактир переезжал, и старые координаты роняли весь каскад проверок
+  const it = d.interactables.find(i => i.label.startsWith('Войти в таверну'));
+  d.teleport(it.pos.x, it.pos.z + 0.2, 0);
 });
 await page.waitForTimeout(600);
 await page.evaluate(() => window.__dbg.doInteract());
@@ -301,7 +304,9 @@ await page.evaluate(() => {
 await page.waitForTimeout(400);
 await page.evaluate(() => {
   const d = window.__dbg;
-  d.teleport(-10.9, 35.6, 0);       // дверь амбара у края поля (раунд 47)
+  // дверь амбара — из данных игры (амбар переезжал в раунде 48)
+  const it = d.interactables.find(i => i.label === 'Войти в амбар');
+  d.teleport(it.pos.x, it.pos.z + 0.2, 0);
 });
 await page.waitForTimeout(500);
 await page.evaluate(() => window.__dbg.doInteract());

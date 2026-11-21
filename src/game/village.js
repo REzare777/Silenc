@@ -271,6 +271,19 @@ export function createVillage(ctx) {
       pos: bs.forge.clone(), radius: 2.8, label: 'Подуть на горн',
       act: () => { forgeLight.intensity = 6.5; ctx.ui.toast('Горн разгорелся — жар пошёл!'); },
     });
+    // смола и фитиль: пополнить факел (огонь — снаряжение, не предмет)
+    ctx.interactables.push({
+      pos: bs.forge.clone().add(new THREE.Vector3(1.6, 0, 0.6)), radius: 2.8,
+      label: 'Купить смолу и фитиль — 10 зол.',
+      act: () => {
+        const combat = ctx.systems.combat;
+        if (!combat) return;
+        if (combat.state.fuel >= 99) { ctx.ui.toast('Факел полон — нечего заправлять.'); return; }
+        if (!ctx.stats.spendCoins(10)) { ctx.ui.toast('Не хватает монет.'); return; }
+        combat.state.fuel = 100;
+        ctx.ui.toast('Кузнец набил фитиль смолой. Факел горит на полную.');
+      },
+    });
 
     /* --- церковь --- */
     const ch = church(ctx.M, {});
@@ -302,7 +315,8 @@ export function createVillage(ctx) {
     {
       // точка выхода через колокольню — в заднем дворе у двери башни
       const back = facadePos(3, 44, chRy, 0, 19.6, 0);
-      ctx.doors.churchBack = { x: back.x, z: back.z, ry: chRy };
+      // ry + π — игрок выходит лицом на север, а не в стену колокольни
+      ctx.doors.churchBack = { x: back.x, z: back.z, ry: chRy + Math.PI };
     }
     // фонарь у двери башни — иначе её не видно
     {

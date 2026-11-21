@@ -181,6 +181,17 @@ export function createLocations(ctx) {
       ctx.systems.animals.onLocationChange();
     }
 
+    // боёвка живёт только в подземелье: в деревне факела нет и теней нет
+    if (ctx.systems.combat) {
+      if (inDungeon) {
+        ctx.systems.combat.setActive(true);
+        if (ctx.systems.shadows) ctx.systems.shadows.spawn();
+      } else {
+        ctx.systems.combat.setActive(false);
+        if (ctx.systems.shadows) ctx.systems.shadows.clear();
+      }
+    }
+
     if (L) {
       // в храм можно войти с юга (через башню) и с севера (через заднюю дверь)
       const sp = (inChurch && where === 'back' && L.spawnBack) ? L.spawnBack : L.spawn;
@@ -393,12 +404,39 @@ export function createLocations(ctx) {
       }, 'dungeon');
   });
 
+  // снимаемые факелы на кронштейнах: забрать свет себе
+  (dungeonLoc.torchBrackets || []).forEach((b, i) => {
+    add(new THREE.Vector3(b.x, b.y, b.z), 2.4, 'Снять факел с кронштейна', () => {
+      if (b.taken) return;
+      b.taken = true;
+      if (b.flame) b.flame.visible = false;
+      if (b.light) b.light.intensity = 0;
+      const combat = ctx.systems.combat;
+      if (combat) combat.state.fuel = 100;
+      if (ctx.ambience) ctx.ambience.torchLight();
+      ctx.ui.toast('Факел с кронштейна — в руке. Внизу стало темнее.', 3200);
+    }, 'dungeon');
+  });
+
   // прикосновение к Вратам — самый мрачный момент локации
   add(new THREE.Vector3(dungeonLoc.gateHall.x, dungeonLoc.gateHall.y + 1.6, dungeonLoc.gateHall.z - 3.2), 3.0,
     'Прикоснуться к Вратам', () => {
+      const shadows = ctx.systems.shadows;
+      const cleared = shadows ? shadows.guardsCleared() : false;
       if (ctx.ambience) ctx.ambience.deepBoom();
-      ctx.ui.toast('Самоцвет холодит ладонь, и на миг кажется, что из глубины '
-        + 'кто-то дотронулся в ответ. Где-то внизу глухо ударило. Потом всё стихает.', 5200);
+      if (cleared) {
+        // стражи рассеяны — Врата отвечают
+        const lights = dungeonLoc.lights;
+        if (lights) lights.gateBoost = 2.0;
+        setTimeout(() => { if (lights) lights.gateBoost = 0; }, 8000);
+        if (ctx.ambience) ctx.ambience.crystalChime();
+        ctx.ui.toast('Тишина, которая настала после боя, вдруг оказывается '
+          + 'не пустой. Самоцвет горит ровно и ждёт. Где-то внизу глухо ударило — '
+          + 'и на этот раз в ответ ударило тихо, почти ласково.', 6000);
+      } else {
+        ctx.ui.toast('Самоцвет холодит ладонь, и на миг кажется, что из глубины '
+          + 'кто-то дотронулся в ответ. Где-то внизу глухо ударило. Потом всё стихает.', 5200);
+      }
     }, 'dungeon');
 
   // ---- комнаты второго этажа: переночевать ----
@@ -418,6 +456,14 @@ export function createLocations(ctx) {
           return;
         }
         ctx.ui.toast(nightLines[i % nightLines.length], 4200);
+        // ночь восстанавливает силы: раны заживают, отдохнувшие руки крепнут
+        if (ctx.stats) {
+          ctx.stats.hp = ctx.stats.maxHp;
+          ctx.stats.restoreStamina(ctx.stats.maxStamina);
+          ctx.stats.restoreMana(ctx.stats.maxMana);
+          ctx.stats._changed();
+        }
+        if (ctx.systems.combat) ctx.systems.combat.state.fuel = 100;
         // ночь сменяется утром — и в доме, и на улице
         if (ctx.env) {
           ctx.env.setTimeOfDay('morning', true);

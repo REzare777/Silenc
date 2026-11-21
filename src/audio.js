@@ -591,6 +591,239 @@ export class Ambience {
     src.start(t); src.stop(t + 0.42);
   }
 
+  /* ------------------------------------------------------------------ *
+   *  Бой: факел, удары, тени
+   * ------------------------------------------------------------------ */
+
+  /** Разжечь факел: шорох смолы и короткий «выдох» пламени. */
+  torchLight() {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.nodes.noiseBuf;
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.setValueAtTime(420, t);
+    f.frequency.exponentialRampToValueAtTime(1500, t + 0.5);
+    f.Q.value = 0.7;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.06, t + 0.08);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.62);
+    src.connect(f).connect(g).connect(this.master);
+    if (this.caveBus) g.connect(this.caveBus);
+    src.start(t); src.stop(t + 0.7);
+  }
+
+  /** Факел погас: короткое шипение вниз. */
+  torchOut() {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.nodes.noiseBuf;
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.setValueAtTime(1800, t);
+    f.frequency.exponentialRampToValueAtTime(320, t + 0.3);
+    f.Q.value = 1.1;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.05, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+    src.connect(f).connect(g).connect(this.master);
+    if (this.caveBus) g.connect(this.caveBus);
+    src.start(t); src.stop(t + 0.4);
+  }
+
+  /** Удар брандом по тени: глухой удар и шипение огня. */
+  hitBrand() {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(180, t);
+    o.frequency.exponentialRampToValueAtTime(58, t + 0.18);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.11, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
+    o.connect(g).connect(this.master);
+    if (this.caveBus) g.connect(this.caveBus);
+    o.start(t); o.stop(t + 0.3);
+    this.hiss(0.5);
+  }
+
+  /** Удар в камень: сухой лязг. */
+  hitStone() {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.nodes.noiseBuf;
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'highpass';
+    f.frequency.value = 2400;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.055, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    src.connect(f).connect(g).connect(this.master);
+    if (this.caveBus) g.connect(this.caveBus);
+    src.start(t); src.stop(t + 0.2);
+    const o = ctx.createOscillator();
+    const og = ctx.createGain();
+    o.type = 'square';
+    o.frequency.value = 1400 + Math.random() * 400;
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.exponentialRampToValueAtTime(0.03, t + 0.005);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+    o.connect(og).connect(this.master);
+    if (this.caveBus) og.connect(this.caveBus);
+    o.start(t); o.stop(t + 0.12);
+  }
+
+  /** Шипение огня (тень получила урон). */
+  hiss(vol = 1) {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.nodes.noiseBuf;
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.setValueAtTime(3200, t);
+    f.frequency.exponentialRampToValueAtTime(1400, t + 0.45);
+    f.Q.value = 0.9;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.05 * vol, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+    src.connect(f).connect(g).connect(this.master);
+    if (this.caveBus) g.connect(this.caveBus);
+    src.start(t); src.stop(t + 0.55);
+  }
+
+  /** Тень рассыпается: нисходящий шёпот. */
+  dissolve() {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.nodes.noiseBuf;
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.setValueAtTime(1800, t);
+    f.frequency.exponentialRampToValueAtTime(260, t + 0.8);
+    f.Q.value = 1.4;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.05, t + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.85);
+    src.connect(f).connect(g).connect(this.master);
+    if (this.caveBus) g.connect(this.caveBus);
+    src.start(t); src.stop(t + 0.9);
+  }
+
+  /** Игрока ударили: глухой удар в грудь и короткий звон в ушах. */
+  hurt() {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(120, t);
+    o.frequency.exponentialRampToValueAtTime(42, t + 0.3);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.13, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.36);
+    o.connect(g).connect(this.master);
+    if (this.caveBus) g.connect(this.caveBus);
+    o.start(t); o.stop(t + 0.4);
+    const ring = ctx.createOscillator();
+    const rg = ctx.createGain();
+    ring.type = 'sine';
+    ring.frequency.value = 2350;
+    rg.gain.setValueAtTime(0.0001, t);
+    rg.gain.exponentialRampToValueAtTime(0.035, t + 0.02);
+    rg.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+    ring.connect(rg).connect(this.master);
+    if (this.caveBus) rg.connect(this.caveBus);
+    ring.start(t); ring.stop(t + 1.2);
+  }
+
+  /** Вспышка: оглушающий «выстрел» огня. */
+  flare() {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.nodes.noiseBuf;
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.setValueAtTime(4200, t);
+    f.frequency.exponentialRampToValueAtTime(500, t + 0.7);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.16, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.8);
+    src.connect(f).connect(g).connect(this.master);
+    if (this.caveBus) g.connect(this.caveBus);
+    src.start(t); src.stop(t + 0.9);
+    const o = ctx.createOscillator();
+    const og = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(260, t);
+    o.frequency.exponentialRampToValueAtTime(60, t + 0.4);
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.exponentialRampToValueAtTime(0.09, t + 0.01);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+    o.connect(og).connect(this.master);
+    if (this.caveBus) og.connect(this.caveBus);
+    o.start(t); o.stop(t + 0.5);
+  }
+
+  /** Сухой щелчок: не хватило маны или топлива. */
+  dryClick() {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.nodes.noiseBuf;
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = 2600;
+    f.Q.value = 2;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.035, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    src.connect(f).connect(g).connect(this.master);
+    src.start(t); src.stop(t + 0.1);
+  }
+
+  /** Шёпот тени: еле слышное дыхание из темноты. */
+  whisper(vol = 1) {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.nodes.noiseBuf;
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.setValueAtTime(700, t);
+    f.frequency.linearRampToValueAtTime(380, t + 1.2);
+    f.Q.value = 3.2;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.035 * vol, t + 0.25);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+    src.connect(f).connect(g).connect(this.master);
+    if (this.caveBus) g.connect(this.caveBus);
+    src.start(t); src.stop(t + 1.5);
+  }
+
   /** Лай пса: резкий шумовой «удар» + падающий по формантам тон. */
   bark(vol = 1) {
     if (!this.ctx || !this.enabled) return;

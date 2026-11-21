@@ -128,6 +128,24 @@
   /* ---------- reticle ---------- */
   #reticle{position:absolute;left:50%;top:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;
     background:rgba(255,255,255,.5);box-shadow:0 0 6px rgba(0,0,0,.7);transition:.2s}
+  /* ---------- бой: топливо факела, «veil», угроза ---------- */
+  #vitals .vIco.fire{background:#d8802a;color:#ffb35c}
+  #vitals .vTrack i.fire{background:linear-gradient(90deg,#8a4a12,#f0a640)}
+  body:not(.combat) #rowFuel{display:none}
+  #veil{position:absolute;left:50%;top:calc(50% + 26px);transform:translateX(-50%);display:flex;gap:6px;
+    opacity:0;transition:opacity .18s;pointer-events:none}
+  #veil.on{opacity:1}
+  #veil i{width:6px;height:6px;border-radius:50%;background:transparent;
+    box-shadow:inset 0 0 0 1px rgba(143,182,255,.5)}
+  #veil i.full{background:#8fb6ff;box-shadow:0 0 6px rgba(143,182,255,.85)}
+  #reticle.target{background:#ffb347;box-shadow:0 0 8px rgba(255,179,71,.9)}
+  #reticle.swing{width:11px;height:11px;margin:-5.5px 0 0 -5.5px}
+  #threat{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .25s;
+    background:radial-gradient(120% 90% at 50% 50%,rgba(0,0,0,0) 34%,rgba(10,4,16,.9) 100%)}
+  #threat.on{opacity:.55}
+  #dmg{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s;
+    background:radial-gradient(110% 80% at 50% 50%,rgba(120,10,10,0) 28%,rgba(150,20,20,.8) 100%)}
+  #dmg.on{opacity:1}
   /* ---------- vignette flash / toast ---------- */
   #toast{position:absolute;left:50%;top:14%;transform:translateX(-50%);padding:9px 18px;font-size:12.5px;letter-spacing:.04em;
     opacity:0;transition:opacity .35s, transform .35s}
@@ -508,11 +526,15 @@
 
   <div id="prompt" class="panel"><kbd>E</kbd><span id="promptText"></span></div>
   <div id="reticle"></div>
+  <div id="veil"><i></i><i></i><i></i></div>
+  <div id="threat"></div>
+  <div id="dmg"></div>
 
   <div id="vitals" class="panel">
     <div class="vRow" id="rowHp"><span class="vIco hp"></span><div class="vTrack"><i class="hp" id="barHp"></i></div><span class="vNum" id="numHp">100</span></div>
     <div class="vRow" id="rowSt"><span class="vIco st"></span><div class="vTrack"><i class="st" id="barSt"></i></div><span class="vNum" id="numSt">100</span></div>
     <div class="vRow" id="rowMp"><span class="vIco mp"></span><div class="vTrack"><i class="mp" id="barMp"></i></div><span class="vNum" id="numMp">100</span></div>
+    <div class="vRow" id="rowFuel"><span class="vIco fire"></span><div class="vTrack"><i class="fire" id="barFuel"></i></div><span class="vNum" id="numFuel">100</span></div>
     <div class="vRow purse"><i class="coinIco"></i><span class="vNum" id="numCoins">0</span><span class="vLbl">зол.</span></div>
   </div>
   <div id="toast" class="panel"></div>

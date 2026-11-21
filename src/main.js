@@ -74,6 +74,8 @@ import { setForestRange } from './world/forest.js';
 import { createAnimalsSystem } from './game/animals.js';
 import { createFishingSystem } from './game/fishing.js';
 import { createLocations } from './game/locations.js';
+import { createCombat, COMBAT } from './game/combat.js';
+import { createShadows } from './game/shadows.js';
 import { createDialog } from './game/dialog.js';
 import { createInteractions } from './game/interactions.js';
 import { createBag } from './game/bag.js';
@@ -342,6 +344,20 @@ animals.build();
 ctx.systems.dialog = createDialog(ctx);
 ctx.systems.locations = createLocations(ctx);
 
+// боёвка: факел в руке и тени в подземелье
+ctx.systems.combat = createCombat(ctx);
+ctx.systems.shadows = createShadows(ctx);
+const combat = ctx.systems.combat;
+const shadows = ctx.systems.shadows;
+
+// Огонь — единственный источник света, топлива и лечения.
+// Жаровни в пещере, костёр за селом, очаг в таверне.
+combat.addFirePoint(-5.6, -17.2, 2.4, 4, 5);    // жаровня у входа
+combat.addFirePoint(5.6, -4.5, 2.4, 4, 5);      // жаровня в кристальном зале
+combat.addFirePoint(-5.6, 20.5, 2.4, 4, 5);     // жаровня на пути к Вратам
+combat.addFirePoint(ctx.campfirePos.x, ctx.campfirePos.z, 3.2, 8, 5);   // костёр
+combat.addFirePoint(-6.5, 0, 2.5, 4, 4);        // очаг в таверне
+
 // контекст собран — проверяем, что ничего не забыто
 assertContextReady(ctx);
 
@@ -508,6 +524,12 @@ window.addEventListener('keydown', (e) => {
       viewmodel.hideHands();
       ui.toast('Убрано в сумку.', 1400);
     }
+  } else if (e.code === 'KeyF') {
+    // потушить или разжечь факел
+    if (ctx.mode === 'play') {
+      const msg = combat.toggleTorch();
+      if (msg) ui.toast(msg, 1800);
+    }
   } else if (e.code === 'KeyE') {
     if (ctx.mode === 'play') {
       if (fishing.session.state === 'bite') fishing.hookFish();
@@ -550,6 +572,38 @@ document.addEventListener('pointerlockchange', () => {
   player.keys.clear();
   if (ctx.mode === 'play') openMenu();   // Esc или потеря захвата — окно настроек
 });
+
+/* ================================================================== *
+ *  Бой: ЛКМ — удар брандом, ПКМ — вспышка
+ *
+ *  Клик отличается от перетаскивания: короткое нажатие без сдвига.
+ *  Перетаскивание мышью остаётся осмотром (fallback без захвата).
+ * ================================================================== */
+
+let mouseDownAt = 0;
+let mouseDownX = 0;
+let mouseDownY = 0;
+
+renderer.domElement.addEventListener('mousedown', (e) => {
+  if (!started || ctx.mode !== 'play') return;
+  mouseDownAt = performance.now();
+  mouseDownX = e.clientX;
+  mouseDownY = e.clientY;
+});
+
+renderer.domElement.addEventListener('mouseup', (e) => {
+  if (!started || ctx.mode !== 'play') return;
+  const dt = performance.now() - mouseDownAt;
+  const moved = Math.hypot(e.clientX - mouseDownX, e.clientY - mouseDownY);
+  const locked = document.pointerLockElement === renderer.domElement;
+  // при захваченной мыши считаем кликом любое нажатие; без захвата —
+  // только короткое нажатие без сдвига, иначе это осмотр перетаскиванием
+  if (!locked && (dt > 250 || moved > 8)) return;
+  if (e.button === 0) combat.strike();
+  else if (e.button === 2) combat.flare();
+});
+
+renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
 
 renderer.domElement.addEventListener('click', () => {
   if (ctx.mode === 'aim') {
@@ -702,6 +756,26 @@ function loop() {
     locations.sceneTavern.fog.color.setHex(0x241408);
   }
 
+  // бой: факел горит, тратит топливо, светит; тени в подземелье
+  if (ctx.loc === 'dungeon') {
+    shadows.update(dt, t);
+    combat.update(dt, t);
+  } else {
+    combat.update(dt, t);
+  }
+  ui.setCombat(ctx.loc === 'dungeon');
+  if (ctx.loc === 'dungeon') {
+    ui.setFire(combat.state.fuel, COMBAT.fuelMax);
+    const aim = combat.aimTarget();
+    ui.setVeil(aim ? aim.veil : 0, 3);
+    ui.setReticle(!!aim, combat.state.strikeAnim > 0);
+    ui.setThreat(ctx.shadowThreat || 0);
+  } else {
+    ui.setVeil(0, 3);
+    ui.setReticle(false, false);
+    ui.setThreat(0);
+  }
+
   // Лес подрезается по расстоянию: за туманом он всё равно не виден,
   // а без этого рисуются все шестнадцать тысяч деревьев.
   forestRangeTimer -= dtEnv;
@@ -768,6 +842,8 @@ function loop() {
       const spot = fishing.aimedCastSpot();
       if (spot) {
         ui.setPrompt('закинуть удочку');
+      } else if (combat.state.active && combat.prompt()) {
+        ui.setPrompt(combat.prompt());
       } else {
         const it = interactions.nearest();
         const hint = player.climbHint();

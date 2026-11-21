@@ -948,7 +948,7 @@ export function church(M, opts = {}) {
     out.platforms.push(localBox(px, pz, ry, 0, d / 2 + 0.55, 1.85, 0.45, 0.1));
     // ступени к двери колокольни (северная сторона)
     out.platforms.push(localBox(px, pz, ry, 0, BTZ + BTD / 2 + 0.75, TOWER_DOOR_W + 1.2, 0.9, 0.22));
-    out.platforms.push(localBox(px, pz, ry, 0, BTZ + BTD / 2 + 0.42, TOWER_DOOR_W + 0.9, 0.6, 0.32));
+    out.platforms.push(localBox(px, pz, ry, 0, BTZ + BTD / 2 + 0.42, TOWER_DOOR_W + 0.9, 0.6, 0.43));
     return out;
   };
   return out;

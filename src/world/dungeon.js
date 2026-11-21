@@ -756,13 +756,29 @@ export function buildDungeon(M, glowTex) {
     colliders.circles.push({ x, z, r: 0.55, y0: y, y1: y + 1.2 });
   };
 
-  // факелы на стенах — по ходу движения: входной зал → кристальный → шахта
+  // факелы на стенах — по ходу движения: входной зал → кристальный → шахта.
+  // Три из них можно снять: пещера гаснет по мере того, как игрок
+  // разбирает её свет.
+  const torchBrackets = [];
+  let torchIndex = 0;
   for (const [tx, ty, tz, try_] of [
     [-11.1, 2.5, -30.5, Math.PI / 2], [11.1, 2.5, -30.5, -Math.PI / 2],
     [-14.1, 2.6, -19.0, Math.PI / 2], [14.1, 2.6, -19.0, -Math.PI / 2],
     [-14.1, 2.6, -6.0, Math.PI / 2], [14.1, 2.6, -6.0, -Math.PI / 2],
     [-13.1, Y_DEEP + 2.6, 20.5, Math.PI / 2], [13.1, Y_DEEP + 2.6, 20.5, -Math.PI / 2],
-  ]) torch(tx, ty, tz, try_);
+  ]) {
+    const idx = torchIndex++;
+    torch(tx, ty, tz, try_);
+    // снимаемые: два у входа в шахту и один на нижнем ярусе
+    if (idx === 4 || idx === 5 || idx === 6) {
+      torchBrackets.push({
+        x: tx, y: ty, z: tz,
+        flame: flames[flames.length - 1],
+        light: torchLights[torchLights.length - 1],
+        taken: false,
+      });
+    }
+  }
 
   // жаровни на пути к Вратам
   brazier(-5.6, Y_TOP, -17.2);
@@ -1092,6 +1108,8 @@ export function buildDungeon(M, glowTex) {
   gateLight.position.set(0, Y_DEEP + 3.4, az);
   group.add(gateLight);
   lights.gate = gateLight;
+  /** Добавка к яркости Врат (0 — обычно, 2 — после рассеяния стражей). */
+  lights.gateBoost = 0;
   const gateFoot = new THREE.PointLight(0x8a6cff, 2.6, 16, 1.8);
   gateFoot.position.set(0, Y_DEEP + 0.7, az - 1.6);
   group.add(gateFoot);
@@ -1384,7 +1402,8 @@ export function buildDungeon(M, glowTex) {
     }
     pos.needsUpdate = true;
     const pulse = 2.1 + Math.sin(t * 0.9) * 0.35;
-    gateLight.intensity = pulse;
+    // «усиление» Врат: когда стражи рассеяны, самоцвет вспыхивает ярче
+    gateLight.intensity = pulse + (lights.gateBoost || 0);
     crystal.emissiveIntensity = 1.15 + Math.sin(t * 1.3) * 0.14;
     crystalViolet.emissiveIntensity = 1.05 + Math.cos(t * 1.1) * 0.14;
     gateCrystal.rotation.y = t * 0.12;
@@ -1451,6 +1470,8 @@ export function buildDungeon(M, glowTex) {
     spawn,
     exit,
     spots,
+    /** Три факела на кронштейнах, которые можно снять. */
+    torchBrackets,
     update,
     /** Габариты локации — для диагностики и тестов. */
     rooms: {

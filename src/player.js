@@ -148,7 +148,14 @@ export class Player {
       const off = ((a - sp.a0 - sp.m * TAU) % TAU + TAU) % TAU;
       let u = (sp.m * TAU + off) / dA;
       u = Math.min(Math.max(u, 0.5), N - 0.5);
-      y = sp.y0 + (u + 0.5) * rise;
+      const yy = sp.y0 + (u + 0.5) * rise;
+      // Залипание — только если игрок ещё в зоне лестницы. Иначе он
+      // «висит» над полом локации (так было у звонарной: пол 0, а игрок
+      // стоял на 26 см выше, потому что ступень винта была рядом).
+      const tt = (yy - sp.y0) / (sp.y1 - sp.y0);
+      const rOutNow = sp.rOut0 + (sp.rOut1 - sp.rOut0) * tt - 0.05;
+      if (r > rOutNow + 0.35) return null;
+      y = yy;
     }
     return y;
   }
