@@ -85,6 +85,25 @@ const nearestTrail = (x, z, exceptId) => {
 
 console.log('=== ДОРОГИ ===');
 const problems = [];
+
+// Видимая дорога — это сглаженная лента (повороты скруглены), поэтому
+// проверять надо именно её: сглаживание срезает углы и может увести
+// полотно ближе к постройке, чем прямая ломаная.
+const smoothLine = (pts, rounds = 3) => {
+  let cur = pts.map((p) => [p[0], p[1]]);
+  for (let r = 0; r < rounds; r++) {
+    if (cur.length < 3) break;
+    const out = [cur[0]];
+    for (let i = 0; i < cur.length - 1; i++) {
+      const a = cur[i], b = cur[i + 1];
+      out.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25]);
+      out.push([a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75]);
+    }
+    out.push(cur[cur.length - 1]);
+    cur = out;
+  }
+  return cur;
+};
 for (const t of data.trails) {
   const start = t.pts[0];
   const end = t.pts[t.pts.length - 1];
@@ -119,6 +138,27 @@ for (const t of data.trails) {
   if (uniqHits.length) {
     notes.push(`пересекает: ${uniqHits.join('; ')}`);
     problems.push(`${t.id}: пересекает ${uniqHits.join(', ')}`);
+  }
+
+  // 2б. сглаженная лента (то, что видит игрок) — не заходит на постройки
+  {
+    const line = smoothLine(t.pts);
+    const hits = [];
+    for (let i = 0; i < line.length - 1; i++) {
+      const a = line[i], b = line[i + 1];
+      for (let k = 0.1; k < 1; k += 0.1) {
+        const x = a[0] + (b[0] - a[0]) * k;
+        const z = a[1] + (b[1] - a[1]) * k;
+        for (const fp of data.footprints) {
+          if (inside(x, z, fp, -0.3)) hits.push(`${fp.name} (${x.toFixed(1)},${z.toFixed(1)})`);
+        }
+      }
+    }
+    const uniq = [...new Set(hits)];
+    if (uniq.length) {
+      notes.push(`сглаженная лента пересекает: ${uniq.join('; ')}`);
+      problems.push(`${t.id}: сглаженная лента пересекает ${uniq.join(', ')}`);
+    }
   }
 
   // 3. вода

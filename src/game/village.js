@@ -31,6 +31,7 @@ import { noticeBoard } from '../world/board.js';
 import { chickenCoop, sheepShelter } from '../world/farm.js';
 import { woodcuttersYard } from '../world/woodcutters.js';
 import { felledClearing } from '../world/clearing.js';
+import { ribbonGeometry, smoothPolyline, resample } from './roadmesh.js';
 import { Embers } from '../world/particles.js';
 import { Builder, box, cyl, sphere, cone, mat } from '../world/geo.js';
 import {
@@ -973,8 +974,8 @@ export function createVillage(ctx) {
       center: [0, 0],
       inner: 44,
       keepClear: (x, z) => {
-        if (Math.abs(x) < 8 && Math.abs(z) < 96) return true;      // главная дорога вдоль Z
-        if (Math.abs(z) < 4.2 && x > -52 && x < 74) return true;   // поперечная дорога
+        if (Math.abs(x) < 9 && Math.abs(z) < 96) return true;      // главная дорога вдоль Z
+        if (Math.abs(z) < 6 && x > -52 && x < 74) return true;     // поперечная дорога
         if (x > 36 && x < 73 && z > -35 && z < 7) return true;       // лужайка у пруда
         if (Math.hypot(x - LAYOUT.campfire.x, z - LAYOUT.campfire.z) < 11) return true; // поляна кострища
         if (distToDungeonTrail(x, z) < 3.4) return true;             // узкая тропа к пещере
@@ -989,7 +990,8 @@ export function createVillage(ctx) {
           if (Math.abs(x - fx) < fw / 2 + 2.5 && Math.abs(z - fz) < fd / 2 + 2.5) return true;
         }
         // вдоль тропинок лес не растёт — дороги должны быть видны
-        if (distToTrails(x, z) < TRAIL_W / 2 + 1.6) return true;
+        // (запас побольше: мягкий край полотна должен быть открытым)
+        if (distToTrails(x, z) < TRAIL_W / 2 + 3.4) return true;
         // вокруг зданий — поляна: деревья не растут вплотную к стенам
         for (const b of BUILDING_CLEARINGS) {
           if (Math.hypot(x - b[0], z - b[1]) < b[2]) return true;
@@ -1210,6 +1212,27 @@ export function createVillage(ctx) {
     const trailGroup = new THREE.Group();
     trailGroup.name = 'dungeonTrail';
     const stones = [];
+    // сплошное полотно: одна мягкая лента со скруглёнными поворотами
+    // (раньше здесь лежали отдельные прямоугольные куски, и в лесу тропа
+    // читалась как набор разрозненных камней)
+    {
+      const line = resample(smoothPolyline(trailPts, 3), 1.2);
+      const tex = ctx.T.dirt.clone();
+      tex.needsUpdate = true;
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      const matRoad = new THREE.MeshStandardMaterial({
+        map: tex, roughness: 0.98,
+        vertexColors: true, transparent: true, depthWrite: false,
+        polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6,
+      });
+      const road = new THREE.Mesh(
+        ribbonGeometry(line, 3.0, 0.045, { uScale: 0.36, vScale: 0.2, feather: 0.24, taper: 1.4 }),
+        matRoad,
+      );
+      road.receiveShadow = true;
+      road.renderOrder = 2;
+      trailGroup.add(road);
+    }
     for (let i = 0; i < trailPts.length - 1; i++) {
       const [ax, az] = trailPts[i];
       const [bx, bz] = trailPts[i + 1];
@@ -1217,24 +1240,6 @@ export function createVillage(ctx) {
       const len = Math.hypot(dx, dz);
       const n = Math.max(2, Math.round(len / 1.5));
       const ang = Math.atan2(dx, dz);
-      // сплошное полотно дороги: раньше здесь лежали отдельные плиты,
-      // и в лесу тропа читалась как набор разрозненных камней
-      {
-        const tex = ctx.T.dirt.clone();
-        tex.needsUpdate = true;
-        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-        tex.repeat.set(1.6, len / 3.2);
-        const matRoad = new THREE.MeshStandardMaterial({
-          map: tex, roughness: 0.98,
-          polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6,
-        });
-        const road = new THREE.Mesh(new THREE.PlaneGeometry(3.0, len), matRoad);
-        road.rotation.x = -Math.PI / 2;
-        road.rotation.z = -ang;
-        road.position.set((ax + bx) / 2, 0.045, (az + bz) / 2);
-        road.receiveShadow = true;
-        trailGroup.add(road);
-      }
       // редкие плоские камни, утопленные в полотно (не лежат поверх)
       for (let k = 0; k < n; k++) {
         const t = (k + 0.5) / n;

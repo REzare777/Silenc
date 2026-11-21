@@ -1,0 +1,10 @@
+import { chromium } from 'playwright';
+import { LAUNCH } from './browser.mjs';
+const browser = await chromium.launch(LAUNCH);
+const page = await browser.newPage({ viewport: { width: 400, height: 300 } });
+page.on('pageerror', (e) => console.log('PAGEERROR', e.message, '\n', (e.stack||'').split('\n').slice(0,6).join('\n')));
+page.on('console', (m) => { if (m.type() === 'error') console.log('CONSOLE', m.text()); });
+await page.goto('http://127.0.0.1:4205/?v=' + Date.now(), { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(6000);
+console.log('ready:', await page.evaluate(() => window.__villageReady));
+await browser.close();

@@ -20,6 +20,7 @@ import { fishingRod, fishingLine } from '../world/props.js';
 import {
   MAIN_W, CROSS_W, TRAIL_W, PLAZA_R, TRAILS,
 } from './roads.js';
+import { ribbonGeometry, discGeometry, smoothPolyline, resample } from './roadmesh.js';
 
 /**
  * Пруд: держим далеко от домов — на юго-восточной лужайке.
@@ -36,7 +37,7 @@ export const POND = { x: 50, z: -14, r: 10.6 };
  * @param {number} [color] оттенок
  * @returns {THREE.MeshStandardMaterial} материал
  */
-function pathMat(tex, rx, ry, color = 0xffffff) {
+function pathMat(tex, rx = 1, ry = 1, color = 0xffffff, soft = false) {
   const t = tex.clone();
   t.needsUpdate = true;
   t.repeat.set(rx, ry);
@@ -46,6 +47,11 @@ function pathMat(tex, rx, ry, color = 0xffffff) {
     // дорожки лежат сантиметрами выше земли — polygonOffset гарантирует,
     // что в местах пересечения не возникает z-fighting («фризит»)
     polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
+    // мягкий край: прозрачность приходит из цвета вершин, поэтому
+    // материал не сортируется и не мерцает на стыках дорог
+    ...(soft ? {
+      vertexColors: true, transparent: true, depthWrite: false,
+    } : {}),
   });
 }
 
@@ -101,37 +107,42 @@ export function addRoads(ctx) {
   // сеть дорог — её проверяют тесты планировки (дорога не идёт по воде
   // и не пересекает постройки)
   ctx.roadTrails = TRAILS;
-  const main = new THREE.Mesh(new THREE.PlaneGeometry(MAIN_W, 190), pathMat(ctx.T.dirt, 4, 80));
-  main.rotation.x = -Math.PI / 2;
-  main.position.set(0, PATH_Y.main, 0);
-  main.receiveShadow = true;
-  ctx.scene.add(main);
 
-  const cross = new THREE.Mesh(new THREE.PlaneGeometry(168, CROSS_W), pathMat(ctx.T.dirt, 60, 3));
-  cross.rotation.x = -Math.PI / 2;
-  cross.position.set(0, PATH_Y.cross, 0);
-  cross.receiveShadow = true;
-  ctx.scene.add(cross);
+  /** Собрать ленту дороги по точкам и добавить в сцену. */
+  const ribbon = (pts, width, y, tex, opts = {}) => {
+    const line = resample(smoothPolyline(pts, opts.rounds ?? 3), opts.step ?? 1.2);
+    if (line.length < 2) return null;
+    const geo = ribbonGeometry(line, width, { y, ...opts });
+    const mesh = new THREE.Mesh(geo, pathMat(tex, 1, 1, 0xffffff, true));
+    mesh.receiveShadow = true;
+    mesh.renderOrder = 2;
+    ctx.scene.add(mesh);
+    return mesh;
+  };
 
-  const plaza = new THREE.Mesh(new THREE.CircleGeometry(PLAZA_R, 48), pathMat(ctx.T.cobble, 4.5, 4.5));
-  plaza.rotation.x = -Math.PI / 2;
-  plaza.position.set(0, PATH_Y.plaza, 0);
-  plaza.receiveShadow = true;
-  ctx.scene.add(plaza);
+  // главная улица — вдоль Z, с мягкими краями и затуханием на концах
+  ribbon([[0, -96], [0, 96]], MAIN_W, PATH_Y.main, ctx.T.dirt, {
+    rounds: 0, step: 2.4, uScale: 0.3, vScale: 0.14, taper: 9,
+  });
+  // поперечная дорога — вдоль X
+  ribbon([[-84, 0], [84, 0]], CROSS_W, PATH_Y.cross, ctx.T.dirt, {
+    rounds: 0, step: 2.4, uScale: 0.3, vScale: 0.14, taper: 9,
+  });
 
+  // мощёная площадь — круг с растушёванным краем
+  {
+    const geo = discGeometry(PLAZA_R, { y: PATH_Y.plaza, feather: 0.3, scale: 0.22 });
+    const plaza = new THREE.Mesh(geo, pathMat(ctx.T.cobble, 1, 1, 0xffffff, true));
+    plaza.receiveShadow = true;
+    plaza.renderOrder = 3;
+    ctx.scene.add(plaza);
+  }
+
+  // тропинки: повороты скруглены, края мягкие
   for (const t of TRAILS) {
-    for (let i = 0; i < t.pts.length - 1; i++) {
-      const a = t.pts[i], b = t.pts[i + 1];
-      const dx = b[0] - a[0], dz = b[1] - a[1];
-      const len = Math.hypot(dx, dz);
-      if (len < 0.01) continue;
-      const p = new THREE.Mesh(new THREE.PlaneGeometry(TRAIL_W, len), pathMat(ctx.T.dirt, 1, len / 6));
-      p.rotation.x = -Math.PI / 2;
-      p.rotation.z = -Math.atan2(dx, dz);
-      p.position.set((a[0] + b[0]) / 2, PATH_Y.trail, (a[1] + b[1]) / 2);
-      p.receiveShadow = true;
-      ctx.scene.add(p);
-    }
+    ribbon(t.pts, TRAIL_W, PATH_Y.trail, ctx.T.dirt, {
+      rounds: 3, step: 1.1, uScale: 0.36, vScale: 0.17, taper: 1.6,
+    });
   }
 }
 
