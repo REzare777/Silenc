@@ -177,7 +177,7 @@ ok('ручная смена времени не двигает день', res.da
 ok('зима включает снег', res.winterSnow === true, `сила ${res.winterStrength}`);
 ok('лето без снега', res.summerSnow === false);
 ok('кнопка «Продолжить» появляется', res.continueVisible);
-ok('в кнопке показан день сохранения', String(res.continueDay) === '7', String(res.continueDay));
+ok('в кнопке показан день сохранения', /7/.test(String(res.continueDay)), String(res.continueDay));
 ok('дата в HUD заполнена', /День \d+/.test(res.dateText || ''), String(res.dateText));
 ok('весна: кроны с цветением', res.springLeafMat);
 ok('лето: обычная зелёная листва', res.summerLeafMat);

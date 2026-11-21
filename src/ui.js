@@ -20,7 +20,19 @@ export class UI {
     this.el = {
       start: document.getElementById('start'),
       begin: document.getElementById('begin'),
+      loadGame: document.getElementById('loadGame'),
       load: document.getElementById('load'),
+      death: document.getElementById('death'),
+      deathFade: document.getElementById('deathFade'),
+      deathReason: document.getElementById('deathReason'),
+      deathLastMeta: document.getElementById('deathLastMeta'),
+      deathLast: document.getElementById('deathLast'),
+      deathLoad: document.getElementById('deathLoad'),
+      deathTitle: document.getElementById('deathTitle'),
+      slots: document.getElementById('slots'),
+      slotsList: document.getElementById('slotsList'),
+      slotsClose: document.getElementById('slotsClose'),
+      slotsBtn: document.getElementById('slotsBtn'),
       prompt: document.getElementById('prompt'),
       promptText: document.getElementById('promptText'),
       toast: document.getElementById('toast'),
@@ -100,6 +112,14 @@ export class UI {
     this.onDialogTopic = null;
     this.onDialogClose = null;
     this.onStart = null;
+    this.onLoadGame = null;      // «Загрузить игру» на титульном экране
+    this.onSlotLoad = null;      // загрузить выбранный слот
+    this.onSlotSave = null;      // сохранить в выбранный слот
+    this.onDeathLast = null;     // «Загрузить последнее сохранение»
+    this.onDeathLoad = null;     // «Загрузить» — открыть список слотов
+    this.onDeathTitle = null;    // «В начало» — на титульный экран
+    this.onSlotsClose = null;
+    this.slotList = null;        // данные слотов (заполняет main.js)
     this.onTime = null;
     this.onQuality = null;
     this.onBloom = null;
@@ -134,6 +154,38 @@ export class UI {
   _bind() {
     this.el.begin.addEventListener('click', () => {
       if (this.onStart) this.onStart();
+    });
+    this.el.loadGame.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.onLoadGame) this.onLoadGame();
+    });
+    this.el.deathLast.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.onDeathLast) this.onDeathLast();
+    });
+    this.el.deathLoad.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.onDeathLoad) this.onDeathLoad();
+    });
+    this.el.deathTitle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.onDeathTitle) this.onDeathTitle();
+    });
+    this.el.slotsBtn && this.el.slotsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.onSlotsOpen) this.onSlotsOpen();
+    });
+    this.el.slotsClose.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.hideSlots();
+      if (this.onSlotsClose) this.onSlotsClose();
+    });
+    this.el.slots.addEventListener('click', (e) => {
+      // клик мимо списка — закрыть окно
+      if (e.target === this.el.slots) {
+        this.hideSlots();
+        if (this.onSlotsClose) this.onSlotsClose();
+      }
     });
     this.el.timebar.querySelectorAll('button').forEach((b) => {
       b.addEventListener('click', (e) => {
@@ -249,7 +301,126 @@ export class UI {
   setContinue(on, day) {
     if (!this.el.continue) return;
     this.el.continue.classList.toggle('hidden', !on);
-    if (on && this.el.contDay) this.el.contDay.textContent = day ?? 1;
+    if (on && this.el.contDay) this.el.contDay.textContent = `· день ${day ?? 1}`;
+  }
+
+  /* ================================================================
+   *  Экран смерти
+   * ================================================================ */
+
+  /**
+   * Затемнить кадр — падение игрока.
+   *
+   * @param {number} k 0 — светло, 1 — черно
+   */
+  setDeathFade(k) {
+    if (!this.el.deathFade) return;
+    this.el.deathFade.style.opacity = String(Math.max(0, Math.min(1, k)) * 0.82);
+  }
+
+  /**
+   * Показать экран «Погиб».
+   *
+   * @param {string} reason причина смерти
+   * @param {object} [meta] данные последнего сохранения
+   */
+  showDeath(reason, meta) {
+    if (!this.el.death) return;
+    if (this.el.deathReason) this.el.deathReason.textContent = reason || 'Вы пали.';
+    if (this.el.deathLastMeta) {
+      this.el.deathLastMeta.textContent = meta && meta.exists
+        ? `последнее сохранение — день ${meta.day}, ${meta.seasonName || meta.season} · ${meta.coins} зол.`
+        : 'сохранений нет';
+    }
+    this.el.death.classList.add('on');
+    // плавное появление: сначала фон, потом содержимое
+    requestAnimationFrame(() => this.el.death.classList.add('shown'));
+    document.body.classList.add('uiFocus');
+    if (document.pointerLockElement) document.exitPointerLock();
+  }
+
+  /** Скрыть экран «Погиб». */
+  hideDeath() {
+    if (!this.el.death) return;
+    this.el.death.classList.remove('on', 'shown');
+    this.setDeathFade(0);
+    document.body.classList.remove('uiFocus');
+  }
+
+  get deathOpen() {
+    return this.el.death && this.el.death.classList.contains('on');
+  }
+
+  /* ================================================================
+   *  Окно загрузки (слоты)
+   * ================================================================ */
+
+  /**
+   * Открыть окно загрузки.
+   *
+   * @param {Array} slots данные слотов (см. `listSlots` в game/save.js)
+   */
+  showSlots(slots) {
+    if (!this.el.slots) return;
+    this.slotList = slots || [];
+    this._renderSlots();
+    this.el.slots.classList.add('on');
+    document.body.classList.add('uiFocus');
+    if (document.pointerLockElement) document.exitPointerLock();
+  }
+
+  /** Закрыть окно загрузки. */
+  hideSlots() {
+    if (!this.el.slots) return;
+    this.el.slots.classList.remove('on');
+    if (!this.deathOpen) document.body.classList.remove('uiFocus');
+  }
+
+  get slotsOpen() {
+    return this.el.slots && this.el.slots.classList.contains('on');
+  }
+
+  /**
+   * Перерисовать список слотов.
+   */
+  _renderSlots() {
+    const list = this.el.slotsList;
+    if (!list) return;
+    const fmt = (ts) => {
+      if (!ts) return '';
+      const d = new Date(ts);
+      const p2 = (n) => String(n).padStart(2, '0');
+      return `${p2(d.getDate())}.${p2(d.getMonth() + 1)} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+    };
+    const seasonName = { spring: 'весна', summer: 'лето', autumn: 'осень', winter: 'зима' };
+    let html = '';
+    for (const s of this.slotList || []) {
+      const meta = s.exists
+        ? `День ${s.day}, ${seasonName[s.season] || s.season} · ${s.coins} зол.${s.at ? ' · ' + fmt(s.at) : ''}`
+        : 'пусто';
+      const isAuto = s.key === 'last';
+      html += `<div class="slotRow ${isAuto ? 'auto' : ''} ${s.exists ? '' : 'empty'}" data-key="${s.key}" data-index="${s.index}">
+        <div class="slotInfo"><b>${s.title}</b><span>${meta}</span></div>
+        <div class="slotActs">
+          <button data-act="load"${s.exists ? '' : ' disabled'}>Загрузить</button>
+          ${isAuto ? '' : `<button data-act="save">Сохранить</button>`}
+        </div>
+      </div>`;
+    }
+    list.innerHTML = html;
+    list.querySelectorAll('.slotActs button').forEach((b) => {
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const row = b.closest('.slotRow');
+        const key = row.dataset.key;
+        const index = +row.dataset.index;
+        if (b.dataset.act === 'load') {
+          if (this.onSlotLoad) this.onSlotLoad(key, index);
+        } else if (this.onSlotSave) {
+          this.onSlotSave(key, index);
+        }
+      });
+    });
   }
 
   /** Часы в углу: текущий период и сколько осталось до следующего. */

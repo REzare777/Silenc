@@ -285,11 +285,21 @@ export function createShadows(ctx) {
    *
    * @param {object} s тень
    */
+  /** Бой приостановлен (игрок погиб или загрузка новой игры). */
+  let paused = false;
+
   function hitPlayer(s) {
     if (playerInvuln > 0) return;
     const stats = ctx.stats;
     stats.damage(SHADOW.damage);
-    if (stats.hp < 1) stats.hp = 1;              // смерти нет
+    // Здоровье может упасть до нуля — тогда игрок погибает.
+    if (stats.hp <= 0) {
+      stats.hp = 0;
+      if (ctx.systems && ctx.systems.death) {
+        ctx.systems.death.kill('Тень забрала вас в пещере. Тьма сомкнулась.');
+      }
+      return;
+    }
     playerInvuln = SHADOW.invuln;
     playerStun = SHADOW.playerStun;
     // вытолкнуть игрока
@@ -315,6 +325,7 @@ export function createShadows(ctx) {
    * @param {number} t время
    */
   function update(dt, t) {
+    if (paused) return;
     if (!list.length) return;
     playerInvuln = Math.max(0, playerInvuln - dt);
     playerStun = Math.max(0, playerStun - dt);
@@ -428,7 +439,12 @@ export function createShadows(ctx) {
         s.group.rotation.y += d * Math.min(1, dt * 6);
       }
 
-      // контакт с игроком
+      // Контакт с игроком.
+      //
+      // Бросок — это внезапный наскок, и раненого (HP ≤ 25) в списке
+      // «не догоняют»: тень не бросается сама. Но если она уже подошла
+      // вплотную, она бьёт — иначе раненый был бы бессмертным, а значит
+      // и смерть в пещере была бы невозможна.
       if (s.state === 'lunge' && dist < SHADOW.contact) {
         hitPlayer(s);
         s.state = 'recoil';
@@ -436,6 +452,8 @@ export function createShadows(ctx) {
         s.vx = (dx / l) * SHADOW.knock * 3;
         s.vz = (dz / l) * SHADOW.knock * 3;
         s.stun = SHADOW.stun;
+      } else if (s.state === 'stalk' && dist < SHADOW.contact * 0.75) {
+        hitPlayer(s);
       }
 
       // угроза для HUD
@@ -477,6 +495,10 @@ export function createShadows(ctx) {
   return {
     list, spawn, clear, update, strike, flare, makeNoise, aimTarget,
     guardsCleared, guardsLeft,
+    /** Заморозить тени (игрок погиб — бой окончен). */
+    pause() { paused = true; },
+    /** Разбудить тени обратно. */
+    resume() { paused = false; },
     get playerInvuln() { return playerInvuln; },
     get playerStun() { return playerStun; },
   };

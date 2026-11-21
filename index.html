@@ -163,25 +163,86 @@
     background:linear-gradient(180deg,#fff3dd,#e0a95c);-webkit-background-clip:text;background-clip:text;color:transparent}
   #card .sub{font-size:10.5px;letter-spacing:.42em;color:var(--ink-dim);text-transform:uppercase;margin-top:10px}
   #card p{font-size:13.5px;line-height:1.75;color:#cdbda3;margin:20px auto 24px;max-width:430px}
-  #keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:9px;margin:0 auto 26px;max-width:470px}
+  #keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(136px,1fr));gap:8px;margin:0 auto 24px;max-width:470px}
   #keys div{display:flex;align-items:center;gap:9px;justify-content:flex-start;font-size:11.5px;color:var(--ink-dim);
-    background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:8px 11px;text-align:left}
+    background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:8px 11px;
+    text-align:left;white-space:nowrap}
   #keys kbd{font:inherit;font-size:10px;font-weight:600;color:var(--gold);background:rgba(232,177,99,.13);
-    border:1px solid rgba(232,177,99,.28);border-radius:5px;padding:2px 6px}
-  #begin{appearance:none;border:1px solid rgba(232,177,99,.45);background:linear-gradient(180deg,rgba(232,177,99,.22),rgba(232,177,99,.1));
-    color:#ffe7bf;font:inherit;font-size:13.5px;letter-spacing:.2em;text-transform:uppercase;padding:14px 40px;border-radius:11px;
-    cursor:pointer;transition:.25s;pointer-events:auto}
-  #begin:hover{background:linear-gradient(180deg,rgba(232,177,99,.34),rgba(232,177,99,.16));transform:translateY(-1px);
+    border:1px solid rgba(232,177,99,.28);border-radius:5px;padding:2px 6px;white-space:nowrap}
+  /* ---------- кнопки титульного экрана ---------- */
+  #startBtns{display:flex;flex-direction:column;align-items:center;gap:12px;margin:26px auto 24px;max-width:420px}
+  #startRow{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  #startBtns button{appearance:none;font:inherit;cursor:pointer;transition:.22s;pointer-events:auto;
+    border-radius:11px;text-transform:uppercase;letter-spacing:.18em;font-size:11.5px;padding:11px 24px;
+    border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);color:var(--ink-dim)}
+  #startBtns button:hover{color:var(--ink);background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3);transform:translateY(-1px)}
+  #startBtns button.primary{border:1px solid rgba(232,177,99,.45);
+    background:linear-gradient(180deg,rgba(232,177,99,.24),rgba(232,177,99,.1));
+    color:#ffe7bf;font-size:13px;letter-spacing:.2em;padding:14px 46px}
+  #startBtns button.primary:hover{background:linear-gradient(180deg,rgba(232,177,99,.36),rgba(232,177,99,.16));
     box-shadow:0 12px 30px rgba(232,177,99,.18)}
-  #continue{appearance:none;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);
-    color:var(--ink-dim);font:inherit;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
-    padding:10px 26px;border-radius:10px;cursor:pointer;transition:.25s;pointer-events:auto;margin-top:10px}
-  #continue:hover{color:var(--ink);background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3)}
+  #startBtns button:disabled{opacity:.4;cursor:not-allowed;transform:none}
   #continue.hidden{display:none}
+  #continue span{color:var(--gold);margin-left:8px}
+  #card .tagline{font-size:13px;line-height:1.7;color:#c6b69c;margin:14px auto 0;max-width:400px}
+  #keys{margin-top:4px}
+  /* ---------- затемнение при смерти ---------- */
+  #deathFade{position:fixed;inset:0;z-index:34;pointer-events:none;background:#070504;opacity:0;transition:opacity .12s linear}
+  /* ---------- экран «Погиб» ---------- */
+  #death{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;
+    background:radial-gradient(120% 90% at 50% 40%,rgba(40,10,8,.42),rgba(5,4,4,.9));
+    backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);opacity:0;transition:opacity .8s ease}
+  #death.on{display:flex}
+  #death.shown{opacity:1}
+  .deathCard{width:min(520px,92vw);padding:34px 38px 30px;text-align:center}
+  .deathCard .deathMark{width:52px;height:52px;margin:0 auto 14px}
+  .deathCard h2{font-family:"Cormorant Garamond",Georgia,serif;font-size:clamp(28px,4.6vw,40px);font-weight:600;
+    letter-spacing:.06em;color:#e9c9a2;margin:0}
+  .deathCard p{font-size:13px;line-height:1.7;color:#b6a794;margin:12px 0 8px}
+  .deathMeta{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:20px}
+  #deathBtns{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .deathRow{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  #deathBtns button{appearance:none;font:inherit;cursor:pointer;transition:.22s;border-radius:11px;
+    text-transform:uppercase;letter-spacing:.16em;font-size:11.5px;padding:11px 24px;
+    border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);color:var(--ink-dim)}
+  #deathBtns button:hover{color:var(--ink);background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3);transform:translateY(-1px)}
+  #deathBtns button.primary{border:1px solid rgba(232,177,99,.45);
+    background:linear-gradient(180deg,rgba(232,177,99,.24),rgba(232,177,99,.1));color:#ffe7bf;font-size:12.5px;padding:13px 34px}
+  #deathBtns button.primary:hover{background:linear-gradient(180deg,rgba(232,177,99,.36),rgba(232,177,99,.16));
+    box-shadow:0 12px 30px rgba(232,177,99,.18)}
+  /* ---------- окно загрузки (слоты) ---------- */
+  #slots{position:fixed;inset:0;z-index:42;display:none;align-items:center;justify-content:center;
+    background:rgba(6,5,4,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  #slots.on{display:flex}
+  .slotsCard{width:min(560px,94vw);max-height:86vh;overflow:auto;padding:26px 28px 22px}
+  .slotsHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .slotsHead h2{font-family:"Cormorant Garamond",Georgia,serif;font-size:24px;font-weight:600;letter-spacing:.04em;margin:0;color:#e9c9a2}
+  #slotsClose{appearance:none;background:none;border:1px solid rgba(255,255,255,.14);color:var(--ink-dim);
+    width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:12px;line-height:1;transition:.2s}
+  #slotsClose:hover{color:var(--ink);border-color:rgba(255,255,255,.32);background:rgba(255,255,255,.07)}
+  .slotRow{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:11px;margin-bottom:8px;
+    border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035)}
+  .slotRow.empty{opacity:.5}
+  .slotRow.auto{border-color:rgba(232,177,99,.26);background:rgba(232,177,99,.06)}
+  .slotInfo{flex:1;min-width:0;text-align:left}
+  .slotInfo b{display:block;font-size:12.5px;font-weight:600;color:var(--ink);letter-spacing:.02em}
+  .slotInfo span{display:block;font-size:10.5px;color:var(--ink-dim);margin-top:3px;letter-spacing:.04em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .slotActs{display:flex;gap:7px;flex:0 0 auto}
+  .slotActs button{appearance:none;font:inherit;cursor:pointer;transition:.2s;border-radius:8px;
+    font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:8px 13px;
+    border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:var(--ink-dim)}
+  .slotActs button:hover{color:var(--ink);background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3)}
+  .slotActs button:disabled{opacity:.35;cursor:not-allowed}
+  .slotsFoot{font-size:10px;color:var(--ink-dim);letter-spacing:.14em;text-transform:uppercase;margin-top:14px;text-align:center}
   #saveBtn{appearance:none;border:1px solid rgba(232,177,99,.3);background:rgba(232,177,99,.1);color:var(--gold);
     font:inherit;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;padding:11px 24px;border-radius:10px;
     cursor:pointer;transition:.25s;margin:0 6px 10px}
   #saveBtn:hover{background:rgba(232,177,99,.2)}
+  #slotsBtn{appearance:none;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:var(--ink-dim);
+    font:inherit;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;padding:11px 24px;border-radius:10px;
+    cursor:pointer;transition:.25s;margin:0 6px 10px}
+  #slotsBtn:hover{color:var(--ink);background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3)}
   #load{font-size:11px;color:var(--ink-dim);letter-spacing:.24em;text-transform:uppercase;margin-top:18px;min-height:16px}
   /* ---------- меню настроек ---------- */
   #menu{position:fixed;inset:0;z-index:25;display:none;align-items:center;justify-content:center;pointer-events:auto;
@@ -577,6 +638,7 @@
         </div>
       </div>
       <button id="saveBtn">Сохранить игру</button>
+      <button id="slotsBtn">Слоты…</button>
       <button id="resume">Продолжить</button>
       <div class="mHint">WASD — идти · Space — прыжок · T — время суток · P — фото-режим · M — звук<br>
         Esc — это меню · кликните по сцене, чтобы вернуть управление · C — показать границы столкновений</div>
@@ -595,8 +657,16 @@
     </svg>
     <h2>Шёпот-Долина</h2>
     <div class="sub">интерактивная прогулка</div>
-    <p>Затишье у барака «Уставший вепрь». Огонь в очагах, тёплые окна, запах дыма.
-       Никто не торопит — бродите, слушайте колокол, загляните в таверну.</p>
+    <p class="tagline">Тёплые окна, колокол над селом и тень под скалой.</p>
+
+    <div id="startBtns">
+      <button id="begin" class="primary">Начать игру</button>
+      <div id="startRow">
+        <button id="continue" class="hidden">Продолжить<span id="contDay"></span></button>
+        <button id="loadGame">Загрузить игру</button>
+      </div>
+    </div>
+
     <div id="keys">
       <div><kbd>W A S D</kbd> движение</div>
       <div><kbd>Shift</kbd> бег</div>
@@ -604,12 +674,45 @@
       <div><kbd>Мышь</kbd> обзор</div>
       <div><kbd>E</kbd> действие</div>
       <div><kbd>T</kbd> время суток</div>
+      <div><kbd>I</kbd> инвентарь</div>
       <div><kbd>Esc</kbd> меню</div>
-    <div><kbd>C</kbd> границы</div>
     </div>
-    <button id="begin">Войти в долину</button>
-    <button id="continue" class="hidden">Продолжить — день <span id="contDay">1</span></button>
     <div id="load">подготовка долины…</div>
+  </div>
+</div>
+
+<!-- ---------- затемнение при смерти ---------- -->
+<div id="deathFade"></div>
+
+<!-- ---------- экран «Погиб» ---------- -->
+<div id="death">
+  <div class="deathCard panel">
+    <svg class="deathMark" viewBox="0 0 64 64" fill="none">
+      <circle cx="32" cy="32" r="27" stroke="#b4544a" stroke-width="1" opacity=".5"/>
+      <path d="M32 14v24M20 26h24" stroke="#b4544a" stroke-width="2.4" stroke-linecap="round"/>
+    </svg>
+    <h2>Погиб</h2>
+    <p id="deathReason">Вы пали.</p>
+    <div id="deathLastMeta" class="deathMeta"></div>
+    <div id="deathBtns">
+      <button id="deathLast" class="primary">Загрузить последнее сохранение</button>
+      <div class="deathRow">
+        <button id="deathLoad">Загрузить</button>
+        <button id="deathTitle">В начало</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ---------- окно загрузки (слоты) ---------- -->
+<div id="slots">
+  <div class="slotsCard panel">
+    <div class="slotsHead">
+      <h2>Загрузка игры</h2>
+      <button id="slotsClose" title="Закрыть">✕</button>
+    </div>
+    <div id="slotsList"></div>
+    <div class="slotsFoot">Ручные слоты не перетираются автосохранением.</div>
   </div>
 </div>
 

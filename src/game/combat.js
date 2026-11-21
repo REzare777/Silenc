@@ -333,6 +333,18 @@ export function createCombat(ctx) {
     state, brand, firePoints,
     update, strike, flare, toggleTorch, setActive, prompt, aimTarget,
     addFirePoint, holdBrand,
+    /**
+     * Заморозить бой (например, когда игрок погиб): факел не тратит
+     * топливо, удары и вспышки не работают.
+     */
+    pause() {
+      state.active = false;
+      state.threat = 0;
+    },
+    /** Разбудить бой обратно. */
+    resume() {
+      state.active = true;
+    },
     /** Доля топлива 0..1 — для полоски в HUD. */
     get fuelRatio() { return state.fuel / COMBAT.fuelMax; },
   };

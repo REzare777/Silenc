@@ -74,12 +74,16 @@ import { setForestRange } from './world/forest.js';
 import { fishById } from './world/fish.js';
 import { createSnow } from './world/snow.js';
 import { createCalendar } from './game/calendar.js';
-import { snapshot, applySnapshot, writeSave, readSave, hasSave, clearSave } from './game/save.js';
+import {
+  snapshot, applySnapshot, writeSave, readSave, hasSave, clearSave,
+  listSlots, readSlot, writeSlot, SLOT_COUNT,
+} from './game/save.js';
 import { createAnimalsSystem } from './game/animals.js';
 import { createFishingSystem } from './game/fishing.js';
 import { createLocations } from './game/locations.js';
 import { createCombat, COMBAT } from './game/combat.js';
 import { createShadows } from './game/shadows.js';
+import { createDeath } from './game/death.js';
 import { createDialog } from './game/dialog.js';
 import { createInteractions } from './game/interactions.js';
 import { createBag } from './game/bag.js';
@@ -351,8 +355,16 @@ ctx.systems.locations = createLocations(ctx);
 // боёвка: факел в руке и тени в подземелье
 ctx.systems.combat = createCombat(ctx);
 ctx.systems.shadows = createShadows(ctx);
+// смерть: падение и экран «Погиб». Появилась вместе с сохранениями —
+// теперь проиграть можно, и это должно быть честно.
+ctx.systems.death = createDeath(ctx);
+// модуль смерти спрашивает последнее сохранение — чтобы показать игроку,
+// куда его вернёт кнопка «Загрузить последнее сохранение»
+ctx.readSave = readSave;
+ctx.systems.saveToSlot = saveToSlot;
 const combat = ctx.systems.combat;
 const shadows = ctx.systems.shadows;
+const death = ctx.systems.death;
 
 // Огонь — единственный источник света, топлива и лечения.
 // Жаровни в пещере, костёр за селом, очаг в таверне.
@@ -474,6 +486,84 @@ function loadGame() {
 }
 
 /**
+ * Начать новую игру с нуля.
+ *
+ * Сохранения при этом не трогаются: ручные слоты остаются на месте,
+ * «последнее сохранение» перезапишется первым же автосейвом.
+ */
+function newGame() {
+  // календарь — в начало года
+  if (ctx.calendar) {
+    ctx.calendar.restore(1, 'spring', 1);
+    ctx.calendar.applyLook();
+  }
+  // игрок — на стартовую точку (та же, что и при первой загрузке игры)
+  ctx.player.teleport(0, 16, 0);
+  ctx.player.acceptInput = true;
+  // характеристики
+  if (ctx.stats) {
+    ctx.stats.hp = ctx.stats.maxHp;
+    ctx.stats.stamina = ctx.stats.maxStamina;
+    ctx.stats.mana = ctx.stats.maxMana ?? 100;
+    ctx.stats.coins = 30;
+  }
+  // инвентарь и улов — пусто
+  if (ctx.inventory) {
+    ctx.inventory.slots.fill(null);
+    ctx.inventory.held = null;
+    ctx.inventory.heldFrom = -1;
+    if (ctx.inventory.touch) ctx.inventory.touch();
+  }
+  ctx.caught = {};
+  ctx.flags = {};
+  if (ctx.ui) {
+    ctx.ui.setDate(ctx.calendar ? ctx.calendar.label() : '');
+    ctx.ui.renderInventory(ctx.systems.bag ? ctx.systems.bag.inventory : null);
+  }
+}
+
+/**
+ * Загрузить слот по ключу ('last' или 'slot1'..'slot3').
+ *
+ * @param {string} key ключ слота
+ * @param {number} index номер слота (0 — последнее сохранение)
+ * @returns {boolean} удалось ли
+ */
+function loadSlot(key, index) {
+  const data = index === 0 ? readSave() : readSlot(index);
+  if (!data) {
+    if (ctx.ui) ctx.ui.toast('Сохранение не найдено или повреждено.', 3200);
+    return false;
+  }
+  applySnapshot(ctx, data);
+  // смерть отменяется: игрок снова жив, бой возобновляется
+  death.revive();
+  if (ctx.ui) {
+    ctx.ui.setDate(ctx.calendar ? ctx.calendar.label() : '');
+    ctx.ui.renderInventory(ctx.systems.bag ? ctx.systems.bag.inventory : null);
+    ctx.ui.hideSlots();
+  }
+  return true;
+}
+
+/**
+ * Сохранить текущее состояние в слот.
+ *
+ * @param {number} index номер ручного слота (1..SLOT_COUNT)
+ * @returns {boolean} удалось ли
+ */
+function saveToSlot(index) {
+  if (index < 1 || index > SLOT_COUNT) return false;
+  const ok = writeSlot(index, snapshot(ctx));
+  if (ctx.ui) {
+    ctx.ui.toast(ok ? `Сохранено в слот ${index}.` : 'Не удалось сохранить в слот.',
+      ok ? 2200 : 3600);
+    if (ctx.ui.slotList) ctx.ui.showSlots(listSlots());
+  }
+  return ok;
+}
+
+/**
  * Закрыть окно настроек и вернуться к игре.
  */
 function resumeGame() {
@@ -498,44 +588,91 @@ const colliderDebug = createColliderDebug(ctx);
 bindSettings(ctx);
 loadVolume(ctx);
 
-ui.onStart = () => {
+ui.onResume = () => resumeGame();
+ui.onSave = () => saveGame();
+// «Слоты…» в меню паузы: сохранить в ручной слот прямо из игры
+ui.onSlotsOpen = () => {
+  ui.showSlots(listSlots());
+};
+
+/** Войти в игру: общие шаги для «Начать», «Продолжить» и загрузки слота. */
+function enterGame(message) {
   started = true;
   ui.hideStart();
+  ui.hideDeath();
   ui.renderInventory(bag.inventory);
   ambience.start();
   ambience.setVolume(loadVolume(ctx));
   ambience.setMuted(!ui.el.tSound.classList.contains('on'));
   cine.active = false;
   player.enabled = true;
+  player.acceptInput = true;
   player.requestLock();
+  if (message) ui.toast(message, 3200);
   setTimeout(() => {
-    if (!document.pointerLockElement) {
+    if (!document.pointerLockElement && ctx.mode === 'play') {
       ui.toast('Захват мыши недоступен — осматривайтесь, зажав левую кнопку.', 5200);
-    } else {
-      ui.toast('Добро пожаловать в долину. Идите, куда зовёт сердце.', 3800);
     }
   }, 900);
+}
+
+// «Начать игру» — новая игра с нуля, сохранения не трогаем
+ui.onStart = () => {
+  newGame();
+  enterGame('Добро пожаловать в долину. Идите, куда зовёт сердце.');
 };
 
-ui.onResume = () => resumeGame();
-ui.onSave = () => saveGame();
-// «Продолжить» на титульном экране: грузим сохранение и сразу входим в игру
+// «Продолжить» на титульном экране: грузим последнее сохранение и входим в игру
 ui.onContinue = () => {
-  const ok = loadGame();
-  if (!ok) {
+  if (!loadGame()) {
     ui.toast('Сохранение не найдено или повреждено.', 3200);
     return;
   }
-  started = true;
-  ui.hideStart();
-  ui.renderInventory(bag.inventory);
-  ambience.start();
-  ambience.setVolume(loadVolume(ctx));
-  ambience.setMuted(!ui.el.tSound.classList.contains('on'));
-  cine.active = false;
-  player.enabled = true;
-  player.requestLock();
-  ui.toast(`С возвращением. ${ctx.calendar.label()}.`, 3200);
+  death.revive();
+  enterGame(`С возвращением. ${ctx.calendar.label()}.`);
+};
+
+// «Загрузить игру» — окно со слотами
+ui.onLoadGame = () => {
+  ui.showSlots(listSlots());
+};
+
+// Загрузка выбранного слота
+ui.onSlotLoad = (key, index) => {
+  if (!loadSlot(key, index)) return;
+  enterGame(`Загружено. ${ctx.calendar.label()}.`);
+};
+
+// Сохранение в выбранный слот
+ui.onSlotSave = (key, index) => {
+  saveToSlot(index);
+};
+
+// Экран смерти: «Загрузить последнее сохранение»
+ui.onDeathLast = () => {
+  if (!loadSlot('last', 0)) return;
+  death.revive();
+  enterGame(`Вы вернулись. ${ctx.calendar.label()}.`);
+};
+
+// Экран смерти: «Загрузить» — игрок сам выбирает слот
+ui.onDeathLoad = () => {
+  ui.showSlots(listSlots());
+};
+
+// Экран смерти: «В начало» — на титульный экран
+ui.onDeathTitle = () => {
+  ui.hideDeath();
+  ui.hideSlots();
+  ui.setDeathFade(0);
+  ctx.mode = 'menu';
+  started = false;
+  player.enabled = false;
+  player.acceptInput = false;
+  if (combat.pause) combat.pause();
+  if (shadows.pause) shadows.pause();
+  ui.el.start.classList.remove('gone');
+  ui.setContinue(hasSave(), readSave() ? readSave().day : 1);
 };
 
 /* ================================================================== *
@@ -872,12 +1009,16 @@ function loop() {
   } else {
     combat.update(dt, t);
   }
+  // смерть: падение камеры и экран «Погиб»
+  death.update(dt);
   // автосохранение раз в минуту реального времени — чтобы прогресс не пропал,
   // даже если игрок закрыл вкладку не по сюжету
   autosaveAccum += dt;
   if (autosaveAccum >= 60) {
     autosaveAccum = 0;
-    if (started && ctx.loc === 'village') autosave();
+    // мёртвому игроку сохранять нечего: «последнее сохранение» должно
+    // остаться тем, с которого можно вернуться после смерти
+    if (started && ctx.loc === 'village' && !death.isDead) autosave();
   }
   ui.setCombat(ctx.loc === 'dungeon');
   if (ctx.loc === 'dungeon') {
@@ -1069,6 +1210,9 @@ window.__dbg = {
     viewmodel.hold(model, { grip: 'two', pose: 'present', scale: 0.16, life: 0, ...opts });
     return spec.name;
   },
+  // слоты и смерть — для проверок и отладки
+  listSlots, loadSlot, saveToSlot,
+  death, combat, shadows,
   startFishing: fishing.startFishing, hookFish: fishing.hookFish,
   updateFishing: fishing.updateFishing, toggleInventory: bag.toggle,
   rollFish: fishing.rollFish, FISH,

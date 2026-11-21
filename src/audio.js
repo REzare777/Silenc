@@ -542,6 +542,54 @@ export class Ambience {
     src.start(t); src.stop(t + 0.9);
   }
 
+  /**
+   * Смерть: глухой удар, потом два затихающих удара сердца.
+   *
+   * Звук должен работать и в деревне, поэтому он не завязан на пещерный bus.
+   */
+  death() {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    // удар тела о пол
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(120, t);
+    o.frequency.exponentialRampToValueAtTime(38, t + 0.5);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.26, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+    o.connect(g).connect(this.master);
+    o.start(t); o.stop(t + 1.0);
+    // шорох одежды о землю
+    const src = ctx.createBufferSource();
+    src.buffer = this.nodes.noiseBuf;
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 420;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.0001, t);
+    ng.gain.exponentialRampToValueAtTime(0.07, t + 0.05);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+    src.connect(f).connect(ng).connect(this.master);
+    src.start(t); src.stop(t + 0.8);
+    // сердце: два удара, всё тише
+    [0.55, 1.05].forEach((dt, i) => {
+      const s = t + dt;
+      const b = ctx.createOscillator();
+      const bg = ctx.createGain();
+      b.type = 'sine';
+      b.frequency.setValueAtTime(66, s);
+      b.frequency.exponentialRampToValueAtTime(30, s + 0.35);
+      bg.gain.setValueAtTime(0.0001, s);
+      bg.gain.exponentialRampToValueAtTime(i === 0 ? 0.17 : 0.09, s + 0.04);
+      bg.gain.exponentialRampToValueAtTime(0.0001, s + 0.5);
+      b.connect(bg).connect(this.master);
+      b.start(s); b.stop(s + 0.6);
+    });
+  }
+
   /** Тонкий кристаллический звон — отзывается самоцвет. */
   crystalChime() {
     if (!this.ctx || !this.enabled) return;

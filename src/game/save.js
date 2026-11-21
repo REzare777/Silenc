@@ -34,8 +34,14 @@
  *  @module game/save
  */
 
-/** Ключ в localStorage. */
+/** Ключ в localStorage для «последнего сохранения». */
 export const SAVE_KEY = 'wv.save.v1';
+
+/** Ключ в localStorage для ручных слотов (1, 2, 3). */
+export const SLOTS_KEY = 'wv.slots.v1';
+
+/** Сколько ручных слотов у игрока. */
+export const SLOT_COUNT = 3;
 
 /** Номер формата сохранения. Повышается при несовместимых изменениях. */
 export const SAVE_VERSION = 1;
@@ -135,6 +141,145 @@ export function clearSave() {
  */
 export function hasSave() {
   return !!readSave();
+}
+
+/* ============================================================================
+ *  Слоты
+ *  =========================================================================
+ *
+ *  «Последнее сохранение» — один слот, который перезаписывается автосейвом
+ *  и кнопкой «Сохранить игру». А ручные слоты — три места, куда игрок
+ *  кладёт состояние сам: они не перетираются, и в них можно вернуться
+ *  после смерти.
+ */
+
+/**
+ * Ключ слота в localStorage.
+ *
+ * @param {number} i номер слота (1..SLOT_COUNT)
+ * @returns {string}
+ */
+function slotKey(i) {
+  return `${SLOTS_KEY}.${i}`;
+}
+
+/**
+ * Прочитать ручной слот.
+ *
+ * @param {number} i номер слота (1..SLOT_COUNT)
+ * @returns {object|null} сохранение или null
+ */
+export function readSlot(i) {
+  if (!Number.isInteger(i) || i < 1 || i > SLOT_COUNT) return null;
+  let raw = null;
+  try {
+    if (fileStore) {
+      raw = fileStore.readSlot ? fileStore.readSlot(i) : null;
+    } else {
+      raw = globalThis.localStorage ? localStorage.getItem(slotKey(i)) : null;
+    }
+  } catch (e) {
+    return null;
+  }
+  if (!raw) return null;
+  try {
+    const data = JSON.parse(raw);
+    if (!data || typeof data !== 'object' || data.v !== SAVE_VERSION) return null;
+    return data;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Записать ручной слот.
+ *
+ * @param {number} i номер слота (1..SLOT_COUNT)
+ * @param {object} data объект состояния
+ * @returns {boolean} удалось ли
+ */
+export function writeSlot(i, data) {
+  if (!Number.isInteger(i) || i < 1 || i > SLOT_COUNT) return false;
+  if (!data || typeof data !== 'object') return false;
+  const payload = { ...data, v: SAVE_VERSION, at: Date.now() };
+  let raw;
+  try {
+    raw = JSON.stringify(payload);
+  } catch (e) {
+    return false;
+  }
+  try {
+    if (fileStore) {
+      if (fileStore.writeSlot) return !!fileStore.writeSlot(i, raw);
+      return false;
+    }
+    if (!globalThis.localStorage) return false;
+    localStorage.setItem(slotKey(i), raw);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Очистить ручной слот.
+ *
+ * @param {number} i номер слота
+ * @returns {boolean}
+ */
+export function clearSlot(i) {
+  if (!Number.isInteger(i) || i < 1 || i > SLOT_COUNT) return false;
+  try {
+    if (fileStore) {
+      if (fileStore.clearSlot) return !!fileStore.clearSlot(i);
+      return false;
+    }
+    if (globalThis.localStorage) localStorage.removeItem(slotKey(i));
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Список слотов с краткими данными — для меню загрузки.
+ *
+ * Первый элемент — «последнее сохранение», дальше ручные слоты.
+ *
+ * @returns {{key:string,index:number,title:string,exists:boolean,day:number,
+ *   season:string,year:number,coins:number,tod:string,at:number}[]}
+ */
+export function listSlots() {
+  const out = [];
+  const last = readSave();
+  out.push({
+    key: 'last',
+    index: 0,
+    title: 'Последнее сохранение',
+    exists: !!last,
+    day: last ? last.day : 0,
+    season: last ? last.season : '',
+    year: last ? last.year : 1,
+    coins: last ? last.coins : 0,
+    tod: last ? last.tod : '',
+    at: last ? last.at : 0,
+  });
+  for (let i = 1; i <= SLOT_COUNT; i++) {
+    const s = readSlot(i);
+    out.push({
+      key: `slot${i}`,
+      index: i,
+      title: `Слот ${i}`,
+      exists: !!s,
+      day: s ? s.day : 0,
+      season: s ? s.season : '',
+      year: s ? s.year : 1,
+      coins: s ? s.coins : 0,
+      tod: s ? s.tod : '',
+      at: s ? s.at : 0,
+    });
+  }
+  return out;
 }
 
 /**
