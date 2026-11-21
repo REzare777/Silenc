@@ -57,6 +57,9 @@ await grab('torch_hand');
 await page.evaluate(() => {
   const d = window.__dbg;
   const s = d.ctx.systems.shadows.list[0];
+  // свет игрока идёт от позиции игрока — переносим и его, иначе кадр тёмный
+  d.player.teleport(s.x + 1.6, s.z - 1.9, 0);
+  d.player.y = 0; d.player.groundY = 0;
   d.camera.position.set(s.x + 1.6, 1.5, s.z - 1.9);
   d.camera.lookAt(s.x, 0.9, s.z);
   d.camera.updateMatrixWorld();
@@ -70,13 +73,32 @@ await page.evaluate(() => {
   const c = d.ctx.systems.combat;
   c.state.flashCd = 0;
   c.flare();
+  // софт-рендер тратит по 10–25 секунд на кадр: вспышка (1,2 с)
+  // успела бы погаснуть до отрисовки — держим её включённой
+  c.state.flashTime = 6;
+  // свет вспышки — фонарь игрока: он должен быть рядом с камерой
+  const L = d.ctx.systems.locations.dungeonLoc.lights.lantern;
+  if (L) {
+    L.position.set(d.camera.position.x, d.camera.position.y - 0.4, d.camera.position.z);
+    L.intensity = 15;
+    L.distance = 26;
+  }
 });
 await page.waitForTimeout(600);
+const fl = await page.evaluate(() => {
+  const d = window.__dbg;
+  const L = d.ctx.systems.locations.dungeonLoc.lights.lantern;
+  const c = d.ctx.systems.combat;
+  return { flashTime: +c.state.flashTime.toFixed(2), li: L.intensity, ld: L.distance, lp: L.position.toArray().map(v => +v.toFixed(2)), cam: d.camera.position.toArray().map(v => +v.toFixed(2)) };
+});
+console.log('вспышка:', fl);
 await grab('flash');
 
 // 4. кристальный зал целиком
 await page.evaluate(() => {
   const d = window.__dbg;
+  d.player.teleport(0, -16, 0);
+  d.player.y = 0; d.player.groundY = 0;
   d.camera.position.set(0, 6.5, -16);
   d.camera.lookAt(0, 1.0, 2);
   d.camera.updateMatrixWorld();

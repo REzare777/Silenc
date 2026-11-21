@@ -25,12 +25,12 @@ export const COMBAT = {
   fuelMax: 100,
   burnPerSec: 0.35,          // ≈ 4 мин 45 с света
   lightTime: 1.5,            // разжигание
-  litIntensity: 6.5,        // факел в руке — заметный круг света
-  litDistance: 17,
-  darkIntensity: 1.2,       // в темноте не чёрно: в кадре всё видно
-  darkDistance: 6,
-  flashIntensity: 15.0,     // вспышка разом разбрасывает всех вблизи
-  flashDistance: 26,
+  litIntensity: 16.0,       // факел в руке — заметный круг света
+  litDistance: 26,
+  darkIntensity: 1.6,       // в темноте не чёрно: в кадре всё видно
+  darkDistance: 7,
+  flashIntensity: 42.0,     // вспышка разом разбрасывает всех вблизи
+  flashDistance: 40,
   flashTime: 1.2,
   flashMana: 25,
   flashFuel: 6,
