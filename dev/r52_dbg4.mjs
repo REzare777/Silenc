@@ -21,6 +21,7 @@ const shot = async (season, day) => {
     d.ctx.calendar.restore(day, season, 1);
     for (let i = 0; i < 120; i++) { d.snow.updateCover(1/60); d.snow.update(1/60, {x:0,y:0,z:0}, true); }
     d.player.enabled = false;
+    d.env.setTimeOfDay('day', true);
     // смотрим на опушку леса с запада — там дубы и берёзы
     d.camera.position.set(-30, 3.4, 40);
     d.camera.lookAt(-38, 6.0, 62);
