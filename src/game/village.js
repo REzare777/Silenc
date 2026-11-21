@@ -24,12 +24,13 @@ import {
 } from '../world/buildings.js';
 import {
   scatterGrass, scatterFlowers, wheatField, lantern, campfire, fence, gate, gardenBed,
-  trough, signpost, makeGlow,
+  trough, signpost, makeGlow, cart,
 } from '../world/props.js';
 import { denseForest } from '../world/forest.js';
 import { noticeBoard } from '../world/board.js';
 import { chickenCoop, sheepShelter } from '../world/farm.js';
 import { woodcuttersYard } from '../world/woodcutters.js';
+import { felledClearing } from '../world/clearing.js';
 import { Embers } from '../world/particles.js';
 import { Builder, box, cyl, sphere, cone, mat } from '../world/geo.js';
 import {
@@ -114,16 +115,29 @@ const CHURCH_TOWER = {
 const WOODS = { x: -45, z: 13 };
 
 const BUILDING_CLEARINGS = [
-  [LAYOUT.church.x, LAYOUT.church.z, 11],
-  [LAYOUT.church.x + 0.9, LAYOUT.church.z + 13.4, 10],
-  [CHURCH_TOWER.x, CHURCH_TOWER.z, 9],
-  [LAYOUT.mill.x, LAYOUT.mill.z, 9],
-  [LAYOUT.tavern.x, LAYOUT.tavern.z, 12],
-  [LAYOUT.barn.x, LAYOUT.barn.z, 11],
-  [LAYOUT.blacksmith.x, LAYOUT.blacksmith.z, 7],
-  [LAYOUT.well.x, LAYOUT.well.z, 5],
-  [PASTURE.x, PASTURE.z, 12],          // овечье пастбище — лес вырублен
-  [WOODS.x, WOODS.z, 9],                // лесная делянка на опушке — лес вырублен
+  [LAYOUT.church.x, LAYOUT.church.z, 12],
+  [LAYOUT.church.x + 0.9, LAYOUT.church.z + 13.4, 15],   // колокольня
+  [CHURCH_TOWER.x, CHURCH_TOWER.z, 11],
+  [LAYOUT.mill.x, LAYOUT.mill.z, 14],
+  [LAYOUT.tavern.x, LAYOUT.tavern.z, 14],
+  // амбар: вырубка широкая — сараю нужно поле, а не частокол
+  [LAYOUT.barn.x, LAYOUT.barn.z, 18],
+  [LAYOUT.blacksmith.x, LAYOUT.blacksmith.z, 9],
+  [LAYOUT.well.x, LAYOUT.well.z, 6],
+  [PASTURE.x, PASTURE.z, 16],          // овечье пастбище — лес вырублен
+  [WOODS.x, WOODS.z, 12],              // лесная делянка на опушке — лес вырублен
+];
+
+/**
+ * Поля — лес не растёт ни на поле, ни по его кромке.
+ *
+ * Раньше в пшеницу western-поля и восточного поля упирались берёзы:
+ * колосья стояли прямо в стволах. Список полей — тот же, что и
+ * `ctx.fields`, чтобы правки не разъезжались.
+ */
+const FIELD_CLEARINGS = [
+  [-30, 50, 20, 12], [31, 44, 19, 14],
+  [82, -20, 20, 12], [96, -6, 16, 14], [80, -2, 18, 12],
 ];
 
 /**
@@ -316,7 +330,7 @@ export function createVillage(ctx) {
     place(barnB, LAYOUT.barn.x, LAYOUT.barn.z, barnRy);
     ctx.footprints.push({ name: 'амбар', x: LAYOUT.barn.x, z: LAYOUT.barn.z, hx: 6.15, hz: 4.15, ry: barnRy });
     // прогалина под амбаром: лес вырублен, но земля — зелёная, не лесная подстилка
-    grassPatch(LAYOUT.barn.x + 1, LAYOUT.barn.z - 1, 10);
+    grassPatch(LAYOUT.barn.x + 1, LAYOUT.barn.z - 1, 16);
     addInteract(
       facadePos(LAYOUT.barn.x, LAYOUT.barn.z, barnRy, 0, -4.4, 1.6), 2.8, 'Войти в амбар',
       () => ctx.systems.locations.setLocation('barn'),
@@ -628,6 +642,37 @@ export function createVillage(ctx) {
    * Теперь это маленькая лесная работа у опушки, а амбар стоит
    * у края village-поля.
    */
+  /**
+   * Вырубка вокруг амбара: пеньки и срубленные стволы по кромке поляны.
+   *
+   * Без них пустая поляна читается как «здесь просто нет деревьев».
+   * С пеньками видно, что лес здесь намеренно отжали.
+   */
+  function buildBarnClearing() {
+    const cl = felledClearing(ctx.M, {
+      x: LAYOUT.barn.x, z: LAYOUT.barn.z,
+      inner: 11, outer: 17,
+      avoid: [
+        // дорога к воротам и подход с юга
+        { x: LAYOUT.barn.x + 1.5, z: LAYOUT.barn.z - 5.2, r: 5.5 },
+        { x: LAYOUT.barn.x - 3, z: LAYOUT.barn.z - 9, r: 5 },
+      ],
+      seed: 21,
+    });
+    place(cl, LAYOUT.barn.x, LAYOUT.barn.z);
+    // колода у края поляны — видно, откуда взялись брёвна
+    ctx.propSpots.push({ name: 'пень', x: LAYOUT.barn.x + 12, z: LAYOUT.barn.z + 3, r: 0.5 });
+
+    // телега у боковой стены: двор без дела выглядит пустым
+    {
+      const cx = LAYOUT.barn.x - 9.2, cz = LAYOUT.barn.z + 4.6;
+      const c = cart(ctx.M, { x: cx, z: cz, ry: 0.9 });
+      ctx.scene.add(c);
+      ctx.colliders.circles.push({ x: cx, z: cz, r: 1.4 });
+      ctx.propSpots.push({ name: 'телега', x: cx, z: cz, r: 1.5 });
+    }
+  }
+
   function buildWoodcuttersYard() {
     const yard = woodcuttersYard(ctx.M, {});
     const ry = ryToFace([WOODS.x, WOODS.z], [-38, 10]);
@@ -906,11 +951,7 @@ export function createVillage(ctx) {
     ctx.scene.add(wheatField(ctx.M, 96, -6, 16, 14));
     ctx.scene.add(wheatField(ctx.M, 80, -2, 18, 12));
     // список полей — для проверок планировки
-    ctx.fields = [
-      { x: -30, z: 50, w: 20, d: 12 }, { x: 31, z: 44, w: 19, d: 14 },
-      { x: 82, z: -20, w: 20, d: 12 }, { x: 96, z: -6, w: 16, d: 14 },
-      { x: 80, z: -2, w: 18, d: 12 },
-    ];
+    ctx.fields = FIELD_CLEARINGS.map(([x, z, w, d]) => ({ x, z, w, d }));
 
     const spots = [
       { x: -12, z: 4, r: 5 }, { x: 12, z: 4, r: 5 }, { x: -18, z: -16, r: 5 },
@@ -943,6 +984,10 @@ export function createVillage(ctx) {
         if (Math.abs(x) < 46 && Math.abs(z) < 46) return true;       // поля и огороды деревни
         // поля за озером — вырубка: здесь будет зерно
         if (x > 60 && x < 104 && z > -34 && z < 16) return true;
+        // на полях и по их кромке лес не растёт
+        for (const [fx, fz, fw, fd] of FIELD_CLEARINGS) {
+          if (Math.abs(x - fx) < fw / 2 + 2.5 && Math.abs(z - fz) < fd / 2 + 2.5) return true;
+        }
         // вдоль тропинок лес не растёт — дороги должны быть видны
         if (distToTrails(x, z) < TRAIL_W / 2 + 1.6) return true;
         // вокруг зданий — поляна: деревья не растут вплотную к стенам
@@ -1264,5 +1309,8 @@ export function createVillage(ctx) {
     buildAnimals();
   }
 
-  return { build, buildBuildings, buildProps, buildFarm, buildWoodcuttersYard, buildNoticeBoard, buildDungeonGate };
+  return {
+    build, buildBuildings, buildProps, buildFarm, buildWoodcuttersYard,
+    buildBarnClearing, buildNoticeBoard, buildDungeonGate,
+  };
 }
