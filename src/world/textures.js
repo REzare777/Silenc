@@ -56,11 +56,19 @@ function tex(canvas, repeat = 1, aniso = 8) {
 }
 
 /* ---------- трава ---------- */
-function grassCanvas(size = 512) {
+/**
+ * Трава-газон. Палитра задаётся сезоном: зимой газон — серо-белый под снегом,
+ * осенью — сухой жёлто-бурый. Оттенком зелёную текстуру в белую не превратить,
+ * поэтому у каждого сезона своя палитра.
+ */
+function grassCanvas(size = 512, pal = {}) {
   const c = makeCanvas(size), g = c.getContext('2d');
   const img = g.createImageData(size, size);
   const d = img.data;
-  const dark = 0x3c5a24, mid = 0x597c31, light = 0x86a44a, dry = 0x9a9a4e;
+  const dark = pal.dark ?? 0x3c5a24;
+  const mid = pal.mid ?? 0x597c31;
+  const light = pal.light ?? 0x86a44a;
+  const dry = pal.dry ?? 0x9a9a4e;
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const n = fbm(x / 26, y / 26, 11, 4);
@@ -83,7 +91,9 @@ function grassCanvas(size = 512) {
   for (let i = 0; i < 2600; i++) {
     const x = hash2(i, 7, 9) * size, y = hash2(i, 13, 4) * size;
     const l = 2 + hash2(i, 3, 1) * 4;
-    g.strokeStyle = hash2(i, 21, 6) > 0.5 ? '#7d9b3f' : '#33501f';
+    g.strokeStyle = pal.blade
+      ? pal.blade
+      : (hash2(i, 21, 6) > 0.5 ? '#7d9b3f' : '#33501f');
     g.lineWidth = 1;
     g.beginPath(); g.moveTo(x, y); g.lineTo(x + (hash2(i, 5, 2) - 0.5) * 2, y - l); g.stroke();
   }
@@ -92,11 +102,16 @@ function grassCanvas(size = 512) {
 }
 
 /* ---------- земляная дорога ---------- */
-function dirtCanvas(size = 512) {
+/**
+ * Земляная дорога. Зимой (`snow` = true) она заснежена: тёмная утоптанная
+ * колея посреди белого наста, а не ровная коричневая лента.
+ */
+function dirtCanvas(size = 512, snow = false) {
   const c = makeCanvas(size), g = c.getContext('2d');
   const img = g.createImageData(size, size);
   const d = img.data;
-  const a = 0x6d5236, b = 0x8a6a45;
+  const a = snow ? 0x8a8378 : 0x6d5236;
+  const b = snow ? 0xb9b4ab : 0x8a6a45;
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const n = fbm(x / 18, y / 18, 21, 4);
@@ -119,14 +134,30 @@ function dirtCanvas(size = 512) {
     g.fillStyle = `rgba(${v},${v - 12},${v - 26},0.75)`;
     g.beginPath(); g.ellipse(x, y, r, r * 0.72, hash2(i, 11, 7) * 3, 0, 7); g.fill();
   }
+  if (snow) {
+    // наст: белые наносы по краям полотна и редкие проплешины земли
+    g.globalAlpha = 0.85;
+    for (let i = 0; i < 420; i++) {
+      const x = hash2(i, 41, 3) * size;
+      const y = hash2(i, 43, 5) * size;
+      const rx = 10 + hash2(i, 47, 7) * 46;
+      const ry = rx * (0.28 + hash2(i, 53, 11) * 0.3);
+      const grd = g.createRadialGradient(x, y, 0, x, y, rx);
+      grd.addColorStop(0, 'rgba(246,250,255,0.95)');
+      grd.addColorStop(1, 'rgba(246,250,255,0)');
+      g.fillStyle = grd;
+      g.beginPath(); g.ellipse(x, y, rx, ry, hash2(i, 59, 13) * 3, 0, 7); g.fill();
+    }
+    g.globalAlpha = 1;
+  }
   return c;
 }
 
 /* ---------- булыжник ---------- */
-function cobbleCanvas(size = 512, cells = 16) {
+function cobbleCanvas(size = 512, cells = 16, snow = false) {
   const c = makeCanvas(size), g = c.getContext('2d');
   const rnd = (i, j, s) => hash2(i * 31 + j * 7, j * 17, s);
-  g.fillStyle = '#4a443c'; g.fillRect(0, 0, size, size);
+  g.fillStyle = snow ? '#8e949c' : '#4a443c'; g.fillRect(0, 0, size, size);
   const cell = size / cells;
   for (let j = -1; j < cells + 1; j++) {
     for (let i = -1; i < cells + 1; i++) {
@@ -136,7 +167,7 @@ function cobbleCanvas(size = 512, cells = 16) {
       const cy = (j + 0.5) * cell + jy;
       const rx = cell * (0.3 + rnd(i, j, 3) * 0.19);
       const ry = rx * (0.72 + rnd(i, j, 4) * 0.24);
-      const v = 88 + rnd(i, j, 5) * 62;
+      const v = snow ? (150 + rnd(i, j, 5) * 62) : (88 + rnd(i, j, 5) * 62);
       const warm = rnd(i, j, 7);
       g.save();
       g.translate(cx, cy);
@@ -538,7 +569,11 @@ function waterCanvas(size = 256) {
 }
 
 /* ---------- мята / листва деревьев ---------- */
-function leafCanvas(size = 256, base = 0x4c7a33) {
+/**
+ * Листва. `blossom` — весеннее цветение: светлая зелень с белыми
+ * крапинами цветов, по которому весна читается сразу.
+ */
+function leafCanvas(size = 256, base = 0x4c7a33, blossom = false) {
   const c = makeCanvas(size), g = c.getContext('2d');
   const img = g.createImageData(size, size);
   const d = img.data;
@@ -555,20 +590,39 @@ function leafCanvas(size = 256, base = 0x4c7a33) {
     }
   }
   g.putImageData(img, 0, 0);
+  if (blossom) {
+    // бело-розовые цветы по всей кроне
+    for (let i = 0; i < 340; i++) {
+      const x = hash2(i, 61, 3) * size;
+      const y = hash2(i, 67, 5) * size;
+      const r = 2 + hash2(i, 71, 7) * 4.5;
+      const pink = hash2(i, 73, 11) > 0.45;
+      const grd = g.createRadialGradient(x, y, 0, x, y, r);
+      grd.addColorStop(0, pink ? 'rgba(255,236,242,0.95)' : 'rgba(255,252,246,0.92)');
+      grd.addColorStop(0.6, pink ? 'rgba(252,222,234,0.6)' : 'rgba(248,246,238,0.55)');
+      grd.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = grd;
+      g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+    }
+  }
   return c;
 }
 
 /* ---------- травинки для кустиков газона ---------- */
-function tuftCanvas(size = 64) {
+/**
+ * Травинки газона. `base` — цвет основания, `blade` — цвет травинок:
+ * зимой трава бледная и присыпанная снегом, осенью — жёлто-бурная.
+ */
+function tuftCanvas(size = 64, base = '#8fbf58', blade = [120, 170, 70]) {
   const c = makeCanvas(size), g = c.getContext('2d');
-  g.fillStyle = '#8fbf58';
+  g.fillStyle = base;
   g.fillRect(0, 0, size, size);
   for (let i = 0; i < 90; i++) {
     const x = hash2(i, 3, 11) * size;
     const h = 6 + hash2(i, 7, 13) * size * 0.7;
     const w = 1 + hash2(i, 11, 17) * 2;
     const lean = (hash2(i, 13, 19) - 0.5) * 10;
-    g.fillStyle = `rgba(${120 + hash2(i, 17, 23) * 60 | 0},${170 + hash2(i, 19, 29) * 50 | 0},70,0.85)`;
+    g.fillStyle = `rgba(${blade[0] + hash2(i, 17, 23) * 60 | 0},${blade[1] + hash2(i, 19, 29) * 50 | 0},${blade[2]},0.85)`;
     g.beginPath();
     g.moveTo(x - w, size);
     g.quadraticCurveTo(x + lean * 0.5, size - h * 0.6, x + lean, size - h);
@@ -655,11 +709,36 @@ function forestFloorCanvas(size = 512) {
 
 export function buildTextures() {
   const grassCanvasImage = grassCanvas(512);
+  // Газон по сезонам. Зимний — серо-белый: снег лёг на траву, но зелёное
+  // ещё проглядывает местами.
+  const grassWinterImage = grassCanvas(512, {
+    dark: 0x8d9aa6, mid: 0xa8b4bd, light: 0xc9d3da, dry: 0xb6bec4,
+    blade: '#c6d0d8',
+  });
+  const grassAutumnImage = grassCanvas(512, {
+    dark: 0x6b5a2a, mid: 0x8a7333, light: 0xa8913f, dry: 0xb59a4a,
+    blade: '#9c8438',
+  });
+  // Весенний газон — сочный, свежий: после зимы трава ярче и мягче.
+  const grassSpringImage = grassCanvas(512, {
+    dark: 0x35601f, mid: 0x52892a, light: 0x86bb41, dry: 0x93b04e,
+    blade: '#6ea637',
+  });
   const T = {
     grass: tex(grassCanvasImage, 26),
     grassFar: tex(grassCanvasImage, 90),
+    grassSpring: tex(grassSpringImage, 26),
+    grassFarSpring: tex(grassSpringImage, 90),
+    grassWinter: tex(grassWinterImage, 26),
+    grassFarWinter: tex(grassWinterImage, 90),
+    grassAutumn: tex(grassAutumnImage, 26),
+    grassFarAutumn: tex(grassAutumnImage, 90),
     dirt: tex(dirtCanvas(512), 8),
+    // заснеженная дорога — зимний вариант
+    dirtWinter: tex(dirtCanvas(512, true), 8),
     cobble: tex(cobbleCanvas(512, 16), 10),
+    // заснеженный булыжник площади
+    cobbleWinter: tex(cobbleCanvas(512, 16, true), 10),
     plaster: tex(plasterCanvas(256, 0xd9c9ac, 3), 1),
     plasterWarm: tex(plasterCanvas(256, 0xd8bf95, 9), 1),
     plasterGrey: tex(plasterCanvas(256, 0xc2bdb0, 15), 1),
@@ -679,12 +758,21 @@ export function buildTextures() {
     fabric2: tex(fabricCanvas(128, '#3f6b6a', '#ded0ad'), 1),
     water: tex(waterCanvas(256), 4),
     leaf: tex(leafCanvas(256, 0x4c7a33), 1),
-    leafAutumn: tex(leafCanvas(256, 0x7a6a28), 1),
+    // Листва по сезонам — это РАЗНЫЕ текстуры, а не оттенок одной.
+    // Умножение зелёной текстуры на оранжевый даёт оливковый, а не осенний.
+    // весенняя листва с цветением — по белым крапинам весна читается сразу
+    leafSpring: tex(leafCanvas(256, 0x86b03c, true), 1),
+    leafAutumn: tex(leafCanvas(256, 0xa8622a), 1),   // багрянец
     leafPine: tex(leafCanvas(256, 0x2f5230), 1),
+    leafWinter: tex(leafCanvas(256, 0x9aa6a8), 1),   // бледная, припорошена снегом
     bark: tex(barkCanvas(256, 0x4b3524), 1),
     barkBirch: tex(barkCanvas(256, 0xb9b3a4), 1),
     forestFloor: tex(forestFloorCanvas(512), 96),
     tuft: tex(tuftCanvas(64), 1),
+    // зимняя трава — бледная, покрытая инеем
+    tuftWinter: tex(tuftCanvas(64, '#c8d2dc', [190, 200, 205]), 1),
+    // осенняя трава — сухая, жёлто-бурая
+    tuftAutumn: tex(tuftCanvas(64, '#b09248', [175, 140, 70]), 1),
   };
   // Анизотропия для всех текстур. Без неё мипмапы «кипят» на больших
   // плоскостях (пол, стены, настил) при движении камеры — это и читалось

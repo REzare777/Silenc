@@ -177,6 +177,18 @@ export class Environment {
     this.phaseTime = 0;
     this.autoCycle = true;
     this.duration = this.transitionSeconds;
+    // Флаг естественной смены суток: ночь → утро. Ставится только при
+    // автоматическом ходе времени, поэтому ручная смена (клавиша T)
+    // новым днём не считается.
+    this.rolledOver = false;
+    // Сезонная тонировка. Окружение переписывает небо и туман каждый кадр
+    // по пресетам времени суток, поэтому сезон не может менять их напрямую —
+    // он задаёт множитель, который накладывается поверх пресета.
+    this.seasonTint = {
+      sky: new THREE.Color(1, 1, 1),
+      fog: new THREE.Color(1, 1, 1),
+      sun: 1,
+    };
     this.apply(PRESETS.golden);
   }
 
@@ -239,6 +251,22 @@ export class Environment {
     this.setTimeOfDay(TIME_ORDER[(i + 1) % TIME_ORDER.length]);
   }
 
+  /**
+   * Задать сезонную тонировку: небо, туман и яркость солнца.
+   *
+   * @param {object} tint {sky: number|THREE.Color, fog: number|THREE.Color, sun: number}
+   */
+  setSeasonTint(tint) {
+    if (!tint) return;
+    const toCol = (v, target) => {
+      if (typeof v === 'number') target.setHex(v);
+      else if (v && v.isColor) target.copy(v);
+    };
+    toCol(tint.sky, this.seasonTint.sky);
+    toCol(tint.fog, this.seasonTint.fog);
+    this.seasonTint.sun = typeof tint.sun === 'number' ? tint.sun : 1;
+  }
+
   snapshot() {
     const s = {};
     for (const k in this.to) s[k] = this.to[k];
@@ -252,7 +280,12 @@ export class Environment {
       this.phaseTime += dt;
       if (this.phaseTime >= this.periodSeconds) {
         this.phaseTime -= this.periodSeconds;
+        const from = this.target ?? this.current;
         this.cycle();
+        // ночь сменилась утром — прошёл целый день
+        if (from === 'night' && (this.target ?? this.current) === 'morning') {
+          this.rolledOver = true;
+        }
       }
     }
     if (this.t < 1) {
@@ -324,7 +357,7 @@ export class Environment {
     this.uniforms.moonAmount.value = p.moon;
 
     this.sun.color.copy(c(p.sunColor));
-    this.sun.intensity = p.sunIntensity;
+    this.sun.intensity = p.sunIntensity * this.seasonTint.sun;
     this.moon.intensity = p.moon * 0.85;
     this.hemi.color.copy(c(p.hemiSky));
     this.hemi.groundColor.copy(c(p.hemiGround));
@@ -332,7 +365,12 @@ export class Environment {
     this.ambient.color.copy(c(p.ambient));
     this.ambient.intensity = p.ambientIntensity;
 
-    this.scene.fog.color.copy(c(p.fog));
+    // сезонная тонировка поверх пресета времени суток
+    this.uniforms.topColor.value.multiply(this.seasonTint.sky);
+    this.uniforms.horizonColor.value.multiply(this.seasonTint.sky);
+    this.uniforms.groundColor.value.multiply(this.seasonTint.sky);
+
+    this.scene.fog.color.copy(c(p.fog)).multiply(this.seasonTint.fog);
     this.scene.fog.near = p.fogNear;
     this.scene.fog.far = p.fogFar;
     this.scene.background = null;

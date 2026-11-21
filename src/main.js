@@ -71,6 +71,10 @@ import { createContext, assertContextReady } from './game/context.js';
 import { buildTerrain } from './game/terrain.js';
 import { createVillage } from './game/village.js';
 import { setForestRange } from './world/forest.js';
+import { fishById } from './world/fish.js';
+import { createSnow } from './world/snow.js';
+import { createCalendar } from './game/calendar.js';
+import { snapshot, applySnapshot, writeSave, readSave, hasSave, clearSave } from './game/save.js';
 import { createAnimalsSystem } from './game/animals.js';
 import { createFishingSystem } from './game/fishing.js';
 import { createLocations } from './game/locations.js';
@@ -361,6 +365,25 @@ combat.addFirePoint(-6.5, 0, 2.5, 4, 4);        // очаг в таверне
 // контекст собран — проверяем, что ничего не забыто
 assertContextReady(ctx);
 
+// Коллекция пойманных пород и флаги сюжета — часть сохранения.
+ctx.caught = ctx.caught || {};
+ctx.flags = ctx.flags || {};
+
+// Системы получают доступ к сохранению через контекст: так локации
+// (например, переночевание в трактире) могут сохранить игру сами.
+ctx.saveGame = (quiet) => saveGame(quiet !== false);
+ctx.itemById = (id) => fishById(id);
+
+// Если есть сохранение — показываем «Продолжить» на титульном экране.
+{
+  const data = readSave();
+  if (data && data.day) {
+    ui.setContinue(true, data.day);
+    ui.setDate(`День ${data.day}, ${(data.season || 'spring') === 'spring' ? 'весна'
+      : (data.season === 'summer' ? 'лето' : (data.season === 'autumn' ? 'осень' : 'зима'))}`);
+  }
+}
+
 player.setColliders(ctx.colliders.boxes, ctx.colliders.circles);
 player.dynamicCircles = ctx.animalCircles;
 player.setPlatforms(ctx.platforms);
@@ -372,6 +395,16 @@ const smoke = new Smoke(scene, glowTex, ctx.smokeSources.map((s) => ({ pos: s.po
 const fireflies = new Fireflies(scene, glowTex, 140, 110);
 const motes = new Motes(scene, glowTex, 240, 18);
 const leaves = new Leaves(scene, 40, 80);
+
+// Календарь: дни и сезоны. Сезон меняет облик долины — траву, листву,
+// небо и снег. Снег — частицы, живущие в мире, а не наклейка.
+const snow = createSnow(ctx);
+scene.add(snow.points);
+scene.add(snow.cover);       // снежный покров поверх земли
+ctx.snow = snow;
+ctx.calendar = createCalendar(ctx);
+// календарь должен знать о снеге раньше, чем первый applyLook
+ctx.calendar.applyLook();
 
 /* --------------------- пул огней --------------------- */
 // внутренние источники (окна домов) — светят изнутри, когда игрок рядом
@@ -399,6 +432,45 @@ function openMenu() {
   player.enabled = false;
   player.keys.clear();
   if (document.pointerLockElement === renderer.domElement) document.exitPointerLock();
+}
+
+/**
+ * Сохранить игру.
+ *
+ * @param {boolean} quiet не показывать подтверждение
+ * @returns {boolean} true, если сохранение записалось
+ */
+function saveGame(quiet = false) {
+  const ok = writeSave(snapshot(ctx));
+  if (!quiet && ctx.ui) {
+    ctx.ui.toast(ok ? 'Игра сохранена.' : 'Не удалось сохранить игру.', ok ? 2200 : 3600);
+  }
+  return ok;
+}
+
+/**
+ * Автосохранение — пишем тихо, без сообщения.
+ *
+ * @returns {boolean}
+ */
+function autosave() {
+  return writeSave(snapshot(ctx));
+}
+
+/**
+ * Загрузить сохранение и применить его к игре.
+ *
+ * @returns {boolean} true, если сохранение было и применено
+ */
+function loadGame() {
+  const data = readSave();
+  if (!data) return false;
+  applySnapshot(ctx, data);
+  if (ctx.ui) {
+    ctx.ui.setDate(ctx.calendar ? ctx.calendar.label() : '');
+    ctx.ui.renderInventory(ctx.inventory);
+  }
+  return true;
 }
 
 /**
@@ -446,6 +518,25 @@ ui.onStart = () => {
 };
 
 ui.onResume = () => resumeGame();
+ui.onSave = () => saveGame();
+// «Продолжить» на титульном экране: грузим сохранение и сразу входим в игру
+ui.onContinue = () => {
+  const ok = loadGame();
+  if (!ok) {
+    ui.toast('Сохранение не найдено или повреждено.', 3200);
+    return;
+  }
+  started = true;
+  ui.hideStart();
+  ui.renderInventory(bag.inventory);
+  ambience.start();
+  ambience.setVolume(loadVolume(ctx));
+  ambience.setMuted(!ui.el.tSound.classList.contains('on'));
+  cine.active = false;
+  player.enabled = true;
+  player.requestLock();
+  ui.toast(`С возвращением. ${ctx.calendar.label()}.`, 3200);
+};
 
 /* ================================================================== *
  *  Ввод
@@ -683,6 +774,8 @@ if ('ontouchstart' in window) {
 const forgePos = new THREE.Vector3(14.5, 0, -8);
 /** Таймер обновления дальности леса. */
 let forestRangeTimer = 0;
+/** Накопитель автосохранения (секунды). */
+let autosaveAccum = 0;
 
 function loop() {
   requestAnimationFrame(loop);
@@ -702,6 +795,19 @@ function loop() {
   env.update(dtEnv, focus);
   gradePass.uniforms.uTime.value = t;
 
+  // Новый день начинается, когда ночь естественно сменилась утром.
+  // Флаг ставит окружение: ручная смена времени суток (клавиша T)
+  // новым днём не считается.
+  if (env.rolledOver) {
+    env.rolledOver = false;
+    if (started) {
+      ctx.calendar.nextDay();
+      ui.setDate(ctx.calendar.label());
+      ctx.ui.toast(`${ctx.calendar.info.note}`, 4200);
+      autosave();
+    }
+  }
+
   // часы: текущий период и время до следующего (обновляем раз в полсекунды)
   clockAccum += dtEnv;
   if (clockAccum > 0.5) {
@@ -711,6 +817,9 @@ function loop() {
 
   const nightAmt = THREE.MathUtils.clamp((env.stars - 0.05) * 1.4, 0, 1);
   fireflies.update(dt, nightAmt);
+  // снег идёт только на улице: в подземелье и в интерьерах его нет
+  snow.update(dt, focus, ctx.loc === 'village');
+  snow.updateCover(dt);
   smoke.update(dt);
   if (M.water.map) {                       // вода медленно колышется
     M.water.map.offset.x += dt * 0.007;
@@ -762,6 +871,13 @@ function loop() {
     combat.update(dt, t);
   } else {
     combat.update(dt, t);
+  }
+  // автосохранение раз в минуту реального времени — чтобы прогресс не пропал,
+  // даже если игрок закрыл вкладку не по сюжету
+  autosaveAccum += dt;
+  if (autosaveAccum >= 60) {
+    autosaveAccum = 0;
+    if (started && ctx.loc === 'village') autosave();
   }
   ui.setCombat(ctx.loc === 'dungeon');
   if (ctx.loc === 'dungeon') {
@@ -972,6 +1088,18 @@ window.__dbg = {
   npcs: locations.npcs, updateNpc: locations.updateNpc,
   sceneTavern: locations.sceneTavern, dialog: ctx.systems.dialog,
   teleport: (x, z, yaw) => player.teleport(x, z, yaw),
+  /** Сохранить игру (используется автотестами). */
+  saveGame: (quiet) => saveGame(quiet !== false),
+  /** Загрузить игру из сохранения. */
+  loadGame: () => loadGame(),
+  /** Есть ли сохранение. */
+  hasSave: () => hasSave(),
+  /** Удалить сохранение. */
+  clearSave: () => clearSave(),
+  /** Календарь: дни и сезоны. */
+  calendar: ctx.calendar,
+  /** Снег. */
+  snow: ctx.snow,
 };
 
 /* ================================================================== *

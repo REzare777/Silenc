@@ -26,6 +26,10 @@ export class UI {
       toast: document.getElementById('toast'),
       menu: document.getElementById('menu'),
       resume: document.getElementById('resume'),
+      saveBtn: document.getElementById('saveBtn'),
+      continue: document.getElementById('continue'),
+      contDay: document.getElementById('contDay'),
+      dateText: document.getElementById('dateText'),
       timebar: document.getElementById('timebar'),
       clock: document.getElementById('clock'),
       compass: document.getElementById('compass'),
@@ -182,6 +186,14 @@ export class UI {
       e.stopPropagation();
       if (this.onResume) this.onResume();
     });
+    this.el.saveBtn && this.el.saveBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.onSave) this.onSave();
+    });
+    this.el.continue && this.el.continue.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.onContinue) this.onContinue();
+    });
     this.el.sens.addEventListener('input', (e) => {
       if (this.onSens) this.onSens(+e.target.value / 100);
     });
@@ -218,6 +230,27 @@ export class UI {
 
   hideStart() { this.el.start.classList.add('gone'); }
   setLoading(text) { this.el.load.textContent = text; }
+
+  /**
+   * Дата в углу: «День 7, осень».
+   *
+   * @param {string} text подпись
+   */
+  setDate(text) {
+    if (this.el.dateText) this.el.dateText.textContent = text;
+  }
+
+  /**
+   * Показать или спрятать кнопку «Продолжить» на титульном экране.
+   *
+   * @param {boolean} on показывать
+   * @param {number|string} day номер дня в сохранении
+   */
+  setContinue(on, day) {
+    if (!this.el.continue) return;
+    this.el.continue.classList.toggle('hidden', !on);
+    if (on && this.el.contDay) this.el.contDay.textContent = day ?? 1;
+  }
 
   /** Часы в углу: текущий период и сколько осталось до следующего. */
   setClock(phase, remainSec) {

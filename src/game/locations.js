@@ -469,6 +469,14 @@ export function createLocations(ctx) {
           ctx.env.setTimeOfDay('morning', true);
           ctx.ui.setTime('morning');
         }
+        // переночевали — значит наступил новый день: двигаем календарь
+        if (ctx.calendar) {
+          ctx.calendar.nextDay();
+          if (ctx.ui) ctx.ui.setDate(ctx.calendar.label());
+          if (ctx.ui) ctx.ui.toast(ctx.calendar.info.note, 4200);
+        }
+        // и сохраняемся: это самое безопасное место в игре
+        if (ctx.saveGame) ctx.saveGame(true);
       }, 'tavern');
   });
 

@@ -11,6 +11,13 @@ export function buildMaterials(T) {
   const M = {
     grass: std(T.grass, { color: 0xffffff }),
     grassFar: std(T.grassFar, { color: 0x9fbb7a }),
+    // сезонные варианты газона (подменяются календарём)
+    grassSpring: std(T.grassSpring, { color: 0xffffff }),
+    grassFarSpring: std(T.grassFarSpring, { color: 0x9fbb7a }),
+    grassWinter: std(T.grassWinter, { color: 0xffffff }),
+    grassFarWinter: std(T.grassFarWinter, { color: 0xb8c2cb }),
+    grassAutumn: std(T.grassAutumn, { color: 0xffffff }),
+    grassFarAutumn: std(T.grassFarAutumn, { color: 0xb59a5c }),
     dirt: std(T.dirt),
     cobble: std(T.cobble, { roughness: 0.95 }),
     plaster: two(T.plaster),
@@ -34,7 +41,11 @@ export function buildMaterials(T) {
     fabric: std(T.fabric, { side: THREE.DoubleSide, roughness: 0.85, emissive: 0x2a1a10, emissiveIntensity: 0.5 }),
     fabric2: std(T.fabric2, { side: THREE.DoubleSide, roughness: 0.85, emissive: 0x2a1a10, emissiveIntensity: 0.5 }),
     leaf: std(T.leaf, { roughness: 0.95 }),
+    leafSpring: std(T.leafSpring, { roughness: 0.95 }),
     leafAutumn: std(T.leafAutumn, { roughness: 0.95 }),
+    // зимняя листва: почти белизна — кроны будто припорошены снегом.
+    // Хвоя (leafPine) остаётся зелёной круглый год.
+    leafWinter: std(T.leafWinter, { roughness: 0.95 }),
     leafPine: std(T.leafPine, { roughness: 0.95 }),
     bark: std(T.bark, { roughness: 0.98 }),
     barkBirch: std(T.barkBirch, { roughness: 0.9 }),
@@ -86,6 +97,9 @@ export function buildMaterials(T) {
     skin: new THREE.MeshStandardMaterial({ color: 0xd8a887, roughness: 0.8 }),
     dark: new THREE.MeshStandardMaterial({ color: 0x2a231d, roughness: 0.9 }),
     foliageInstanced: std(T.tuft, { color: 0xa9c47d, roughness: 1 }),
+    // сезонные варианты травы-кустиков (подменяются календарём)
+    foliageWinter: std(T.tuftWinter, { color: 0xdfe6ee, roughness: 1 }),
+    foliageAutumn: std(T.tuftAutumn, { color: 0xd8b878, roughness: 1 }),
     flowerWhite: new THREE.MeshStandardMaterial({ color: 0xf6efd8, roughness: 0.9, side: THREE.DoubleSide }),
     flowerYellow: new THREE.MeshStandardMaterial({ color: 0xf3c743, roughness: 0.9, side: THREE.DoubleSide }),
     flowerViolet: new THREE.MeshStandardMaterial({ color: 0xa482c9, roughness: 0.9, side: THREE.DoubleSide }),

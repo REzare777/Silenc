@@ -83,6 +83,8 @@
   #clock{display:block;width:100%;text-align:center;font-size:10px;letter-spacing:.04em;color:var(--ink-dim);
     margin-top:2px;padding-top:4px;border-top:1px solid rgba(255,255,255,.08);white-space:nowrap}
   #clock b{color:var(--gold);font-weight:600}
+  #dateText{display:block;width:100%;text-align:center;font-size:10px;letter-spacing:.06em;
+    color:var(--gold);opacity:.85;margin-bottom:2px;white-space:nowrap}
   #timebar button{appearance:none;border:0;background:transparent;color:var(--ink-dim);font:inherit;font-size:11px;
     letter-spacing:.06em;padding:7px 11px;border-radius:9px;cursor:pointer;transition:.2s;white-space:nowrap}
   #timebar button:hover{color:var(--ink);background:rgba(255,255,255,.07)}
@@ -171,6 +173,15 @@
     cursor:pointer;transition:.25s;pointer-events:auto}
   #begin:hover{background:linear-gradient(180deg,rgba(232,177,99,.34),rgba(232,177,99,.16));transform:translateY(-1px);
     box-shadow:0 12px 30px rgba(232,177,99,.18)}
+  #continue{appearance:none;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);
+    color:var(--ink-dim);font:inherit;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+    padding:10px 26px;border-radius:10px;cursor:pointer;transition:.25s;pointer-events:auto;margin-top:10px}
+  #continue:hover{color:var(--ink);background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3)}
+  #continue.hidden{display:none}
+  #saveBtn{appearance:none;border:1px solid rgba(232,177,99,.3);background:rgba(232,177,99,.1);color:var(--gold);
+    font:inherit;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;padding:11px 24px;border-radius:10px;
+    cursor:pointer;transition:.25s;margin:0 6px 10px}
+  #saveBtn:hover{background:rgba(232,177,99,.2)}
   #load{font-size:11px;color:var(--ink-dim);letter-spacing:.24em;text-transform:uppercase;margin-top:18px;min-height:16px}
   /* ---------- меню настроек ---------- */
   #menu{position:fixed;inset:0;z-index:25;display:none;align-items:center;justify-content:center;pointer-events:auto;
@@ -420,6 +431,7 @@
     <button data-tod="dusk">Сумерки</button>
     <button data-tod="night">Ночь</button>
   
+    <span id="dateText">День 1, весна</span>
     <span id="clock">—</span>
   </div>
 
@@ -564,6 +576,7 @@
           </div>
         </div>
       </div>
+      <button id="saveBtn">Сохранить игру</button>
       <button id="resume">Продолжить</button>
       <div class="mHint">WASD — идти · Space — прыжок · T — время суток · P — фото-режим · M — звук<br>
         Esc — это меню · кликните по сцене, чтобы вернуть управление · C — показать границы столкновений</div>
@@ -595,6 +608,7 @@
     <div><kbd>C</kbd> границы</div>
     </div>
     <button id="begin">Войти в долину</button>
+    <button id="continue" class="hidden">Продолжить — день <span id="contDay">1</span></button>
     <div id="load">подготовка долины…</div>
   </div>
 </div>

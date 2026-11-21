@@ -280,6 +280,14 @@ export function createFishingSystem(ctx) {
     const inventory = ctx.inventory;
     const placed = ctx.inventory.add(makeStack(spec, { weight: f.fish.weight, length: f.fish.length }));
     ctx.ui.renderInventory(inventory);
+    // запись в коллекцию пород: сколько поймали и какой удачный экземпляр
+    if (ctx.caught) {
+      const rec = ctx.caught[spec.id] || { count: 0, bestWeight: 0, bestLength: 0 };
+      rec.count++;
+      rec.bestWeight = Math.max(rec.bestWeight, f.fish.weight);
+      rec.bestLength = Math.max(rec.bestLength, f.fish.length);
+      ctx.caught[spec.id] = rec;
+    }
     if (!placed.ok) {
       ctx.ui.toast('Все слоты заняты — пришлось выпустить рыбу обратно в озеро.', 3600);
       endFishing();

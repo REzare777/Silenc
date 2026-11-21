@@ -235,6 +235,14 @@ export function createVillage(ctx) {
     // стоят внутри дома).
     ctx.footprints = ctx.footprints || [];
     ctx.propSpots = ctx.propSpots || [];
+    // Кустики травы: календарь подменяет им материал по сезону
+    // (летом зелёные, осенью сухие, зимой присыпанные снегом).
+    ctx.tuftMeshes = ctx.tuftMeshes || [];
+    ctx.addTufts = ctx.addTufts || ((mesh) => {
+      ctx.scene.add(mesh);
+      ctx.tuftMeshes.push(mesh);
+      return mesh;
+    });
 
     /* --- таверна «Уставший вепрь» --- */
     const t = tavern(ctx.M, {});
@@ -565,6 +573,10 @@ export function createVillage(ctx) {
     mesh.receiveShadow = true;
     mesh.name = 'grassPatch';
     ctx.scene.add(mesh);
+    // Полоски газона: у каждой свой масштаб текстуры, поэтому их
+    // перекрашивает календарь через map, а не через общий материал.
+    ctx.grassPatches = ctx.grassPatches || [];
+    ctx.grassPatches.push({ mesh, repeat: r / 4 });
   }
 
   /**
@@ -615,12 +627,14 @@ export function createVillage(ctx) {
       ctx.colliders.boxes.push(localBox(-42.4, 27.2, 0.2, 0, 0, 2.4, 0.9));
 
       // трава и цветы на выпасе
-      ctx.scene.add(scatterGrass(ctx.M, [
+      ctx.addTufts(scatterGrass(ctx.M, [
         { x: -45, z: 31, r: 6.5 }, { x: -48, z: 34, r: 3.5 },
       ], 260));
       const fl = scatterFlowers(ctx.M, [{ x: -45, z: 31, r: 6 }], 26);
       ctx.scene.add(fl);
       ctx.scene.userData.flowers = fl;
+      ctx.flowerMeshes = ctx.flowerMeshes || [];
+      ctx.flowerMeshes.push(fl);
       ctx.pasture = PASTURE;
     }
 
@@ -635,7 +649,7 @@ export function createVillage(ctx) {
         ctx.propSpots.push({ name: 'курятник', x: cx, z: cz, r: 1.2 });
       }
       // солома на земле
-      ctx.scene.add(scatterGrass(ctx.M, [{ x: -16, z: 22, r: 3 }], 90));
+      ctx.addTufts(scatterGrass(ctx.M, [{ x: -16, z: 22, r: 3 }], 90));
       ctx.henyard = HENYARD;
     }
   }
@@ -959,12 +973,20 @@ export function createVillage(ctx) {
     }
 
     /* --- поля, трава, цветы --- */
-    ctx.scene.add(wheatField(ctx.M, -30, 50, 20, 12));
-    ctx.scene.add(wheatField(ctx.M, 31, 44, 19, 14));
+    // Пшеничные поля: зимой календарь их прячет — поле заметает снегом.
+    ctx.wheatMeshes = ctx.wheatMeshes || [];
+    const addWheat = (x, z, w, d) => {
+      const field = wheatField(ctx.M, x, z, w, d);
+      ctx.scene.add(field);
+      ctx.wheatMeshes.push(field);
+      return field;
+    };
+    addWheat(-30, 50, 20, 12);
+    addWheat(31, 44, 19, 14);
     // поля за озером — главная зерновая полоса долины
-    ctx.scene.add(wheatField(ctx.M, 82, -20, 20, 12));
-    ctx.scene.add(wheatField(ctx.M, 96, -6, 16, 14));
-    ctx.scene.add(wheatField(ctx.M, 80, -2, 18, 12));
+    addWheat(82, -20, 20, 12);
+    addWheat(96, -6, 16, 14);
+    addWheat(80, -2, 18, 12);
     // список полей — для проверок планировки
     ctx.fields = FIELD_CLEARINGS.map(([x, z, w, d]) => ({ x, z, w, d }));
 
@@ -976,15 +998,17 @@ export function createVillage(ctx) {
       { x: 38, z: 6, r: 6 }, { x: 74, z: -30, r: 6 }, { x: 92, z: -28, r: 5 },
       { x: 66, z: 6, r: 5 }, { x: 100, z: -16, r: 5 },
     ];
-    ctx.scene.add(scatterGrass(ctx.M, spots, 1100));
+    ctx.addTufts(scatterGrass(ctx.M, spots, 1100));
     const flowers = scatterFlowers(ctx.M, spots, 70);
     ctx.scene.add(flowers);
     ctx.scene.userData.flowers = flowers;
+    ctx.flowerMeshes = ctx.flowerMeshes || [];
+    ctx.flowerMeshes.push(flowers);
 
     /* --- лес: плотное кольцо вокруг деревни --- */
     // Лес начинается в 44 м от центра и полностью закрывает дальний обзор:
     // скала с входом в подземелье (≈100 м) не видна с улицы.
-    const { group: forestGroup, trees, chunks } = denseForest(ctx.M, ctx.rng, {
+    const { group: forestGroup, trees, chunks, deciduousFoliage } = denseForest(ctx.M, ctx.rng, {
       center: [0, 0],
       inner: 44,
       keepClear: (x, z) => {
@@ -1016,6 +1040,9 @@ export function createVillage(ctx) {
     ctx.scene.add(forestGroup);
     ctx.forestChunks = chunks;
     ctx.forestTrees = trees;      // чанки леса: дальние отключаются по расстоянию
+    // Лиственная зелень (кроны, кусты, папоротник) — календарь подменяет
+    // этим мешам материал по сезону.
+    ctx.forestFoliage = deciduousFoliage;
     // коллайдеры — только у ближних деревьев (дальние не мешают прогулке)
     for (const t of trees) {
       if (Math.hypot(t.x, t.z) < 80) ctx.colliders.circles.push({ x: t.x, z: t.z, r: 0.34 * t.s });

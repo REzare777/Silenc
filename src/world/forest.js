@@ -152,7 +152,7 @@ export function speciesGeometry(type) {
         [0, 8.6, 0, 1.7], [0.95, 7.8, 0.35, 1.15], [-0.9, 8.0, -0.3, 1.1], [0.15, 9.8, -0.15, 1.0],
         [1.4, 9.2, 0.8, 0.65], [-1.3, 9.4, -0.6, 0.62], [0.2, 10.6, 0.3, 0.58],
       ]);
-      return { trunk, crown, trunkMat: 'bark', crownMat: 'leafAutumn' };
+      return { trunk, crown, trunkMat: 'bark', crownMat: 'leaf' };
     }
   }
 }
@@ -184,7 +184,7 @@ const CHUNK = 72;
  * @param {THREE.Group} group куда добавлять чанки
  * @param {{x:number,z:number}[]} [chunks] список чанков для отсечения по расстоянию
  */
-function instanced(geo, material, list, name, group, chunks) {
+function instanced(geo, material, list, name, group, chunks, out) {
   const buckets = new Map();
   for (const t of list) {
     const key = `${Math.floor(t.x / CHUNK)},${Math.floor(t.z / CHUNK)}`;
@@ -210,6 +210,7 @@ function instanced(geo, material, list, name, group, chunks) {
     im.frustumCulled = true;
     im.computeBoundingSphere();       // габариты — по матрицам инстансов
     group.add(im);
+    if (out) out.push(im);            // ссылка на меш — для подмены материала
     if (chunks) {
       let cx = 0, cz = 0;
       for (const t of items) { cx += t.x; cz += t.z; }
@@ -287,22 +288,22 @@ export function denseForest(M, rng, opts = {}) {
 
   /* --- стволы и кроны --- */
   const chunks = [];
+  // Кроны лиственных пород и хвои держатся отдельно: по сезону календарь
+  // меняет их материал (зелёная листва → осенняя → зимняя), а хвоя
+  // остаётся зелёной круглый год.
+  const deciduousFoliage = [];
+  const pineCrowns = [];
   for (const [type, list] of Object.entries(species)) {
     if (!list.length) continue;
     const g = speciesGeometry(type);
     const trunkKey = g.trunkMat;
-    const crownKey = g.crownMat === 'leafAutumn' ? 'leafAutumn' : g.crownMat;
-    // осенью часть листвы желтеет
-    const autumnList = list.filter((t) => t.autumn);
-    const greenList = list.filter((t) => !t.autumn);
+    const isPine = g.crownMat === 'leafPine';
 
+    const crownMeshes = [];
     instanced(g.trunk, M[trunkKey], list, `forestTrunk_${type}`, group, chunks);
-    if (greenList.length) {
-      instanced(g.crown, M[crownKey], greenList, `forestCrown_${type}`, group, chunks);
-    }
-    if (autumnList.length && crownKey !== 'leafAutumn') {
-      instanced(g.crown, M.leafAutumn, autumnList, `forestCrown_${type}_autumn`, group, chunks);
-    }
+    instanced(g.crown, M[g.crownMat], list, `forestCrown_${type}`, group, chunks, crownMeshes);
+    if (isPine) pineCrowns.push(...crownMeshes);
+    else deciduousFoliage.push(...crownMeshes);
   }
 
   /* --- подлесок: кусты --- */
@@ -317,7 +318,9 @@ export function denseForest(M, rng, opts = {}) {
   const bushGeo = crownBlobGeo([
     [0, 0.62, 0, 0.72], [0.5, 0.45, 0.2, 0.5], [-0.45, 0.48, -0.25, 0.46], [0.05, 0.95, -0.1, 0.4],
   ]);
-  instanced(bushGeo, M.leaf, bushes, 'forestBushes', group, chunks);
+  const bushMeshes = [];
+  instanced(bushGeo, M.leaf, bushes, 'forestBushes', group, chunks, bushMeshes);
+  deciduousFoliage.push(...bushMeshes);
 
   /* --- подлесок: папоротник и трава --- */
   const ferns = [];
@@ -342,7 +345,9 @@ export function denseForest(M, rng, opts = {}) {
     }
     return mergeGeometries(parts, false);
   })();
-  instanced(fernGeo, M.leaf, ferns, 'forestFerns', group, chunks);
+  const fernMeshes = [];
+  instanced(fernGeo, M.leaf, ferns, 'forestFerns', group, chunks, fernMeshes);
+  deciduousFoliage.push(...fernMeshes);
 
   /* --- подлесок: мшистые камни --- */
   const rocks = [];
@@ -422,7 +427,13 @@ export function denseForest(M, rng, opts = {}) {
   floor.name = 'forestFloor';
   group.add(floor);
 
-  return { group, trees, bushes: bushes.length, chunks };
+  return {
+    group, trees, bushes: bushes.length, chunks,
+    /** Лиственная зелень (кроны, кусты, папоротник) — материал меняется по сезону. */
+    deciduousFoliage,
+    /** Кроны хвои — всегда зелёные. */
+    pineCrowns,
+  };
 }
 
 /** Линейная интерполяция. */

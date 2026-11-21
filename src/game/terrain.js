@@ -81,6 +81,8 @@ export function addGround(ctx) {
   g.rotation.x = -Math.PI / 2;
   g.receiveShadow = true;
   ctx.scene.add(g);
+  // Реестр земли: календарь подменяет материал газона по сезону.
+  ctx.groundMesh = g;
 
   const hills = new THREE.Group();
   for (let i = 0; i < 28; i++) {
@@ -93,6 +95,8 @@ export function addGround(ctx) {
     hills.add(hill);
   }
   ctx.scene.add(hills);
+  // Холмы на горизонте — тоже газон, значит тоже меняют цвет по сезону.
+  ctx.hillMeshes = hills.children.slice();
 }
 
 /**
@@ -108,6 +112,10 @@ export function addRoads(ctx) {
   // и не пересекает постройки)
   ctx.roadTrails = TRAILS;
 
+  // Реестр дорожных полотен: календарь подменяет им текстуру (зимой
+  // дорога заснежена).
+  ctx.roadMeshes = ctx.roadMeshes || [];
+
   /** Собрать ленту дороги по точкам и добавить в сцену. */
   const ribbon = (pts, width, y, tex, opts = {}) => {
     const line = resample(smoothPolyline(pts, opts.rounds ?? 3), opts.step ?? 1.2);
@@ -117,6 +125,7 @@ export function addRoads(ctx) {
     mesh.receiveShadow = true;
     mesh.renderOrder = 2;
     ctx.scene.add(mesh);
+    ctx.roadMeshes.push(mesh);
     return mesh;
   };
 
@@ -135,7 +144,9 @@ export function addRoads(ctx) {
     const plaza = new THREE.Mesh(geo, pathMat(ctx.T.cobble, 1, 1, 0xffffff, true));
     plaza.receiveShadow = true;
     plaza.renderOrder = 3;
+    plaza.name = 'plaza';
     ctx.scene.add(plaza);
+    ctx.roadMeshes.push(plaza);
   }
 
   // тропинки: повороты скруглены, края мягкие
