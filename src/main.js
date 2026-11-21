@@ -671,7 +671,7 @@ ui.onDeathTitle = () => {
   player.acceptInput = false;
   if (combat.pause) combat.pause();
   if (shadows.pause) shadows.pause();
-  ui.el.start.classList.remove('gone');
+  ui.showStart();
   ui.setContinue(hasSave(), readSave() ? readSave().day : 1);
 };
 

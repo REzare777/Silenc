@@ -54,6 +54,19 @@ await page.evaluate(() => {
   d.ui.hideDeath();          // экран смерти покажем следующим кадром
 });
 await page.waitForTimeout(1200);
+console.log('состояние #start:', JSON.stringify(await page.evaluate(() => {
+  const el = document.getElementById('start');
+  const cs = getComputedStyle(el);
+  return {
+    gone: el.classList.contains('gone'),
+    visibility: cs.visibility,
+    opacity: cs.opacity,
+    display: cs.display,
+    zIndex: cs.zIndex,
+    deathOn: document.getElementById('death').classList.contains('on'),
+    deathDisplay: getComputedStyle(document.getElementById('death')).display,
+  };
+})));
 await page.screenshot({ path: `${OUT}/R53_fall.jpg`, type: 'jpeg', quality: 88 });
 console.log('снимок: fall');
 

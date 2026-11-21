@@ -8,7 +8,10 @@ const page = await browser.newPage({ viewport: { width: 640, height: 400 } });
 const errs = [];
 page.on('pageerror', (e) => errs.push('PAGEERROR ' + e.message));
 page.on('console', (m) => { if (m.type() === 'error') errs.push('CONSOLE ' + m.text()); });
-await page.goto('file://' + file, { waitUntil: 'domcontentloaded' });
+// однофайловая версия тяжёлая (1,2 МБ, всё рендерится процедурно),
+// поэтому навигации нужен запас по времени
+page.setDefaultTimeout(120000);
+await page.goto('file://' + file, { waitUntil: 'domcontentloaded', timeout: 120000 });
 await page.waitForFunction(() => window.__villageReady === true, null, { timeout: 180000 });
 await page.evaluate(() => document.getElementById('begin').click());
 await page.waitForTimeout(1500);

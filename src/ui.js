@@ -280,7 +280,32 @@ export class UI {
     this.fishView = new FishView(this.el.viewCanvas);
   }
 
-  hideStart() { this.el.start.classList.add('gone'); }
+  /**
+   * Скрыть титульный экран.
+   *
+   * Класс `gone` гасит прозрачность плавно, но на него одного полагаться
+   * нельзя: переход по opacity умеет «зависать» (особенно при тяжёлом
+   * рендере), и тогда экран остаётся на месте. Поэтому через 0,75 с слой
+   * убирается из раскладки в любом случае.
+   */
+  hideStart() {
+    const el = this.el.start;
+    if (!el) return;
+    clearTimeout(this._startTimer);
+    el.classList.add('gone');
+    this._startTimer = setTimeout(() => {
+      if (el.classList.contains('gone')) el.style.display = 'none';
+    }, 750);
+  }
+
+  /** Показать титульный экран снова. */
+  showStart() {
+    const el = this.el.start;
+    if (!el) return;
+    clearTimeout(this._startTimer);
+    el.style.display = '';
+    el.classList.remove('gone');
+  }
   setLoading(text) { this.el.load.textContent = text; }
 
   /**
