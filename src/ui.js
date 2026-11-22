@@ -1,7 +1,8 @@
 
 import { FishView } from './fishview.js';
-import { fishIcon, rarityOf } from './world/fish.js';
+import { rarityOf } from './world/fish.js';
 import { clickSlot, MAIN_SLOTS, BELT_SLOTS, TOTAL_SLOTS } from './inventory.js';
+import { itemIcon, itemBadge, itemDesc } from './game/items.js';
 
 /** Русские окончания: plural(5,'рыба','рыбы','рыб') → 'рыб' */
 export function plural(n, one, few, many) {
@@ -33,6 +34,14 @@ export class UI {
       slotsList: document.getElementById('slotsList'),
       slotsClose: document.getElementById('slotsClose'),
       slotsBtn: document.getElementById('slotsBtn'),
+      trade: document.getElementById('trade'),
+      tradeName: document.getElementById('tradeName'),
+      tradeTitle: document.getElementById('tradeTitle'),
+      tradeGreet: document.getElementById('tradeGreet'),
+      tradeMine: document.getElementById('tradeMine'),
+      tradeGoods: document.getElementById('tradeGoods'),
+      tradeFoot: document.getElementById('tradeFoot'),
+      tradeClose: document.getElementById('tradeClose'),
       prompt: document.getElementById('prompt'),
       promptText: document.getElementById('promptText'),
       toast: document.getElementById('toast'),
@@ -119,6 +128,9 @@ export class UI {
     this.onDeathLoad = null;     // «Загрузить» — открыть список слотов
     this.onDeathTitle = null;    // «В начало» — на титульный экран
     this.onSlotsClose = null;
+    this.onTradeSell = null;      // игрок продаёт предмет
+    this.onTradeBuy = null;       // игрок покупает предмет
+    this.onTradeClose = null;
     this.slotList = null;        // данные слотов (заполняет main.js)
     this.onTime = null;
     this.onQuality = null;
@@ -174,6 +186,13 @@ export class UI {
     this.el.slotsBtn && this.el.slotsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (this.onSlotsOpen) this.onSlotsOpen();
+    });
+    this.el.tradeClose.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.onTradeClose) this.onTradeClose();
+    });
+    this.el.trade.addEventListener('click', (e) => {
+      if (e.target === this.el.trade && this.onTradeClose) this.onTradeClose();
     });
     this.el.slotsClose.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -374,6 +393,111 @@ export class UI {
 
   get deathOpen() {
     return this.el.death && this.el.death.classList.contains('on');
+  }
+
+  /* ================================================================
+   *  Окно торговли
+   * ================================================================ */
+
+  /**
+   * Открыть окно торговли.
+   *
+   * @param {object} data { name, title, greet, goods }
+   */
+  openTrade(data) {
+    if (!this.el.trade) return;
+    this.el.tradeName.textContent = data.name || '';
+    this.el.tradeTitle.textContent = data.title || '';
+    this.el.tradeGreet.textContent = data.greet || '';
+    this.el.trade.classList.add('on');
+    document.body.classList.add('uiFocus');
+    if (document.pointerLockElement) document.exitPointerLock();
+  }
+
+  /** Закрыть окно торговли. */
+  closeTrade() {
+    if (!this.el.trade) return;
+    this.el.trade.classList.remove('on');
+    if (!this.deathOpen) document.body.classList.remove('uiFocus');
+  }
+
+  get tradeOpen() {
+    return this.el.trade && this.el.trade.classList.contains('on');
+  }
+
+  /**
+   * Перерисовать содержимое окна торговли.
+   *
+   * @param {object} data { mine: [{id,spec,count,price}], goods: [{id,name,price,...}] }
+   */
+  renderTrade(data) {
+    if (!this.el.trade) return;
+    this.el.tradeMine.innerHTML = '';
+    this.el.tradeGoods.innerHTML = '';
+    const mine = data.mine || [];
+    const goods = data.goods || [];
+
+    if (!mine.length) {
+      const e = document.createElement('div');
+      e.className = 'tradeEmpty';
+      e.textContent = 'Нечего продавать.';
+      this.el.tradeMine.appendChild(e);
+    }
+    for (const m of mine) {
+      const row = document.createElement('div');
+      row.className = 'tradeRow';
+      const icon = itemIcon(m.spec, 68);
+      if (icon) row.appendChild(icon);
+      const info = document.createElement('div');
+      info.className = 'tradeInfo';
+      const b = document.createElement('b');
+      b.textContent = m.spec.name + (m.count > 1 ? ` ×${m.count}` : '');
+      const sp = document.createElement('span');
+      sp.textContent = `отдаст за ${m.price} зол.`;
+      info.appendChild(b);
+      info.appendChild(sp);
+      row.appendChild(info);
+      const btn = document.createElement('button');
+      btn.className = 'tradeBtn';
+      btn.textContent = 'Продать';
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.onTradeSell) this.onTradeSell(m.id);
+      });
+      row.appendChild(btn);
+      this.el.tradeMine.appendChild(row);
+    }
+
+    for (const g of goods) {
+      const row = document.createElement('div');
+      row.className = 'tradeRow';
+      const icon = itemIcon(g, 68);
+      if (icon) row.appendChild(icon);
+      const info = document.createElement('div');
+      info.className = 'tradeInfo';
+      const b = document.createElement('b');
+      b.textContent = g.name;
+      const sp = document.createElement('span');
+      sp.textContent = g.dmg
+        ? `урон ${g.dmg[0]}–${g.dmg[1]} · замах ${g.speed.toFixed(2)} с · ${g.price} зол.`
+        : `${g.price} зол.`;
+      info.appendChild(b);
+      info.appendChild(sp);
+      row.appendChild(info);
+      const btn = document.createElement('button');
+      btn.className = 'tradeBtn';
+      btn.textContent = 'Купить';
+      btn.disabled = !this.stats || this.stats.coins < g.price;
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.onTradeBuy) this.onTradeBuy(g.id);
+      });
+      row.appendChild(btn);
+      this.el.tradeGoods.appendChild(row);
+    }
+
+    const coins = this.stats ? this.stats.coins : 0;
+    this.el.tradeFoot.textContent = `В кошельке: ${coins} зол.`;
   }
 
   /* ================================================================
@@ -783,7 +907,7 @@ export class UI {
     for (let i = 0; i < BELT_SLOTS; i++) this.el.hotbar.appendChild(this._hudSlot(inv, MAIN_SLOTS + i));
     const st = inv.stats();
     this.el.invCount.textContent = st.total
-      ? `${st.total} ${plural(st.total, 'рыба', 'рыбы', 'рыб')} · ${st.kinds} ${plural(st.kinds, 'вид', 'вида', 'видов')}`
+      ? `${st.total} ${plural(st.total, 'предмет', 'предмета', 'предметов')} · ${st.kinds} ${plural(st.kinds, 'вид', 'вида', 'видов')}`
       : 'пусто';
     if (this.stats) this.setCoins(this.stats.coins);
     this._paintHeld();
@@ -795,7 +919,7 @@ export class UI {
     el.className = 'slot';
     const s = inv.slots[i];
     if (s) {
-      const icon = fishIcon(s.spec, 128);
+      const icon = itemIcon(s.spec, 128);
       if (icon) el.appendChild(icon);
       if (s.count > 1) {
         const c = document.createElement('span');
@@ -803,10 +927,13 @@ export class UI {
         c.textContent = s.count;
         el.appendChild(c);
       }
-      const b = document.createElement('span');
-      b.className = 'badge';
-      b.textContent = s.best.weight.toFixed(2) + 'кг';
-      el.appendChild(b);
+      const badge = itemBadge(s.spec, s);
+      if (badge) {
+        const b = document.createElement('span');
+        b.className = 'badge';
+        b.textContent = badge;
+        el.appendChild(b);
+      }
     } else {
       el.classList.add('empty');
     }
@@ -828,7 +955,7 @@ export class UI {
     el.className = 'slot hudslot';
     const s = inv.slots[i];
     if (s) {
-      const icon = fishIcon(s.spec, 96);
+      const icon = itemIcon(s.spec, 96);
       if (icon) el.appendChild(icon);
       if (s.count > 1) {
         const c = document.createElement('span');
@@ -863,9 +990,10 @@ export class UI {
     rar.textContent = r ? r.label : '';
     rar.style.color = r ? r.color : '#e9e6df';
     t.appendChild(rar);
+    const info = itemDesc(s.spec, s);
     const line = document.createElement('div');
     line.className = 'tl';
-    line.textContent = `${s.best.weight.toFixed(2)} кг · ${Math.round(s.best.length)} см · ${s.spec.value} зол.`;
+    line.textContent = info.rows.map(([k, v]) => `${k}: ${v}`).join(' · ');
     t.appendChild(line);
     if (s.count > 1) {
       const c = document.createElement('div');
@@ -877,6 +1005,12 @@ export class UI {
     d.className = 'td';
     d.textContent = s.spec.desc || '';
     t.appendChild(d);
+    if (s.spec.tip) {
+      const tip = document.createElement('div');
+      tip.className = 'td';
+      tip.textContent = s.spec.tip;
+      t.appendChild(tip);
+    }
     t.classList.add('on');
     this._moveTip();
   }
@@ -900,11 +1034,27 @@ export class UI {
     this.el.vName.textContent = spec.name;
     this.el.vRar.textContent = r ? r.label : spec.rarity;
     this.el.vRar.style.color = r ? r.color : '#e9e6df';
-    this.el.vWeight.textContent = s.best.weight.toFixed(2) + ' кг';
-    this.el.vLen.textContent = Math.round(s.best.length) + ' см';
-    this.el.vValue.textContent = spec.value + ' зол.';
-    this.el.vWhere.textContent = `${spec.lengthMin}–${spec.lengthMax} см, ${spec.weightMin}–${spec.weightMax} кг`;
+    const info = itemDesc(spec, s);
+    const pick = (label) => {
+      const row = info.rows.find(([k]) => k === label);
+      return row ? row[1] : '—';
+    };
+    this.el.vWeight.textContent = pick('Вес');
+    this.el.vLen.textContent = pick('Длина') !== '—' ? pick('Длина') : pick('Урон');
+    this.el.vValue.textContent = `${spec.value ?? spec.price ?? 0} зол.`;
+    this.el.vWhere.textContent = info.rows
+      .filter(([k]) => k !== 'Вес' && k !== 'Длина' && k !== 'Цена')
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(' · ');
     this.el.vDesc.textContent = spec.desc || '';
+    // подписи в карточке зависят от вида предмета
+    const labels = spec.kind === 'weapon'
+      ? ['Урон', 'Замах', 'Цена', 'Особенности']
+      : spec.kind === 'fish'
+        ? ['Вес', 'Длина', 'Цена', 'Где водится']
+        : ['Вес', 'Цена', 'Куда', 'Описание'];
+    const dts = this.el.viewCard ? this.el.viewCard.querySelectorAll('dt') : [];
+    dts.forEach((dt, i) => { if (labels[i]) dt.textContent = labels[i]; });
     this.el.viewCard.classList.add('has');
     this.fishView.show(spec);
   }
@@ -915,7 +1065,7 @@ export class UI {
     const s = this.inv ? this.inv.held : null;
     if (!s) { h.classList.remove('on'); h.innerHTML = ''; return; }
     h.innerHTML = '';
-    const icon = fishIcon(s.spec, 128);
+    const icon = itemIcon(s.spec, 128);
     if (icon) h.appendChild(icon);
     if (s.count > 1) {
       const c = document.createElement('span');

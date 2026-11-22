@@ -11,7 +11,7 @@
  *      бросается.
  *   6. Удар тени отнимает 6 HP, но HP никогда не падает ниже 1.
  *   7. Огонь (жаровня, костёр) пополняет топливо и лечит.
- *   8. «Смола и фитиль» у кузнеца: −10 монет и +100 топлива.
+ *   8. «Смола и фитиль» у кузнеца: −12 монет и +100 топлива.
  *   9. Переночевать в таверне восстанавливает HP и силы полностью.
  *
  *  Запуск: cd dev && node r51_check.mjs
@@ -50,7 +50,8 @@ const res = await page.evaluate(async () => {
   out.loc = ctx.loc;
   out.active = combat.state.active;
   out.shadowCount = shadows.list.length;
-  out.brandInHand = ctx.viewmodel.itemName;
+  // бранд живёт в левой руке (viewmodel.torch), а не в «обычном» предмете
+  out.brandInHand = ctx.viewmodel.torch ? 'brand' : ctx.viewmodel.itemName;
   out.handVisible = ctx.viewmodel.visible;
 
   /* ---------- 1. топливо тратится ---------- */
@@ -144,7 +145,7 @@ const res = await page.evaluate(async () => {
   ctx.systems.locations.setLocation('village');
   await new Promise((r) => setTimeout(r, 100));
   out.shadowsInVillage = shadows.list.length;
-  out.brandInVillage = ctx.viewmodel.itemName;
+  out.brandInVillage = ctx.viewmodel.torch ? 'brand' : ctx.viewmodel.itemName;
   const forgeShop = ctx.interactables.find((x) => x.label && x.label.includes('смолу'));
   out.forgeShopExists = !!forgeShop;
   if (forgeShop) {
@@ -196,8 +197,8 @@ const checks = [
   ['в деревне теней нет', res.shadowsInVillage === 0],
   ['в деревне бранда в руке нет', res.brandInVillage !== 'brand'],
   ['у кузнеца есть «смола и фитиль»', res.forgeShopExists === true],
-  ['смола и фитиль: −10 монет и +100 топлива',
-    res.coinsAfterShop === 40 && res.fuelAfterShop === 100],
+  ['смола и фитиль: −12 монет и +100 топлива',
+    res.coinsAfterShop === 38 && res.fuelAfterShop === 100],
   ['переночевать лечит и восстанавливает силы',
     res.bedExists && res.hpAfterSleep === 100 && res.staminaAfterSleep === 100],
 ];

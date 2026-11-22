@@ -14,6 +14,7 @@
  */
 
 import { barkeepIcon } from '../world/npc.js';
+import { blacksmithIcon } from '../world/blacksmith.js';
 
 /**
  * Сценарии диалогов.
@@ -54,6 +55,44 @@ const SCRIPTS = {
         label: 'А лютню вашу кто играет?',
         text: 'Я, когда трактир пуст. Плохо, конечно, но слушатели не жалуются — им вообще ни о чём не известно.',
       },
+      {
+        label: 'Покажи товар',
+        text: 'Держи. За улов плачу полную цену — в деревне рыба в цене. Хлеб, эль, сыр, свечи — всё, что самовар готовит.',
+        trade: true,
+      },
+    ],
+  },
+
+  blacksmith: {
+    name: 'Торн',
+    title: 'кузнец',
+    greet: 'Ну? Опять кто-то с пустыми руками. У меня сталь есть, а у тебя — пустая сумка. Что тебе надо?',
+    topics: [
+      {
+        label: 'Что есть на продажу?',
+        text: 'Клинки, топоры, луки, посохи. Клеймо моё — Торн, клинок в горизонт. За дорого не возьму, но и дёшево не отдам: сталь у меня не из дерева.',
+        trade: true,
+      },
+      {
+        label: 'Кто вы такой?',
+        text: 'Торн. Кую двадцать лет, из них три — в этих местах. Платит мне казна, а дерево мне платит натурой: дрова, мука, иногда рыба.',
+      },
+      {
+        label: 'Сложно ли быть кузнецом?',
+        text: 'Тяжело, но привычно. Руки помнят, голова отдыхает. Только когда молот поёт — всё, забываешь про хлеб и погоду.',
+      },
+      {
+        label: 'А борода?',
+        text: 'Борода — это заказчики. Пока борода не мешает молоту, клиенты довольны, а мне плевать.',
+      },
+      {
+        label: 'Что такое смола и фитиль?',
+        text: 'Смола — это дерево, прожжённое в жёлтый дым. Фитиль — пенька. Вместе они дают факелу гореть в подземелье, где нет ни огня, ни ветра.',
+      },
+      {
+        label: 'Врёшь ведь, что у тебя оружие лучше всех?',
+        text: 'Вру. Но и не совру. Клинок я делаю такой, каким его до сих пор точат. А гвозди — другими. Спроси у тех, кто умеет отличать.',
+      },
     ],
   },
 };
@@ -68,7 +107,7 @@ export function createDialog(ctx) {
   let openId = null;
 
   /** Портрет персонажа (рисуется один раз и переиспользуется). */
-  const portraits = { barkeep: barkeepIcon(112) };
+  const portraits = { barkeep: barkeepIcon(112), blacksmith: blacksmithIcon(112) };
 
   /**
    * Открыть диалог с персонажем.
@@ -87,7 +126,7 @@ export function createDialog(ctx) {
     ctx.player.keys.clear();
     if (document.pointerLockElement) document.exitPointerLock();
 
-    const npc = ctx.systems.locations?.npcs?.[id];
+    const npc = ctx.npcs?.[id] || ctx.systems.locations?.npcs?.[id];
     if (npc) npc.talk(true);
 
     ctx.ui.openDialog({
@@ -95,7 +134,7 @@ export function createDialog(ctx) {
       title: s.title,
       text: s.greet,
       portrait: portraits[id] || null,
-      topics: s.topics.map((t) => ({ label: t.label, text: t.text })),
+      topics: s.topics.map((t) => ({ label: t.label, text: t.text, trade: !!t.trade })),
     });
     return true;
   }
@@ -103,7 +142,7 @@ export function createDialog(ctx) {
   /** Закрыть диалог и вернуть управление. */
   function close() {
     if (!openId) return;
-    const npc = ctx.systems.locations?.npcs?.[openId];
+    const npc = ctx.npcs?.[openId] || ctx.systems.locations?.npcs?.[openId];
     if (npc) npc.talk(false);
     openId = null;
     ctx.ui.closeDialog();
@@ -117,6 +156,12 @@ export function createDialog(ctx) {
   ctx.ui.onDialogTopic = (topic) => {
     if (!openId) return;
     ctx.ui.setDialogText(topic.text);
+    // тема «показать товар» открывает торговлю с этим же торговцем
+    if (topic.trade) {
+      const who = openId;
+      close();
+      if (ctx.systems.trade) ctx.systems.trade.open(who);
+    }
   };
   ctx.ui.onDialogClose = () => close();
 

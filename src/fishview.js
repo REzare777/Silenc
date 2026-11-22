@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { fishModel } from './world/fish.js';
+import { weaponModel } from './world/weapons.js';
+import { itemIcon } from './game/items.js';
 
 /**
  * Отдельное окно просмотра предмета: свой рендерер, своя сцена.
@@ -38,23 +40,54 @@ export class FishView {
     this.running = false;
   }
 
-  /** Показать модель рыбы (или любого предмета-группы). */
+  /**
+   * Показать предмет: рыбу, оружие или товар.
+   *
+   * Рыба и оружие — настоящие 3D-модели, товары (хлеб, эль, свеча) —
+   * рисованные иконки: возиться с геометрией кружки нет смысла.
+   *
+   * @param {object} spec предмет
+   */
   show(spec) {
     this.clear();
+    if (!spec) { this.resize(); this.start(); return; }
+    if (spec.kind === 'goods' || spec.kind === 'material') {
+      this.showIcon(spec);
+      return;
+    }
     try {
-      this.model = fishModel(spec);
+      this.model = spec.kind === 'weapon' ? weaponModel(spec.id) : fishModel(spec);
     } catch (e) {
       this.model = null;
     }
     if (this.model) {
       this.model.rotation.y = -0.35;
+      // оружие длиннее рыбы — отодвигаем и опускаем, чтобы влезло в кадр
+      if (spec.kind === 'weapon') {
+        this.model.position.y = -0.35;
+        this.model.scale.setScalar(1.15);
+      }
       this.holder.add(this.model);
     }
     this.resize();
     this.start();
   }
 
+  /** Товар: показываем его иконку во весь холст. */
+  showIcon(spec) {
+    this.clear();
+    const icon = itemIcon(spec, Math.min(this.canvas.width, this.canvas.height));
+    if (!icon) return;
+    this.iconCtx = this.canvas.getContext('2d');
+    this.iconCtx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    const s = Math.min(this.canvas.width, this.canvas.height);
+    this.iconCtx.drawImage(icon, (this.canvas.width - s) / 2, (this.canvas.height - s) / 2, s, s);
+    this.resize();
+    this.start();
+  }
+
   clear() {
+    this.iconCtx = null;
     if (this.model) {
       this.holder.remove(this.model);
       this.model.traverse((o) => { if (o.geometry) o.geometry.dispose(); });

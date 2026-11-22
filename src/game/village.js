@@ -38,6 +38,8 @@ import {
   LAYOUT, ryToFace, facadePos, tavernDoor, dungeonGate, dungeonTrail, distToDungeonTrail,
 } from './layout.js';
 import { distToTrails, TRAIL_W } from './roads.js';
+import { blacksmith as blacksmithNpcModel } from '../world/blacksmith.js';
+import { createNpc } from './npc.js';
 
 
 
@@ -268,26 +270,73 @@ export function createVillage(ctx) {
     const bsRy = ryToFace([LAYOUT.blacksmith.x, LAYOUT.blacksmith.z], [0, -2]);
     place(bs, LAYOUT.blacksmith.x, LAYOUT.blacksmith.z, bsRy);
     ctx.footprints.push({ name: 'кузня', x: LAYOUT.blacksmith.x, z: LAYOUT.blacksmith.z, hx: 3, hz: 2.5, ry: bsRy });
-    const forgeLight = new THREE.PointLight(0xff7a28, 2.6, 12, 2);
+    // в three r155+ свет считается в канделах: 2.6 — это почти ноль
+    const forgeLight = new THREE.PointLight(0xff7a28, 14, 13, 2);
     forgeLight.position.copy(bs.forge);
     forgeLight.position.y += 0.9;
     ctx.scene.add(forgeLight);
     ctx.animated.push((tt) => {
-      forgeLight.intensity = 2.1 + Math.sin(tt * 11.3) * 0.35 + Math.sin(tt * 27.1) * 0.2;
+      forgeLight.intensity = 13.5 + Math.sin(tt * 11.3) * 1.8 + Math.sin(tt * 27.1) * 1.0;
     });
     ctx.interactables.push({
       pos: bs.forge.clone(), radius: 2.8, label: 'Подуть на горн',
-      act: () => { forgeLight.intensity = 6.5; ctx.ui.toast('Горн разгорелся — жар пошёл!'); },
+      act: () => { forgeLight.intensity = 34; ctx.ui.toast('Горн разгорелся — жар пошёл!'); },
     });
+    /* --- кузнец Торн у горна --- */
+    const bsModel = blacksmithNpcModel();
+    // кузнец стоит перед фасадом кузни — там, где его видно с улицы.
+    // Направление на фасад — от кузни к центру деревни (см. ryToFace).
+    const bsStreet = new THREE.Vector3(
+      0 - LAYOUT.blacksmith.x, 0, -2 - LAYOUT.blacksmith.z,
+    ).normalize();
+    const bsSide = new THREE.Vector3(-bsStreet.z, 0, bsStreet.x);
+    // чуть вплотную к проёму: внутри стены кузнец был бы «в кирпиче»
+    const bsSpot = new THREE.Vector3(LAYOUT.blacksmith.x, 0, LAYOUT.blacksmith.z)
+      .add(bsStreet.clone().multiplyScalar(3.75))
+      .add(bsSide.clone().multiplyScalar(0.6));
+    ctx.scene.add(bsModel.group);      // модель NPC сама в сцену не попадает
+    const bsNpc = createNpc(ctx, {
+      id: 'blacksmith',
+      name: 'Торн',
+      model: bsModel,
+      route: [{ x: bsSpot.x, z: bsSpot.z }],
+      face: bsRy + Math.PI,
+      watch: 6.5,          // повернётся к игроку, если тот подойдёт
+      speed: 0.8,
+      wait: 3,
+    });
+    ctx.npcs = ctx.npcs || {};
+    ctx.npcs.blacksmith = bsNpc;
+    ctx.animated.push((tt, dt) => {
+      bsNpc.update(dt, tt, ctx.player.pos);
+    });
+    // лампа над кузней: без неё кузнец — тёмный силуэт у стены
+    // лампа — перед кузнецом и ниже головы: иначе светит только макушку,
+    // а лицо остаётся чёрным
+    const smithDir = new THREE.Vector3(Math.sin(bsRy + Math.PI), 0, Math.cos(bsRy + Math.PI));
+    const smithLight = new THREE.PointLight(0xffb877, 14, 9, 2);
+    smithLight.position.set(bsNpc.x + smithDir.x * 1.9, 1.62, bsNpc.z + smithDir.z * 1.9);
+    ctx.scene.add(smithLight);
+    ctx.animated.push((tt) => {
+      smithLight.intensity = 13.5 + Math.sin(tt * 7.7) * 0.8 + Math.sin(tt * 19.3) * 0.45;
+    });
+    ctx.interactables.push({
+      pos: new THREE.Vector3(bsNpc.x, 1.4, bsNpc.z), radius: 3.0,
+      label: 'Поговорить с кузнецом',
+      act: () => {
+        if (ctx.systems.dialog) ctx.systems.dialog.open('blacksmith');
+      },
+    });
+
     // смола и фитиль: пополнить факел (огонь — снаряжение, не предмет)
     ctx.interactables.push({
       pos: bs.forge.clone().add(new THREE.Vector3(1.6, 0, 0.6)), radius: 2.8,
-      label: 'Купить смолу и фитиль — 10 зол.',
+      label: 'Купить смолу и фитиль — 12 зол.',
       act: () => {
         const combat = ctx.systems.combat;
         if (!combat) return;
         if (combat.state.fuel >= 99) { ctx.ui.toast('Факел полон — нечего заправлять.'); return; }
-        if (!ctx.stats.spendCoins(10)) { ctx.ui.toast('Не хватает монет.'); return; }
+        if (!ctx.stats.spendCoins(12)) { ctx.ui.toast('Не хватает монет.'); return; }
         combat.state.fuel = 100;
         ctx.ui.toast('Кузнец набил фитиль смолой. Факел горит на полную.');
       },

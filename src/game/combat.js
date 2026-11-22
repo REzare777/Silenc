@@ -61,6 +61,8 @@ export function createCombat(ctx) {
     flashTime: 0,
     strikeCd: 0,
     strikeAnim: 0,
+    weaponCd: 0,           // перезарядка оружия
+    lastWeapon: null,      // id оружия, которым били последним
     active: false,        // бой активен (подземелье)
     inLight: 0,           // 0..1 — насколько близко игрок к огню
     threat: 0,            // 0..1 — близость тени (для слоя угрозы)
@@ -84,9 +86,10 @@ export function createCombat(ctx) {
    */
   function holdBrand(on) {
     if (on) {
-      ctx.viewmodel.hold(brand.group, { grip: 'right', pose: 'carry', scale: 0.22 });
+      // бранд живёт в левой руке: если правая занята оружием, горит там
+      ctx.viewmodel.setTorch(brand.group, 0.22);
     } else {
-      ctx.viewmodel.release();
+      ctx.viewmodel.setTorch(null);
     }
   }
 
@@ -157,6 +160,60 @@ export function createCombat(ctx) {
       else ctx.ambience.hitStone();
     }
     if (hit) state.hits++;
+    return hit;
+  }
+
+  /**
+   * Удар оружием из пояса.
+   *
+   * Правила простые и честные:
+   *   * урон — случайное число из диапазона оружия;
+   *   * скорость — кулдаун равен `speed` оружия: тяжёлое бьёт медленно;
+   *   * дальность — `reach`: у лука и посоха своя;
+   *   * посох тратит ману.
+   *
+   * @returns {boolean} попали ли
+   */
+  function weaponStrike() {
+    const spec = ctx.systems.loadout ? ctx.systems.loadout.currentWeapon() : null;
+    if (!spec) return false;
+    if (state.weaponCd > 0) return false;
+    if (spec.mana && !ctx.stats.spendMana(spec.mana)) {
+      if (ctx.ambience) ctx.ambience.dryClick();
+      if (ctx.ui) ctx.ui.toast('Мана кончилась — жезл молчит.', 2000);
+      return false;
+    }
+    state.weaponCd = spec.speed;
+    state.lastWeapon = spec.id;
+
+    // замах
+    const dur = Math.max(0.16, Math.min(0.38, spec.speed * 0.5));
+    ctx.viewmodel.swing(dur);
+    if (ctx.ambience) {
+      ctx.ambience.swing(
+        spec.subclass === 'magic' ? 'magic'
+          : spec.subclass === 'bow' ? 'bow'
+            : spec.subclass === 'axe' ? 'axe' : 'blade');
+    }
+
+    // урон
+    const dmg = spec.dmg[0] + Math.random() * (spec.dmg[1] - spec.dmg[0]);
+    const cone = spec.subclass === 'bow' ? 0.10 : spec.subclass === 'magic' ? 0.55 : 0.5;
+    ctx.camera.getWorldPosition(_org);
+    ctx.camera.getWorldDirection(_dir);
+
+    const shadows = ctx.systems.shadows;
+    let hit = false;
+    if (shadows) {
+      const res = shadows.hit(_org, _dir, spec.reach, cone, dmg);
+      hit = res.hit;
+      if (res.hit && ctx.ambience) {
+        if (spec.subclass === 'bow') ctx.ambience.twang();
+        else if (spec.subclass === 'magic') ctx.ambience.zap();
+        else ctx.ambience.hitBlade(spec.weight >= 3);
+      }
+    }
+    if (!hit && ctx.ambience) ctx.ambience.hitStone();
     return hit;
   }
 
@@ -267,6 +324,7 @@ export function createCombat(ctx) {
     state.flashCd = Math.max(0, state.flashCd - dt);
     state.flashTime = Math.max(0, state.flashTime - dt);
     state.strikeCd = Math.max(0, state.strikeCd - dt);
+    state.weaponCd = Math.max(0, state.weaponCd - dt);
     if (state.strikeAnim > 0) {
       state.strikeAnim -= dt;
       if (state.strikeAnim <= 0) {
@@ -331,7 +389,7 @@ export function createCombat(ctx) {
 
   return {
     state, brand, firePoints,
-    update, strike, flare, toggleTorch, setActive, prompt, aimTarget,
+    update, strike, weaponStrike, flare, toggleTorch, setActive, prompt, aimTarget,
     addFirePoint, holdBrand,
     /**
      * Заморозить бой (например, когда игрок погиб): факел не тратит

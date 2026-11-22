@@ -29,6 +29,8 @@
  *   - `speed` — скорость шага, м/с
  *   - `wait`  — сколько стоять на точке, сек
  *   - `face`  — начальный поворот
+ *   - `watch` — если задан, персонаж поворачивается телом к игроку, когда
+ *               тот подходит ближе этого расстояния
  * @returns {object} NPC
  */
 export function createNpc(ctx, cfg) {
@@ -122,6 +124,15 @@ export function createNpc(ctx, cfg) {
     }
 
     let moving = false;
+    // «следить за игроком»: персонаж поворачивается телом, если тот рядом
+    let watching = false;
+    if (cfg.watch && playerPos) {
+      const wd = Math.hypot(playerPos.x - npc.x, playerPos.z - npc.z);
+      if (wd < cfg.watch) {
+        watching = true;
+        turnTo(Math.atan2(playerPos.x - npc.x, playerPos.z - npc.z), dt);
+      }
+    }
     if (npc.talking) {
       // стоит и смотрит на игрока
       npc.curSpeed = 0;
@@ -129,6 +140,10 @@ export function createNpc(ctx, cfg) {
         const a = Math.atan2(playerPos.x - npc.x, playerPos.z - npc.z);
         turnTo(a, dt);
       }
+    } else if (watching) {
+      // повернулся к игроку — стоим на месте
+      npc.curSpeed = 0;
+      npc.state = 'idle';
     } else if (route.length) {
       const tg = target();
       if (tg) {

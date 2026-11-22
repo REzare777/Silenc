@@ -23,6 +23,7 @@ import { shadowModel } from '../world/creature.js';
 export const SHADOW = {
   count: 6,
   veil: 3,
+  hp: 40,                  // здоровье: его снимают обычным оружием
   stalkSpeed: 1.15,        // крадучи
   stalkSpeedDark: 1.45,    // в темноте быстрее
   lungeSpeed: 3.4,
@@ -137,6 +138,7 @@ export function createShadows(ctx) {
       x: p[0], y: p[1], z: p[2],
       home: { x: p[0], z: p[2] },
       veil: SHADOW.veil,
+      hp: SHADOW.hp,
       state: 'sleep',
       stun: 0,
       dissolve: 0,
@@ -254,6 +256,56 @@ export function createShadows(ctx) {
     }
     makeNoise(org, 8);
     return true;
+  }
+
+  /**
+   * Удар оружием: ищем ближайшую тень в конусе и снимаем здоровье.
+   *
+   * Бранд гасит «veil» — стойкость тени. Оружие бьёт по здоровью. Когда
+   * здоровье кончилось, тень рассыпается, как и после третьего удара
+   * брандом. Так у игрока есть два пути: тихий и быстрый.
+   *
+   * @param {THREE.Vector3} org начало луча (камера)
+   * @param {THREE.Vector3} dir направление взгляда
+   * @param {number} range дальность
+   * @param {number} cone половина угла конуса
+   * @param {number} dmg урон
+   * @returns {{hit: boolean, killed: boolean}}
+   */
+  function hit(org, dir, range, cone, dmg) {
+    let best = null, bestD = Infinity;
+    for (const s of list) {
+      if (s.veil <= 0 || s.hp <= 0) continue;
+      const dx = s.x - org.x, dz = s.z - org.z;
+      const d = Math.hypot(dx, dz);
+      if (d > range || d < 1e-3) continue;
+      const dot = (dx / d) * dir.x + (dz / d) * dir.z;
+      if (dot < Math.cos(cone)) continue;
+      if (d < bestD) { bestD = d; best = s; }
+    }
+    if (!best) {
+      makeNoise(org, 10);       // удар мимо слышно
+      return { hit: false, killed: false };
+    }
+    best.hp -= dmg;
+    best.stun = SHADOW.stun * 0.7;
+    best.state = 'recoil';
+    // отбрасывание — слабее, чем от бранда
+    const dx = best.x - org.x, dz = best.z - org.z;
+    const d = Math.hypot(dx, dz) || 1;
+    best.vx = (dx / d) * SHADOW.strikeKnock * 1.4;
+    best.vz = (dz / d) * SHADOW.strikeKnock * 1.4;
+    let killed = false;
+    if (best.hp <= 0) {
+      killed = true;
+      best.veil = 0;
+      best.dissolve = SHADOW.dissolve;
+      if (ctx.ambience) ctx.ambience.dissolve();
+    } else if (ctx.ambience) {
+      ctx.ambience.hiss();
+    }
+    makeNoise(org, 6);
+    return { hit: true, killed };
   }
 
   /**
@@ -493,7 +545,7 @@ export function createShadows(ctx) {
   }
 
   return {
-    list, spawn, clear, update, strike, flare, makeNoise, aimTarget,
+    list, spawn, clear, update, strike, hit, flare, makeNoise, aimTarget,
     guardsCleared, guardsLeft,
     /** Заморозить тени (игрок погиб — бой окончен). */
     pause() { paused = true; },

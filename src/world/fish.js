@@ -165,6 +165,10 @@ export const FISH = [
      shape: 'spiny', pattern: 'stripe', tint: '#d9b45c',
      desc: 'Золотистая, с костяными пластинами по спине.' } */
 
+// у каждой рыбы есть вид «fish»: единый каталог предметов должен понимать,
+// что рыба — это рыба, а не «предмет без вида»
+for (const f of FISH) f.kind = 'fish';
+
 const FISH_BY_ID = new Map(FISH.map((f) => [f.id, f]));
 
 /** Рыба по id или null. */

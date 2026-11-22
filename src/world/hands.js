@@ -158,9 +158,47 @@ const POSES = {
 };
 
 /**
+ * Позы для оружия: обе руки заданы явно, потому что у оружия свой хват.
+ *
+ * Ключ — вид оружия: одноручный клинок, двуручный, лук, посох. Отдельно
+ * описан хват «факел в левой руке» — так в подземелье игрок держит в правой
+ * руке меч, а в левой горящий бранд.
+ */
+const WEAPON_POSES = {
+  sword: {
+    // одноручный хват: правая сжата в кулак, левая свободно у бедра
+    right: { pos: [0.145, -0.205, -0.32], rot: [0.30, -0.26, 0.10] },
+    left: { pos: [-0.185, -0.335, -0.26], rot: [0.22, 0.28, -0.06] },
+  },
+  sword2: {
+    // двуручный хват: обе руки на рукояти, ближе к центру кадра
+    right: { pos: [0.115, -0.155, -0.33], rot: [0.34, -0.30, 0.12] },
+    left: { pos: [-0.035, -0.195, -0.35], rot: [0.36, 0.14, -0.06] },
+  },
+  bow: {
+    // лук: левая вытянута вперёд и держит лук, правая у плеча натягивает тетиву
+    right: { pos: [0.175, -0.10, -0.30], rot: [0.22, -0.32, 0.14] },
+    left: { pos: [-0.145, -0.215, -0.40], rot: [0.06, 0.10, 0.03] },
+  },
+  staff: {
+    // посох: правая держит древок, левая поддерживает ниже
+    right: { pos: [0.125, -0.165, -0.38], rot: [0.14, -0.18, 0.06] },
+    left: { pos: [-0.135, -0.295, -0.33], rot: [0.26, 0.20, -0.05] },
+  },
+  torchLeft: {
+    // факел в левой руке: ладонь раскрыта, горит вверх
+    left: { pos: [-0.135, -0.165, -0.42], rot: [0.36, 0.14, -0.12] },
+  },
+  torchRight: {
+    // факел в правой руке (как раньше, когда оружия нет)
+    right: { pos: [0.105, -0.145, -0.40], rot: [0.20, -0.18, 0.05] },
+  },
+};
+
+/**
  * Собрать пару рук с разными захватами.
  *
- * @returns {object} { group, right, left, setPose }
+ * @returns {object} { group, right, left, setPose, setArms }
  */
 export function buildHands() {
   const mats = handMaterials();
@@ -195,8 +233,31 @@ export function buildHands() {
     }
   }
 
+  /**
+   * Поставить руки в позу оружия.
+   *
+   * @param {string} name имя позы из WEAPON_POSES
+   * @param {string} [leftName] поза для левой руки (например, факел)
+   */
+  function setArms(name, leftName) {
+    const spec = WEAPON_POSES[name] || null;
+    const leftSpec = leftName
+      ? ((WEAPON_POSES[leftName] || {}).left || null)
+      : (spec ? spec.left : null);
+    right.visible = !!(spec && spec.right);
+    left.visible = !!leftSpec;
+    if (spec && spec.right) {
+      right.position.fromArray(spec.right.pos);
+      right.rotation.set(spec.right.rot[0], spec.right.rot[1], spec.right.rot[2]);
+    }
+    if (leftSpec) {
+      left.position.fromArray(leftSpec.pos);
+      left.rotation.set(leftSpec.rot[0], leftSpec.rot[1], leftSpec.rot[2]);
+    }
+  }
+
   setPose('two', 'present');
-  return { group, right, left, setPose, mats };
+  return { group, right, left, setPose, setArms, mats };
 }
 
 /**

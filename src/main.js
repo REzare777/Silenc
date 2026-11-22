@@ -85,6 +85,10 @@ import { createCombat, COMBAT } from './game/combat.js';
 import { createShadows } from './game/shadows.js';
 import { createDeath } from './game/death.js';
 import { createDialog } from './game/dialog.js';
+import { createTrade } from './game/trade.js';
+import { createLoadout } from './game/loadout.js';
+import { ITEMS, GOODS, MATERIALS, itemIcon, itemBadge, itemDesc, sellPrice, buyPrice, getItem } from './game/items.js';
+import { WEAPONS, weaponModel, weaponIcon, getWeapon, weaponGrip } from './world/weapons.js';
 import { createInteractions } from './game/interactions.js';
 import { createBag } from './game/bag.js';
 import { PlayerStats } from './game/stats.js';
@@ -307,6 +311,7 @@ let photo = false;       // фото-режим
 ctx.systems.interactions = createInteractions(ctx);
 ctx.systems.fishing = createFishingSystem(ctx);
 ctx.systems.bag = createBag(ctx);
+ctx.systems.loadout = createLoadout(ctx);
 
 const village = createVillage(ctx);
 const animals = createAnimalsSystem(ctx);
@@ -350,6 +355,7 @@ animals.build();
 
 // амбар и таверна — отдельные сцены
 ctx.systems.dialog = createDialog(ctx);
+ctx.systems.trade = createTrade(ctx);
 ctx.systems.locations = createLocations(ctx);
 
 // боёвка: факел в руке и тени в подземелье
@@ -725,6 +731,7 @@ window.addEventListener('keydown', (e) => {
       const n = +e.code.slice(5);
       if (n >= 1 && n <= 9) {
         bag.inventory.sel = n - 1;
+        if (ctx.systems.loadout) ctx.systems.loadout.select(n - 1);
         ui.renderInventory(bag.inventory);
         ui.toast(`Слот пояса: ${n}`, 900);
       }
@@ -773,6 +780,7 @@ window.addEventListener('keydown', (e) => {
     const n = +e.code.slice(5);
     if (n >= 1 && n <= 9) {
       bag.inventory.sel = n - 1;
+      if (ctx.systems.loadout) ctx.systems.loadout.select(n - 1);
       ui.renderInventory(bag.inventory);
     }
   }
@@ -827,8 +835,10 @@ renderer.domElement.addEventListener('mouseup', (e) => {
   // при захваченной мыши считаем кликом любое нажатие; без захвата —
   // только короткое нажатие без сдвига, иначе это осмотр перетаскиванием
   if (!locked && (dt > 250 || moved > 8)) return;
-  if (e.button === 0) combat.strike();
-  else if (e.button === 2) combat.flare();
+  if (e.button === 0) {
+    // сначала оружие из пояса, а если его нет — удар брандом
+    if (!combat.weaponStrike()) combat.strike();
+  } else if (e.button === 2) combat.flare();
 });
 
 renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -1009,6 +1019,8 @@ function loop() {
   } else {
     combat.update(dt, t);
   }
+  // снаряжение: оружие в руках всегда соответствует выбранной ячейке пояса
+  if (ctx.systems.loadout) ctx.systems.loadout.sync();
   // смерть: падение камеры и экран «Погиб»
   death.update(dt);
   // автосохранение раз в минуту реального времени — чтобы прогресс не пропал,
@@ -1213,6 +1225,10 @@ window.__dbg = {
   // слоты и смерть — для проверок и отладки
   listSlots, loadSlot, saveToSlot,
   death, combat, shadows,
+  trade: ctx.systems.trade, loadout: ctx.systems.loadout,
+  npcs: Object.assign({}, locations.npcs || {}, ctx.npcs || {}),
+  items: { ITEMS, GOODS, MATERIALS, itemIcon, itemBadge, itemDesc, sellPrice, buyPrice, getItem },
+  weapons: { WEAPONS, weaponModel, weaponIcon, getWeapon, weaponGrip },
   startFishing: fishing.startFishing, hookFish: fishing.hookFish,
   updateFishing: fishing.updateFishing, toggleInventory: bag.toggle,
   rollFish: fishing.rollFish, FISH,
@@ -1229,7 +1245,7 @@ window.__dbg = {
   dungeonLoc: locations.dungeonLoc, sceneDungeon: locations.sceneDungeon,
   churchLoc: locations.churchLoc, sceneChurch: locations.sceneChurch,
   homeLocs: locations.homeLocs,
-  npcs: locations.npcs, updateNpc: locations.updateNpc,
+  updateNpc: locations.updateNpc,
   sceneTavern: locations.sceneTavern, dialog: ctx.systems.dialog,
   teleport: (x, z, yaw) => player.teleport(x, z, yaw),
   /** Сохранить игру (используется автотестами). */

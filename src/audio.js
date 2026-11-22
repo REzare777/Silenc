@@ -732,6 +732,104 @@ export class Ambience {
     o.start(t); o.stop(t + 0.12);
   }
 
+  /**
+   * Взмах оружием: короткий свист воздуха.
+   *
+   * @param {string} kind 'blade' | 'axe' | 'bow' | 'magic'
+   */
+  swing(kind = 'blade') {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.nodes.noiseBuf;
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.Q.value = kind === 'axe' ? 1.2 : 2.4;
+    const f0 = kind === 'axe' ? 520 : kind === 'magic' ? 1800 : 900;
+    f.frequency.setValueAtTime(f0 * 0.6, t);
+    f.frequency.exponentialRampToValueAtTime(f0 * 1.7, t + 0.16);
+    const g = ctx.createGain();
+    const vol = kind === 'axe' ? 0.075 : kind === 'magic' ? 0.05 : 0.055;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    src.connect(f).connect(g).connect(this.master);
+    if (this.caveBus) g.connect(this.caveBus);
+    src.start(t); src.stop(t + 0.26);
+  }
+
+  /**
+   * Попадание клинком: лязг стали.
+   *
+   * @param {boolean} heavy тяжёлое оружие
+   */
+  hitBlade(heavy = false) {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(heavy ? 620 : 980, t);
+    o.frequency.exponentialRampToValueAtTime(heavy ? 180 : 320, t + 0.12);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(heavy ? 0.09 : 0.06, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + (heavy ? 0.26 : 0.18));
+    o.connect(g).connect(this.master);
+    if (this.caveBus) g.connect(this.caveBus);
+    o.start(t); o.stop(t + 0.3);
+    const src = ctx.createBufferSource();
+    src.buffer = this.nodes.noiseBuf;
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'highpass';
+    f.frequency.value = 3000;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.0001, t);
+    ng.gain.exponentialRampToValueAtTime(0.04, t + 0.005);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    src.connect(f).connect(ng).connect(this.master);
+    if (this.caveBus) ng.connect(this.caveBus);
+    src.start(t); src.stop(t + 0.14);
+  }
+
+  /** Тетива лука: короткий звон. */
+  twang() {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(420, t);
+    o.frequency.exponentialRampToValueAtTime(160, t + 0.16);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.05, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 1800;
+    o.connect(f).connect(g).connect(this.master);
+    if (this.caveBus) g.connect(this.caveBus);
+    o.start(t); o.stop(t + 0.24);
+  }
+
+  /** Магия посоха: негромкий гудящий разряд. */
+  zap() {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(1400, t);
+    o.frequency.exponentialRampToValueAtTime(320, t + 0.22);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.05, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+    o.connect(g).connect(this.master);
+    if (this.caveBus) g.connect(this.caveBus);
+    o.start(t); o.stop(t + 0.3);
+  }
+
   /** Шипение огня (тень получила урон). */
   hiss(vol = 1) {
     if (!this.ctx || !this.enabled) return;

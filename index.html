@@ -238,6 +238,37 @@
   .slotActs button:hover{color:var(--ink);background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3)}
   .slotActs button:disabled{opacity:.35;cursor:not-allowed}
   .slotsFoot{font-size:10px;color:var(--ink-dim);letter-spacing:.14em;text-transform:uppercase;margin-top:14px;text-align:center}
+  /* ---------- окно торговли ---------- */
+  #trade{position:fixed;inset:0;z-index:41;display:none;align-items:center;justify-content:center;
+    background:rgba(6,5,4,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  #trade.on{display:flex}
+  .tradeCard{width:min(720px,95vw);max-height:88vh;overflow:auto;padding:24px 26px 20px}
+  .tradeHead{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
+  .tradeHead h2{font-family:"Cormorant Garamond",Georgia,serif;font-size:26px;font-weight:600;letter-spacing:.03em;margin:0;color:#e9c9a2}
+  .tradeRole{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-dim);margin-top:4px}
+  .tradeGreet{font-size:12.5px;line-height:1.65;color:#bfb09c;margin:10px 0 16px;font-style:italic}
+  .tradeCols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:640px){.tradeCols{grid-template-columns:1fr}}
+  .tradeColHead{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);
+    border-bottom:1px solid rgba(232,177,99,.22);padding-bottom:6px;margin-bottom:8px}
+  .tradeList{display:flex;flex-direction:column;gap:6px;max-height:46vh;overflow:auto;padding-right:4px}
+  .tradeRow{display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:10px;
+    border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03)}
+  /* иконки предметов: глобальное правило canvas{position:fixed} нужно сбросить */
+  .tradeRow canvas{width:34px;height:34px;flex:0 0 34px;border-radius:7px;
+    position:static;inset:auto;pointer-events:none}
+  .tradeInfo{flex:1;min-width:0}
+  .tradeInfo b{display:block;font-size:12px;font-weight:600;color:var(--ink)}
+  .tradeInfo span{display:block;font-size:10px;color:var(--ink-dim);margin-top:2px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tradeBtn{appearance:none;font:inherit;cursor:pointer;transition:.2s;border-radius:8px;flex:0 0 auto;
+    font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:8px 11px;
+    border:1px solid rgba(232,177,99,.3);background:rgba(232,177,99,.1);color:var(--gold)}
+  .tradeBtn:hover{background:rgba(232,177,99,.22);border-color:rgba(232,177,99,.55)}
+  .tradeBtn:disabled{opacity:.35;cursor:not-allowed;border-color:rgba(255,255,255,.12);
+    background:rgba(255,255,255,.04);color:var(--ink-dim)}
+  .tradeEmpty{font-size:11px;color:var(--ink-dim);padding:10px 2px;font-style:italic}
+  .tradeFoot{font-size:10.5px;color:var(--ink-dim);letter-spacing:.1em;margin-top:14px;text-align:center}
   #saveBtn{appearance:none;border:1px solid rgba(232,177,99,.3);background:rgba(232,177,99,.1);color:var(--gold);
     font:inherit;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;padding:11px 24px;border-radius:10px;
     cursor:pointer;transition:.25s;margin:0 6px 10px}
@@ -544,7 +575,7 @@
         <span><kbd>ЛКМ</kbd> взять / положить</span>
         <span><kbd>ПКМ</kbd> половина / одна</span>
         <span><kbd>Shift</kbd>+<kbd>ЛКМ</kbd> в пояс</span>
-        <span><kbd>1</kbd>–<kbd>9</kbd> слот пояса</span>
+        <span><kbd>1</kbd>–<kbd>9</kbd> взять из пояса в руки</span>
         <span><kbd>I</kbd> или <kbd>ESC</kbd> — закрыть</span>
       </div>
     </div>
@@ -704,6 +735,31 @@
         <button id="deathTitle">В начало</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ---------- окно торговли ---------- -->
+<div id="trade">
+  <div class="tradeCard panel">
+    <div class="tradeHead">
+      <div>
+        <h2 id="tradeName">Хорт</h2>
+        <div id="tradeTitle" class="tradeRole">трактирщик</div>
+      </div>
+      <button id="tradeClose" title="Закрыть">✕</button>
+    </div>
+    <p id="tradeGreet" class="tradeGreet"></p>
+    <div class="tradeCols">
+      <div class="tradeCol">
+        <div class="tradeColHead">Ваши вещи</div>
+        <div id="tradeMine" class="tradeList"></div>
+      </div>
+      <div class="tradeCol">
+        <div class="tradeColHead">Его товары</div>
+        <div id="tradeGoods" class="tradeList"></div>
+      </div>
+    </div>
+    <div class="tradeFoot" id="tradeFoot"></div>
   </div>
 </div>
 

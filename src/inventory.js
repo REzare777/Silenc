@@ -12,20 +12,45 @@ export const TOTAL_SLOTS = MAIN_SLOTS + BELT_SLOTS;
 export const MAX_STACK = 64;
 export const BELT_START = MAIN_SLOTS;
 
-/** Стак одного вида рыбы. */
+/**
+ * Стак одного вида предмета.
+ *
+ * У рыбы в стаке помнится лучший экземпляр (вес и длина) — у неё это и есть
+ * характеристика. У оружия и товаров «лучшего» нет, поэтому `best` остаётся
+ * пустым, и всё, что с ним работает, обязано это учитывать.
+ *
+ * @param {object} spec описание предмета
+ * @param {object} [meta] уточнения (вес/длина экземпляра)
+ * @returns {object} стак
+ */
 export function makeStack(spec, meta = {}) {
-  const weight = meta.weight ?? spec.weightMin;
-  const length = meta.length ?? spec.lengthMin;
-  return {
+  // рыба узнаётся и по виду, и по наличию «лучшего экземпляра»:
+  // вес и длина есть только у рыбы
+  const isFish = !!spec && (spec.kind === 'fish'
+    || (spec.weightMin !== undefined && spec.lengthMin !== undefined));
+  const stack = {
     id: spec.id,
     spec,
     count: 1,
-    best: { weight, length },   // лучший экземпляр в стаке
+    best: isFish ? { weight: meta.weight ?? spec.weightMin, length: meta.length ?? spec.lengthMin } : null,
+  };
+  return stack;
+}
+
+/** Копия стака (в том числе — «висящего на курсоре»). */
+function copyStack(s) {
+  return {
+    id: s.id,
+    spec: s.spec,
+    count: s.count,
+    best: s.best ? { weight: s.best.weight, length: s.best.length } : null,
   };
 }
 
-function copyStack(s) {
-  return { id: s.id, spec: s.spec, count: s.count, best: { weight: s.best.weight, length: s.best.length } };
+/** Поменять «лучший экземпляр», если у стаков он вообще есть. */
+function mergeBest(dst, src) {
+  if (!dst.best || !src.best) return;
+  if (src.best.weight > dst.best.weight) dst.best = { weight: src.best.weight, length: src.best.length };
 }
 
 export class Inventory {
@@ -42,13 +67,16 @@ export class Inventory {
   /** Положить стак в инвентарь: сперва в существующий такой же, потом в пустой слот. */
   add(stack) {
     let rest = stack;
-    for (let i = 0; i < TOTAL_SLOTS; i++) {
+    // оружие и прочие «нескладываемые» вещи всегда занимают отдельный слот:
+    // два кинжала должны быть двумя клинками, а не стаком из двух
+    const stackable = !stack.spec || stack.spec.stackable !== false;
+    for (let i = 0; stackable && i < TOTAL_SLOTS; i++) {
       const s = this.slots[i];
       if (!s || s.id !== rest.id || s.count >= MAX_STACK) continue;
       const room = MAX_STACK - s.count;
       const take = Math.min(room, rest.count);
       s.count += take;
-      if (rest.best.weight > s.best.weight) s.best = { weight: rest.best.weight, length: rest.best.length };
+      mergeBest(s, rest);
       rest = { ...rest, count: rest.count - take };
       if (rest.count <= 0) { this.touch(); return { ok: true, slot: i, merged: true }; }
     }
@@ -79,14 +107,15 @@ export class Inventory {
     if (!s) return;
     const toBelt = i < BELT_START;
     const range = toBelt ? [BELT_START, TOTAL_SLOTS] : [0, BELT_START];
-    // сперва — в стак того же вида
-    for (let k = range[0]; k < range[1]; k++) {
+    // сперва — в стак того же вида (но только если вид складывается)
+    const stackable = !s.spec || s.spec.stackable !== false;
+    for (let k = stackable ? range[0] : range[1]; k < range[1]; k++) {
       const t = this.slots[k];
       if (t && t.id === s.id && t.count < MAX_STACK) {
         const room = MAX_STACK - t.count;
         const take = Math.min(room, s.count);
         t.count += take;
-        if (s.best.weight > t.best.weight) t.best = { weight: s.best.weight, length: s.best.length };
+        mergeBest(t, s);
         s.count -= take;
         if (s.count <= 0) this.slots[i] = null;
         this.touch();
@@ -131,12 +160,41 @@ export class Inventory {
   }
 
   /**
-   * Найти первый непустой слот с рыбой.
+   * Найти первый непустой слот.
    *
+   * @param {string} [kind] если задан — искать только предмет этого вида
    * @returns {number} номер слота или -1
    */
-  firstFilled() {
-    for (let i = 0; i < this.slots.length; i++) if (this.slots[i]) return i;
+  firstFilled(kind) {
+    for (let i = 0; i < this.slots.length; i++) {
+      const s = this.slots[i];
+      if (!s) continue;
+      if (kind && s.spec.kind !== kind) continue;
+      return i;
+    }
+    return -1;
+  }
+
+  /**
+   * Посчитать, сколько предметов данного вида лежит в сумке.
+   *
+   * @param {string} id идентификатор предмета
+   * @returns {number}
+   */
+  countOf(id) {
+    let n = 0;
+    for (const s of this.slots) if (s && s.id === id) n += s.count;
+    return n;
+  }
+
+  /**
+   * Первый слот с нужным предметом.
+   *
+   * @param {string} id идентификатор предмета
+   * @returns {number} номер слота или -1
+   */
+  findById(id) {
+    for (let i = 0; i < this.slots.length; i++) if (this.slots[i] && this.slots[i].id === id) return i;
     return -1;
   }
 }
@@ -185,7 +243,7 @@ export function clickSlot(inv, i, button = 0, shift = false) {
   } else if (slot.id === inv.held.id && slot.count < MAX_STACK) {
     const take = Math.min(MAX_STACK - slot.count, inv.held.count);
     slot.count += take;
-    if (inv.held.best.weight > slot.best.weight) slot.best = { weight: inv.held.best.weight, length: inv.held.best.length };
+    mergeBest(slot, inv.held);
     inv.held.count -= take;
     if (inv.held.count <= 0) { inv.held = null; inv.heldFrom = -1; }
   } else {
