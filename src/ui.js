@@ -48,6 +48,7 @@ export class UI {
       menu: document.getElementById('menu'),
       resume: document.getElementById('resume'),
       saveBtn: document.getElementById('saveBtn'),
+      loadInMenu: document.getElementById('loadInMenu'),
       continue: document.getElementById('continue'),
       contDay: document.getElementById('contDay'),
       dateText: document.getElementById('dateText'),
@@ -289,6 +290,10 @@ export class UI {
       e.stopPropagation();
       if (this.onSave) this.onSave();
     });
+    this.el.loadInMenu && this.el.loadInMenu.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.onLoadInMenu) this.onLoadInMenu();
+    });
     this.el.continue && this.el.continue.addEventListener('click', (e) => {
       e.stopPropagation();
       if (this.onContinue) this.onContinue();
@@ -499,6 +504,7 @@ export class UI {
     for (const g of goods) {
       const row = document.createElement('div');
       row.className = 'tradeRow';
+      row.dataset.id = g.id;
       const icon = itemIcon(g, 68);
       if (icon) row.appendChild(icon);
       const info = document.createElement('div');
@@ -508,7 +514,9 @@ export class UI {
       const sp = document.createElement('span');
       sp.textContent = g.dmg
         ? `урон ${g.dmg[0]}–${g.dmg[1]} · замах ${g.speed.toFixed(2)} с · ${g.price} зол.`
-        : `${g.price} зол.`;
+        : g.mana
+          ? `${g.mana} маны за раз · ${g.price} зол.`
+          : `${g.price} зол.`;
       info.appendChild(b);
       info.appendChild(sp);
       row.appendChild(info);
@@ -650,6 +658,15 @@ export class UI {
       if (this.el.threat) this.el.threat.classList.remove('on');
       if (this.el.reticle) this.el.reticle.classList.remove('target', 'swing');
     }
+  }
+
+  /**
+   * Факел в руках: показываем полоску топлива даже вне подземелья.
+   *
+   * @param {boolean} on взят ли факел в руку
+   */
+  setTorch(on) {
+    document.body.classList.toggle('hasTorch', !!on);
   }
 
   /**

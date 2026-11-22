@@ -46,6 +46,9 @@ export const SLOT_COUNT = 3;
 /** Номер формата сохранения. Повышается при несовместимых изменениях. */
 export const SAVE_VERSION = 1;
 
+/** Полный бак факела — столько топлива он вмещает (см. `COMBAT.fuelMax`). */
+const COMBAT_MAX_FUEL = 100;
+
 /**
  * Хранилище по умолчанию: localStorage.
  * В Electron/NW.js его подменяют на файловый (см. `setFileStore`).
@@ -301,6 +304,8 @@ export function snapshot(ctx) {
     }
   }
   const p = ctx.player;
+  const combat = ctx.systems && ctx.systems.combat;
+  const loadout = ctx.systems && ctx.systems.loadout;
   return {
     day: ctx.calendar ? ctx.calendar.day : 1,
     season: ctx.calendar ? ctx.calendar.season : 'spring',
@@ -316,6 +321,12 @@ export function snapshot(ctx) {
     invSel: inv ? inv.sel : 0,
     caught: ctx.caught ? { ...ctx.caught } : {},
     flags: ctx.flags ? { ...ctx.flags } : {},
+    // факел: сколько топлива осталось, горит ли он и взят ли в руку
+    torch: combat ? {
+      fuel: combat.state.fuel,
+      lit: combat.state.lit,
+      equipped: loadout ? loadout.torchEquipped : false,
+    } : null,
   };
 }
 
@@ -377,6 +388,23 @@ export function applySnapshot(ctx, data) {
   // улов (для коллекции пород) и флаги
   if (ctx.caught && data.caught) Object.assign(ctx.caught, data.caught);
   if (ctx.flags && data.flags) Object.assign(ctx.flags, data.flags);
+
+  // факел: топливо, горение и то, взят ли он в руку
+  if (data.torch) {
+    const combat = ctx.systems && ctx.systems.combat;
+    const loadout = ctx.systems && ctx.systems.loadout;
+    if (combat) {
+      if (typeof data.torch.fuel === 'number') {
+        combat.state.fuel = Math.max(0, Math.min(COMBAT_MAX_FUEL, data.torch.fuel));
+      }
+    }
+    // сначала экипировка: гореть может только то, что в руке
+    if (loadout) loadout.setTorchEquipped(!!data.torch.equipped);
+    if (combat) {
+      combat.state.lit = !!data.torch.lit && combat.state.fuel > 0 && combat.state.torchEquipped;
+      combat.brand.setLit(combat.state.lit);
+    }
+  }
 
   // позиция — только в деревне: в локациях игрок появляется у входа
   if (ctx.player && data.pos && !ctx.systems?.locations?.isInside?.()) {

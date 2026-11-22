@@ -108,10 +108,13 @@ const res = await page.evaluate(() => {
   }
 
   // --- симметрия: у каждого дома есть зеркальный ---
-  // Исключение: дом E на восточной стороне (29, −22). Его зеркало
+  // Исключения: дом E на восточной стороне (29, −22). Его зеркало
   // ((40, −8)) попало бы в пруд, поэтому в раунде 46 западный дом E
   // переехал на окраину (−40, −8) и пара у этой пары — одна.
-  const ASYM = new Set([8, 9]);
+  // Дом F на западе (−34, −16) — тоже один: раньше он стоял на дороге
+  // к скале (−19, −34) и перекрывал её. Парный ему дом 11 (19, −34) остался
+  // на месте, но зеркала у него больше нет.
+  const ASYM = new Set([8, 9, 10, 11]);
   const mirror = [];
   for (const h of homes) {
     if (ASYM.has(h.i)) continue;
@@ -120,6 +123,34 @@ const res = await page.evaluate(() => {
   }
 
   // расстояния между соседними домами — «как в деревне», а не щель
+  // --- дорога к скале: дом не должен стоять на ней ---
+  // Точки повторяют DUNGEON_TRAIL из game/layout.js: раньше дом стоял
+  // прямо на дороге к скале и перекрывал её.
+  const TRAIL = [
+    [-2.5, -14], [-5, -21], [-12, -28], [-20, -33], [-28, -38],
+    [-36, -41], [-44, -46], [-51, -52], [-56, -58], [-62, -60], [-67, -63],
+  ];
+  const distToTrail = (x, z) => {
+    let best = Infinity;
+    for (let i = 0; i < TRAIL.length - 1; i++) {
+      const [ax, az] = TRAIL[i];
+      const [bx, bz] = TRAIL[i + 1];
+      const dx = bx - ax, dz = bz - az;
+      const l2 = dx * dx + dz * dz;
+      let t = l2 > 0 ? ((x - ax) * dx + (z - az) * dz) / l2 : 0;
+      t = Math.max(0, Math.min(1, t));
+      best = Math.min(best, Math.hypot(x - (ax + dx * t), z - (az + dz * t)));
+    }
+    return best;
+  };
+  const onTrail = [];
+  for (const h of homes) {
+    const d = distToTrail(h.x, h.z);
+    // половина диагонали дома + половина ширины дороги + запас
+    const need = Math.hypot(h.w, h.d) / 2 + 1.3 + 1.5;
+    if (d < need) onTrail.push(`дом ${h.i} (${h.x}, ${h.z}): ${d.toFixed(1)} м от дороги к скале`);
+  }
+
   const gaps = [];
   for (let i = 0; i < homes.length; i++) {
     for (let j = i + 1; j < homes.length; j++) {
@@ -130,7 +161,7 @@ const res = await page.evaluate(() => {
     }
   }
 
-  return { homes, problems, mirror, gaps, others };
+  return { homes, problems, mirror, gaps, others, onTrail };
 });
 
 console.log('--- дома ---');
@@ -144,10 +175,14 @@ for (const p of res.problems) {
 }
 console.log('\n--- расстояния между домами (ближе 20 м) ---');
 console.log(res.gaps.length ? '  ' + res.gaps.join(', ') : '  все участки просторные');
+console.log('\n--- дорога к скале ---');
+if (!res.onTrail.length) console.log('  ✓ ни один дом не стоит на дороге к скале');
+for (const t of res.onTrail) console.log(`  ✗ ${t}`);
+
 console.log('\n--- симметрия ---');
 console.log(res.mirror.length
   ? `  ✗ нет зеркального дома: ${res.mirror.join(', ')}`
   : '  ✓ все дома имеют зеркальную пару');
 console.log('\nошибки: ' + errs.length, errs.slice(0, 3));
 await browser.close();
-if (res.problems.length || res.mirror.length) process.exit(1);
+if (res.problems.length || res.mirror.length || res.onTrail.length) process.exit(1);

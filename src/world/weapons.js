@@ -47,6 +47,7 @@ const M = {
   bow: new THREE.MeshStandardMaterial({ color: 0x9c7444, roughness: 0.88 }),
   string: new THREE.MeshStandardMaterial({ color: 0xd9cfb4, roughness: 1 }),
   shaft: new THREE.MeshStandardMaterial({ color: 0x7a5c33, roughness: 0.9 }),
+  arrow: new THREE.MeshStandardMaterial({ color: 0xb08e5c, roughness: 0.85 }),
   gem: new THREE.MeshStandardMaterial({
     color: 0x4f7fb5, roughness: 0.15, metalness: 0.1,
     emissive: 0x2b4f7a, emissiveIntensity: 0.55,
@@ -310,32 +311,58 @@ function bowModel() {
     return m;
   }
 
-  // дуги: от рукояти вверх и наружу
+  /* Геометрия лука.
+   *
+   * Плоскость лука — вертикальная (Y — вверх по плечам, Z — от стрелка к
+   * цели). Прогиб плеч уходит к цели, а наконечники загибаются назад, к
+   * стрелку: поэтому тетива получается прямой и стоит чуть позади рукояти,
+   * как и на настоящем луке.
+   */
+  const LIMB = 0.72;      // длина плеча от рукояти до наконечника
+  const BELLY = -0.19;    // прогиб к цели
+  const TIP_Z = 0.07;     // наконечник загибается к стрелку
+
   const tips = [];
   for (const side of [-1, 1]) {
-    const N = 7;
-    let prev = new THREE.Vector3(0, -0.16, 0);
+    const N = 10;
+    let prev = new THREE.Vector3(0, side * 0.11, 0);
     for (let i = 1; i <= N; i++) {
       const t = i / N;
       const p = new THREE.Vector3(
-        side * 0.30 * Math.sin(t * Math.PI * 0.5),
-        -0.16 + 0.92 * t,
-        0.03 * Math.cos(t * Math.PI),
+        0,
+        side * (0.11 + LIMB * t),
+        BELLY * Math.sin(Math.PI * t) + TIP_Z * t,
       );
-      g.add(tube(prev, p, 0.026 - 0.010 * ((i - 1) / N), 0.026 - 0.010 * (i / N), M.bow));
+      const r0 = 0.030 - 0.017 * ((i - 1) / N);
+      const r1 = 0.030 - 0.017 * (i / N);
+      g.add(tube(prev, p, r0, r1, M.bow));
       prev = p;
     }
     tips.push(prev);
   }
-  // рукоять
-  g.add(mesh(cyl(0.028, 0.028, 0.34, 8), M.leather, 0, 0, -0.005));
-  // тетива — от концов дуг к рукояти
-  g.add(tube(tips[0], new THREE.Vector3(0, -0.02, -0.03), 0.005, 0.005, M.string));
-  g.add(tube(tips[1], new THREE.Vector3(0, -0.02, -0.03), 0.005, 0.005, M.string));
-  // стрела — поперёк лука, остриём вперёд
-  const shaft = mesh(cyl(0.006, 0.006, 0.66, 5), M.shaft, 0, 0.16, -0.30, Math.PI / 2, 0, 0);
+
+  // рукоять: кожаная обмотка посредине
+  g.add(mesh(cyl(0.036, 0.036, 0.28, 10), M.leather, 0, 0, 0.012));
+  // рожки на наконечниках
+  for (const t of tips) {
+    g.add(mesh(cyl(0.019, 0.013, 0.08, 6), M.woodDark, t.x, t.y + Math.sign(t.y) * 0.03, t.z));
+  }
+
+  // тетива — прямая от рожка до рожка
+  g.add(tube(tips[0], tips[1], 0.0045, 0.0045, M.string));
+
+  // стрела: древно вперёд, наконечник и оперение
+  const shaft = mesh(cyl(0.011, 0.011, 0.80, 7), M.arrow, 0, 0, -0.25, Math.PI / 2, 0, 0);
   g.add(shaft);
-  g.add(mesh(cone(0.016, 0.08, 6), M.steel, 0, 0.16, -0.66, Math.PI / 2, 0, 0));
+  g.add(mesh(cone(0.022, 0.11, 8), M.steel, 0, 0, -0.68, Math.PI / 2, 0, 0));
+  // оперение — три пера у хвостовика
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2;
+    const f = mesh(box(0.006, 0.07, 0.15), M.cloth,
+      Math.cos(a) * 0.016, Math.sin(a) * 0.016, 0.09,
+      0, 0, a);
+    g.add(f);
+  }
   return g;
 }
 
@@ -372,7 +399,7 @@ function staffModel() {
 const FLOATS = {
   blade: { pos: [0.175, -0.030, -0.500], rot: [-0.42, -0.16, 0.16], scale: 0.46 },
   axe: { pos: [0.175, -0.080, -0.470], rot: [-0.34, -0.14, 0.20], scale: 0.34 },
-  bow: { pos: [0.020, -0.150, -0.620], rot: [0.02, -0.15, 0.02], scale: 0.26 },
+  bow: { pos: [-0.135, -0.070, -0.720], rot: [0.10, -0.44, 0.20], scale: 0.32 },
   magic: { pos: [0.125, -0.230, -0.520], rot: [0.0, -0.22, 0.06], scale: 0.30 },
 };
 

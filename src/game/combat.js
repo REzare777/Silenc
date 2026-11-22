@@ -57,6 +57,7 @@ export function createCombat(ctx) {
     fuel: COMBAT.fuelMax,
     lit: false,
     lighting: 0,          // сколько осталось разжигания
+    torchEquipped: false, // факел взят в левую руку
     flashCd: 0,
     flashTime: 0,
     strikeCd: 0,
@@ -94,23 +95,79 @@ export function createCombat(ctx) {
   }
 
   /**
+   * Взять факел в левую руку или убрать его.
+   *
+   * Факел — обычное снаряжение: его можно купить, положить на пояс и взять
+   * в руку. Никто его не выдаёт при входе в подземелье, и гореть он
+   * начинает только по команде игрока.
+   *
+   * @param {boolean} on взять ли в руку
+   */
+  function setTorchEquipped(on) {
+    const want = !!on;
+    if (state.torchEquipped === want) return;
+    state.torchEquipped = want;
+    holdBrand(want);
+    if (!want) {
+      // убрали факел — огонь погас
+      state.lit = false;
+      state.lighting = 0;
+      brand.setLit(false);
+    }
+  }
+
+  /**
+   * Взять/убрать факел (переключатель).
+   *
+   * @returns {boolean} взят ли он теперь в руку
+   */
+  function toggleTorchEquip() {
+    setTorchEquipped(!state.torchEquipped);
+    return state.torchEquipped;
+  }
+
+  /**
+   * Добавить топлива в факел.
+   *
+   * @param {number} n сколько
+   * @returns {number} сколько топлива стало
+   */
+  function addFuel(n) {
+    state.fuel = Math.max(0, Math.min(COMBAT.fuelMax, state.fuel + n));
+    return state.fuel;
+  }
+
+  /**
+   * Зажечь факел сразу, без ожидания разжигания.
+   *
+   * @returns {boolean} удалось ли
+   */
+  function lightNow() {
+    if (!state.torchEquipped || state.fuel <= 0) return false;
+    state.lighting = 0;
+    state.lit = true;
+    brand.setLit(true);
+    return true;
+  }
+
+  /**
    * Включить или выключить боевой режим (вход/выход из подземелья).
    *
    * @param {boolean} on активен ли бой
    */
   function setActive(on) {
-    if (state.active === !!on) return;
-    state.active = !!on;
+    const want = !!on;
+    if (state.active === want) return;
+    state.active = want;
     if (state.active) {
-      state.fuel = COMBAT.fuelMax;
-      state.lit = true;
-      state.lighting = 0;
-      brand.setLit(true);
-      holdBrand(true);
+      // факел не зажигается сам — это снаряжение игрока
+      if (!state.torchEquipped) {
+        state.lit = false;
+        brand.setLit(false);
+      }
+      if (ctx.systems.shadows) ctx.systems.shadows.spawn();
     } else {
-      state.lit = false;
-      brand.setLit(false);
-      holdBrand(false);
+      state.threat = 0;
     }
   }
 
@@ -120,7 +177,9 @@ export function createCombat(ctx) {
    * @returns {string} что произошло — для подсказки
    */
   function toggleTorch() {
-    if (!state.active) return '';
+    if (!state.torchEquipped) {
+      return 'Факела в руках нет. Возьми его с пояса (клавиша R).';
+    }
     if (state.lit) {
       state.lit = false;
       brand.setLit(false);
@@ -130,7 +189,7 @@ export function createCombat(ctx) {
     if (state.lighting > 0) return 'Факел уже разжигается…';
     if (state.fuel <= 0) {
       if (ctx.ambience) ctx.ambience.torchOut();
-      return 'В факеле нет топлива. Подойди к огню.';
+      return 'В факеле нет топлива. Подойди к огню или купи смолу и фитиль.';
     }
     state.lighting = COMBAT.lightTime;
     if (ctx.ambience) ctx.ambience.torchLight();
@@ -294,7 +353,28 @@ export function createCombat(ctx) {
    */
   function update(dt, t) {
     if (!state.active) {
+      // вне подземелья боя нет, но факел — обычная вещь: он горит,
+      // тратит топливо и живым пламенем
       state.threat = 0;
+      if (state.lighting > 0) {
+        state.lighting -= dt;
+        if (state.lighting <= 0) {
+          state.lighting = 0;
+          state.lit = true;
+          brand.setLit(true);
+        }
+      }
+      if (state.lit) {
+        state.fuel -= COMBAT.burnPerSec * dt;
+        if (state.fuel <= 0) {
+          state.fuel = 0;
+          state.lit = false;
+          brand.setLit(false);
+          if (ctx.ambience) ctx.ambience.torchOut();
+          if (ctx.ui) ctx.ui.toast('Факел погас. Найди огонь.', 2400);
+        }
+      }
+      brand.update(t);
       return;
     }
 
@@ -365,6 +445,7 @@ export function createCombat(ctx) {
     if (state.flashCd > 0.01) {
       return `Вспышка перезаряжается — ${state.flashCd.toFixed(1)} с`;
     }
+    if (!state.torchEquipped) return 'Факела нет в руках — R';
     if (state.lighting > 0) return 'Разжигаю факел…';
     if (!state.lit) {
       return state.fuel > 0 ? 'Зажечь факел — F' : 'Факел пуст — найди огонь';
@@ -390,7 +471,7 @@ export function createCombat(ctx) {
   return {
     state, brand, firePoints,
     update, strike, weaponStrike, flare, toggleTorch, setActive, prompt, aimTarget,
-    addFirePoint, holdBrand,
+    addFirePoint, holdBrand, setTorchEquipped, toggleTorchEquip, addFuel, lightNow,
     /**
      * Заморозить бой (например, когда игрок погиб): факел не тратит
      * топливо, удары и вспышки не работают.

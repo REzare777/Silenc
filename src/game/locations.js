@@ -237,6 +237,8 @@ export function createLocations(ctx) {
       ctx.ui.toast('Вы вернулись в деревню.', 2200);
     }
     ctx.player.keys.clear();
+    // смена локации — повод для автосохранения
+    if (ctx.onLocationChanged) ctx.onLocationChanged();
   }
 
   /* ---------------- взаимодействия внутри локаций ---------------- */

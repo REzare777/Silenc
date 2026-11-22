@@ -133,6 +133,10 @@ export class ViewModel {
     this.lifetime = 0;
     /** Плавное появление/исчезновение. */
     this._fade = 0;
+    /** Вспышка заклинания: сколько осталось гореть. */
+    this._flash = 0;
+    /** Сила вспышки заклинания. */
+    this._flashPower = 0;
 
     /** Целевая посадка парящего объекта. */
     this._base = { pos: [0, 0, 0], rot: [0, 0, 0] };
@@ -243,6 +247,20 @@ export class ViewModel {
   /** Убрать оружие. */
   clearWeapon() {
     this.setWeapon(null, null);
+  }
+
+  /**
+   * Вспышка заклинания: свет вокруг оружия на мгновение усиливается.
+   *
+   * @param {number} color цвет вспышки
+   * @param {number} power сила
+   */
+  flash(color = 0xffb066, power = 8) {
+    this.glow.color.setHex(color);
+    this.glow.intensity = power;
+    this._flash = 0.35;
+    this._flashPower = power;
+    if (this.motes) this.motes.material.color.setHex(color);
   }
 
   /**
@@ -478,6 +496,20 @@ export class ViewModel {
     }
     pts.needsUpdate = true;
     this.motes.material.opacity = 0.55 * this._fade;
+
+    // вспышка заклинания: свет гаснет сам
+    if (this._flash > 0) {
+      this._flash = Math.max(0, this._flash - dt);
+      const k = this._flash / 0.35;
+      this.glow.intensity = Math.max(this.glow.intensity, this._flashPower * k);
+      if (this._flash === 0) {
+        // возвращаем обычный цвет свечения оружия
+        const magic = this.weaponSpec && this.weaponSpec.subclass === 'magic';
+        this.glow.color.setHex(this.torch && !this.weapon ? 0xffb066 : (magic ? 0x9a6bff : 0xffd9a0));
+        this.glow.intensity = this.weapon ? (magic ? 6 : 3.2) : (this.torch ? 5 : 2.5);
+        if (this.motes) this.motes.material.color.setHex(0xffd9a0);
+      }
+    }
 
     // появление/исчезновение
     const f = this._fade;

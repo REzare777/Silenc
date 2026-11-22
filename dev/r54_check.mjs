@@ -116,7 +116,7 @@ await step('торговля и кузнец', () => {
   ok('tradeVisible', tradeEl && tradeEl.classList.contains('on'));
   const rows = document.querySelectorAll('#tradeGoods .tradeRow');
   info.tradeGoodRows = rows.length;
-  ok('tradeRows', rows.length === 8, rows.length);   // 7 видов оружия + смола и фитиль
+  ok('tradeRows', rows.length === 9, rows.length);   // 7 видов оружия + смола и фитиль + факел
   info.tradeMineBefore = document.querySelectorAll('#tradeMine .tradeRow').length;
   ok('tradeMineListed', info.tradeMineBefore >= 0, info.tradeMineBefore);
 
@@ -150,7 +150,7 @@ await step('торговля и кузнец', () => {
   ok('sellCoins', d.ctx.stats.coins === coinsPre + fish.value, `${coinsPre} + ${fish.value} = ${d.ctx.stats.coins}`);
   ok('sellCount', inv.countOf(fish.id) === 1, inv.countOf(fish.id));
   const barkeepRows = document.querySelectorAll('#tradeGoods .tradeRow');
-  ok('barkeepGoods', barkeepRows.length === 6, barkeepRows.length);
+  ok('barkeepGoods', barkeepRows.length === 9, barkeepRows.length);   // 6 товаров + 3 заклинания
   trade.close();
 
   /* --- 5б. торговля в таверне: интеракт на месте --- */

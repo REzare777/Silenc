@@ -87,7 +87,8 @@ import { createDeath } from './game/death.js';
 import { createDialog } from './game/dialog.js';
 import { createTrade } from './game/trade.js';
 import { createLoadout } from './game/loadout.js';
-import { ITEMS, GOODS, MATERIALS, itemIcon, itemBadge, itemDesc, sellPrice, buyPrice, getItem } from './game/items.js';
+import { createSpells } from './game/spells.js';
+import { ITEMS, GOODS, MATERIALS, GEAR, SPELLS, itemIcon, itemBadge, itemDesc, sellPrice, buyPrice, getItem } from './game/items.js';
 import { WEAPONS, weaponModel, weaponIcon, getWeapon, weaponFloat } from './world/weapons.js';
 import { createInteractions } from './game/interactions.js';
 import { createBag } from './game/bag.js';
@@ -361,6 +362,8 @@ ctx.systems.locations = createLocations(ctx);
 // боёвка: факел в руке и тени в подземелье
 ctx.systems.combat = createCombat(ctx);
 ctx.systems.shadows = createShadows(ctx);
+// заклинания: мана, откаты и вспышки
+ctx.systems.spells = createSpells(ctx);
 // смерть: падение и экран «Погиб». Появилась вместе с сохранениями —
 // теперь проиграть можно, и это должно быть честно.
 ctx.systems.death = createDeath(ctx);
@@ -371,6 +374,19 @@ ctx.systems.saveToSlot = saveToSlot;
 const combat = ctx.systems.combat;
 const shadows = ctx.systems.shadows;
 const death = ctx.systems.death;
+
+/* Автосохранение по событиям
+ * -------------------------
+ * Игра пишет «последнее сохранение» сама в трёх случаях:
+ *   * игрок зашёл в локацию (амбар, таверна, подземелье, дом, храм);
+ *   * сменился период времени суток (утро → день → золотой час → …);
+ *   * прошла минута реального времени (страховка от закрытой вкладки).
+ * Мёртвому игроку нечего сохранять: после смерти «последнее сохранение»
+ * должно остаться тем, с которого игрок вернётся.
+ */
+ctx.onLocationChanged = () => {
+  if (started && !death.isDead) autosave();
+};
 
 // Огонь — единственный источник света, топлива и лечения.
 // Жаровни в пещере, костёр за селом, очаг в таверне.
@@ -390,7 +406,10 @@ ctx.flags = ctx.flags || {};
 // Системы получают доступ к сохранению через контекст: так локации
 // (например, переночевание в трактире) могут сохранить игру сами.
 ctx.saveGame = (quiet) => saveGame(quiet !== false);
-ctx.itemById = (id) => fishById(id);
+// предмет по id — из общего каталога: рыба, оружие, товары, снаряжение
+// и заклинания (раньше здесь стоял только поиск по рыбе, и оружие из
+// сохранения не восстанавливалось)
+ctx.itemById = (id) => getItem(id) || fishById(id);
 
 // Если есть сохранение — показываем «Продолжить» на титульном экране.
 {
@@ -549,6 +568,8 @@ function loadSlot(key, index) {
     ctx.ui.renderInventory(ctx.systems.bag ? ctx.systems.bag.inventory : null);
     ctx.ui.hideSlots();
   }
+  // если загрузка шла из меню паузы — возвращаем управление
+  if (ctx.mode === 'menu') resumeGame();
   return true;
 }
 
@@ -596,6 +617,11 @@ loadVolume(ctx);
 
 ui.onResume = () => resumeGame();
 ui.onSave = () => saveGame();
+// «Загрузить игру…» прямо в меню паузы: список сохранений открывается
+// поверх меню, без похода на титульный экран
+ui.onLoadInMenu = () => {
+  ui.showSlots(listSlots());
+};
 // «Слоты…» в меню паузы: сохранить в ручной слот прямо из игры
 ui.onSlotsOpen = () => {
   ui.showSlots(listSlots());
@@ -733,10 +759,10 @@ window.addEventListener('keydown', (e) => {
     else if (e.code.startsWith('Digit')) {
       const n = +e.code.slice(5);
       if (n >= 1 && n <= 9) {
-        bag.inventory.sel = n - 1;
+        // выбор ячейки пояса: оружие — в руку, свиток — колдуется,
+        // факел — берётся в левую руку
         if (ctx.systems.loadout) ctx.systems.loadout.select(n - 1);
         ui.renderInventory(bag.inventory);
-        ui.toast(`Слот пояса: ${n}`, 900);
       }
     }
     return;
@@ -768,6 +794,11 @@ window.addEventListener('keydown', (e) => {
       const msg = combat.toggleTorch();
       if (msg) ui.toast(msg, 1800);
     }
+  } else if (e.code === 'KeyR') {
+    // взять факел в левую руку или убрать его
+    if (ctx.mode === 'play' && ctx.systems.loadout) {
+      ctx.systems.loadout.toggleTorch();
+    }
   } else if (e.code === 'KeyE') {
     if (ctx.mode === 'play') {
       if (fishing.session.state === 'bite') fishing.hookFish();
@@ -782,7 +813,8 @@ window.addEventListener('keydown', (e) => {
   } else if (e.code.startsWith('Digit')) {
     const n = +e.code.slice(5);
     if (n >= 1 && n <= 9) {
-      bag.inventory.sel = n - 1;
+      // выбор ячейки пояса: оружие — в руку, свиток — колдуется,
+      // факел — берётся в левую руку
       if (ctx.systems.loadout) ctx.systems.loadout.select(n - 1);
       ui.renderInventory(bag.inventory);
     }
@@ -926,6 +958,8 @@ const forgePos = new THREE.Vector3(14.5, 0, -8);
 let forestRangeTimer = 0;
 /** Накопитель автосохранения (секунды). */
 let autosaveAccum = 0;
+/** Последний период времени суток — по смене делаем автосохранение. */
+let lastTod = null;
 
 function loop() {
   requestAnimationFrame(loop);
@@ -963,6 +997,12 @@ function loop() {
   if (clockAccum > 0.5) {
     clockAccum = 0;
     ui.setClock(env.current, env.periodSeconds - env.phaseTime);
+  }
+
+  // смена периода времени суток — второй повод для автосохранения
+  if (env.current !== lastTod) {
+    lastTod = env.current;
+    if (started && !death.isDead) autosave();
   }
 
   const nightAmt = THREE.MathUtils.clamp((env.stars - 0.05) * 1.4, 0, 1);
@@ -1033,10 +1073,13 @@ function loop() {
     autosaveAccum = 0;
     // мёртвому игроку сохранять нечего: «последнее сохранение» должно
     // остаться тем, с которого можно вернуться после смерти
-    if (started && ctx.loc === 'village' && !death.isDead) autosave();
+    if (started && !death.isDead) autosave();
   }
   ui.setCombat(ctx.loc === 'dungeon');
-  if (ctx.loc === 'dungeon') {
+  // факел — снаряжение: его можно взять и в деревне, поэтому полоска
+  // топлива видна, пока факел в руке
+  ui.setTorch(combat.state.torchEquipped);
+  if (ctx.loc === 'dungeon' || combat.state.torchEquipped) {
     ui.setFire(combat.state.fuel, COMBAT.fuelMax);
     const aim = combat.aimTarget();
     ui.setVeil(aim ? aim.veil : 0, 3);
@@ -1228,9 +1271,9 @@ window.__dbg = {
   // слоты и смерть — для проверок и отладки
   listSlots, loadSlot, saveToSlot,
   death, combat, shadows,
-  trade: ctx.systems.trade, loadout: ctx.systems.loadout,
+  trade: ctx.systems.trade, loadout: ctx.systems.loadout, spells: ctx.systems.spells,
   npcs: Object.assign({}, locations.npcs || {}, ctx.npcs || {}),
-  items: { ITEMS, GOODS, MATERIALS, itemIcon, itemBadge, itemDesc, sellPrice, buyPrice, getItem },
+  items: { ITEMS, GOODS, MATERIALS, itemIcon, itemBadge, itemDesc, sellPrice, buyPrice, getItem, GEAR, SPELLS },
   weapons: { WEAPONS, weaponModel, weaponIcon, getWeapon, weaponFloat },
   startFishing: fishing.startFishing, hookFish: fishing.hookFish,
   updateFishing: fishing.updateFishing, toggleInventory: bag.toggle,

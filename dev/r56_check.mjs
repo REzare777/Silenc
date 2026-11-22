@@ -87,5 +87,19 @@ for (const spec of WEAPONS) {
     `z=${v.z.toFixed(2)}`);
 }
 
+/* ---- лук: настоящая дуга с тетивой и стрелой ---- */
+{
+  const bow = weaponModel('bow');
+  let meshes = 0;
+  bow.traverse((o) => { if (o.isMesh) meshes++; });
+  const b = new THREE.Box3().setFromObject(bow);
+  const h = b.max.y - b.min.y;
+  const w = b.max.x - b.min.x;
+  ok('«Лук»: модель собрана из многих частей', meshes >= 20, meshes);
+  ok('«Лук»: высота дуги около 1,6 м', h > 1.4 && h < 2.0, h.toFixed(2));
+  ok('«Лук»: плоскость лука вертикальна', w < 0.12, w.toFixed(3));
+  ok('«Лук»: стрека уходит вперёд по −Z', b.min.z < -0.4, b.min.z.toFixed(2));
+}
+
 console.log(`\nr56_check: ${okCount} ok, ${failCount} fail`);
 process.exit(failCount ? 1 : 0);

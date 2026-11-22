@@ -29,7 +29,7 @@
  *  @module game/trade
  */
 
-import { GOODS, MATERIALS, sellPrice, buyPrice, itemIcon, getItem } from './items.js';
+import { GOODS, MATERIALS, SPELLS, GEAR, sellPrice, buyPrice, itemIcon, getItem } from './items.js';
 import { WEAPONS } from '../world/weapons.js';
 import { BELT_START, TOTAL_SLOTS } from '../inventory.js';
 
@@ -44,22 +44,24 @@ export const TRADERS = {
     id: 'barkeep',
     name: 'Хорт',
     title: 'трактирщик «Уставшего вепря»',
-    buys: ['fish', 'goods'],
-    sells: GOODS,
+    buys: ['fish', 'goods', 'spell'],
+    // Хорт торгует съестным и «старыми словами»: заклинания он знает
+    // от прежней хозяйки, а продаёт их от её имени
+    sells: GOODS.concat(SPELLS),
     margin: 1.0,
-    greet: 'Эль, хлеб, сыр — всё по цене, какой я сам себе назначу. А за улов твой дам полную стоимость: в деревне рыба в цене.',
+    greet: 'Эль, хлеб, сыр — всё по цене, какой я сам себе назначу. А за улов твой дам полную стоимость: в деревне рыба в цене. За свитки с заклинаниями — отдельный разговор.',
     stock: null,       // товары не кончаются
   },
   blacksmith: {
     id: 'blacksmith',
     name: 'Торн',
     title: 'кузнец',
-    buys: ['weapon'],
-    // оружие и материалы кузнеца: «смола и фитиль» — то же, чем он набивает
-    // факел, поэтому её можно и купить, и сразу заправить
-    sells: WEAPONS.concat(MATERIALS),
+    buys: ['weapon', 'gear'],
+    // оружие, снаряжение и материалы кузнеца: «смола и фитиль» — то же,
+    // чем он набивает факел, поэтому её можно и купить, и сразу заправить
+    sells: WEAPONS.concat(MATERIALS).concat(GEAR),
     margin: 1.0,
-    greet: 'Мне нужен металл, а тебе — оружие. Меняемся. Только осторожно с двуручным: он и вправду тяжёлый.',
+    greet: 'Мне нужен металл, а тебе — оружие. Меняемся. Только осторожно с двуручным: он и вправду тяжёлый. Факел тоже могу — обмотанный, крепкий.',
     stock: null,
   },
 };
@@ -173,9 +175,11 @@ export function createTrade(ctx) {
       return false;
     }
     const stack = { id: spec.id, spec: { ...spec, kind: spec.kind || 'goods' }, count: 1, best: null };
-    // оружие сразу идёт на пояс — иначе пришлось бы искать его в сумке
+    // оружие, факел и свитки сразу идут на пояс — иначе пришлось бы искать
+    // их в сумке
+    const quick = spec.kind === 'weapon' || spec.kind === 'gear' || spec.kind === 'spell';
     let beltSlot = -1;
-    if (spec.kind === 'weapon') {
+    if (quick) {
       for (let k = BELT_START; k < TOTAL_SLOTS; k++) {
         if (!ctx.inventory.slots[k]) { beltSlot = k; break; }
       }
@@ -194,7 +198,7 @@ export function createTrade(ctx) {
       return false;
     }
     // оружие — сразу в руку
-    if (beltSlot >= 0 && ctx.systems.loadout) {
+    if (beltSlot >= 0 && ctx.systems.loadout && spec.kind === 'weapon') {
       ctx.systems.loadout.select(beltSlot - BELT_START);
     }
     ctx.ui.renderInventory(ctx.inventory);
@@ -204,6 +208,14 @@ export function createTrade(ctx) {
       msg = beltSlot >= 0
         ? `Куплено: ${spec.name} за ${price} зол. Теперь в руках — клавиша ${beltSlot - BELT_START + 1}.`
         : `Куплено: ${spec.name} за ${price} зол. Пояс занят: положи оружие на пояс (Shift+ЛКМ) и нажми цифру.`;
+    } else if (spec.kind === 'spell') {
+      msg = beltSlot >= 0
+        ? `Куплено: ${spec.name} за ${price} зол. Колдуй клавишей ${beltSlot - BELT_START + 1}.`
+        : `Куплено: ${spec.name} за ${price} зол. Пояс занят: положи свиток на пояс (Shift+ЛКМ).`;
+    } else if (spec.kind === 'gear') {
+      msg = beltSlot >= 0
+        ? `Куплено: ${spec.name} за ${price} зол. Возьми в руку клавишей ${beltSlot - BELT_START + 1}.`
+        : `Куплено: ${spec.name} за ${price} зол. Пояс занят: положи на пояс (Shift+ЛКМ).`;
     }
     ctx.ui.toast(msg, 3600);
     return true;

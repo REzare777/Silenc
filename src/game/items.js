@@ -16,7 +16,9 @@
  *    • `fish`    — рыба из `world/fish.js` (у неё свой вес и длина);
  *    • `weapon`  — оружие из `world/weapons.js` (урон, скорость, дальность);
  *    • `goods`   — товары: хлеб, эль, сыр, свеча, мёд;
- *    • `material`— материалы кузнеца: смола и фитиль.
+ *    • `material`— материалы кузнеца: смола и фитиль;
+ *    • `gear`    — снаряжение: факел (его берут на пояс, как оружие);
+ *    • `spell`   — заклинания: их покупают у трактирщика и колдуют с пояса.
  *
  *  Цены хранятся в одном месте, потому что от них зависит вся экономика:
  *  сколько платит трактирщик за улов, сколько стоит оружие, что выгодно
@@ -131,16 +133,110 @@ export const MATERIALS = [
 ];
 
 /* ------------------------------------------------------------------
+ *  Снаряжение
+ * ------------------------------------------------------------------ */
+
+/**
+ * Снаряжение — то, что берут на пояс и используют как оружие.
+ *
+ * Факел раньше был неотъемлемой частью подземелья: игрок входил — и бранд
+ * уже горел в руке. Теперь это обычная вещь: её можно купить у кузнеца,
+ * положить на пояс и взять в левую руку. Нет факела — идёшь в темноте.
+ */
+export const GEAR = [
+  {
+    id: 'torch',
+    name: 'Факел',
+    kind: 'gear',
+    value: 14,
+    buy: 16,
+    sell: 6,
+    weight: 0.7,
+    stackable: false,
+    desc: 'Обжигая палка с обмотанной пеньковой верёвкой. В подземелье это единственный круг света вокруг тебя.',
+    tip: 'Нажми цифру слота пояса, где лежит факел: он окажется в левой руке. F — зажечь и погасить.',
+  },
+];
+
+/* ------------------------------------------------------------------
+ *  Заклинания
+ * ------------------------------------------------------------------ */
+
+/**
+ * Заклинания — их покупают у трактирщика (Хорт знает старые слова) и
+ * колдуют прямо с пояса: нажал цифру — свиток сработал.
+ *
+ * `spell` — что делает заклинание: `flash` (вспышка), `heal` (лечение),
+ * `light` (живой огонь).
+ */
+export const SPELLS = [
+  {
+    id: 'spell_flash',
+    name: 'Огненная вспышка',
+    kind: 'spell',
+    value: 24,
+    buy: 28,
+    sell: 11,
+    weight: 0.1,
+    stackable: false,
+    mana: 25,
+    spell: 'flash',
+    desc: 'Короткий рывок огня по воздуху. Свет разом разбрасывает всех, кто подошёл слишком близко.',
+    tip: 'Нажми цифру слота пояса со свитком. Требует 25 маны.',
+  },
+  {
+    id: 'spell_heal',
+    name: 'Лечебное слово',
+    kind: 'spell',
+    value: 20,
+    buy: 24,
+    sell: 9,
+    weight: 0.1,
+    stackable: false,
+    mana: 20,
+    spell: 'heal',
+    desc: 'Старое слово, которому учат травниц. Стягивает раны и возвращает силы.',
+    tip: 'Лечит 35 единиц здоровья. Требует 20 маны.',
+  },
+  {
+    id: 'spell_light',
+    name: 'Живой огонь',
+    kind: 'spell',
+    value: 16,
+    buy: 20,
+    sell: 8,
+    weight: 0.1,
+    stackable: false,
+    mana: 15,
+    spell: 'light',
+    desc: 'Огонь, который не спрашивает разрешения у смолы: вспыхивает там, где нужен свет.',
+    tip: 'Зажигает факел в руке и добавляет 60 топлива. Без факела — светит вокруг тебя минуту.',
+  },
+];
+
+/* ------------------------------------------------------------------
  *  Реестр
  * ------------------------------------------------------------------ */
 
-/** Все предметы по id: рыба + оружие + товары + материалы. */
+/**
+ * Откаты заклинаний (секунды) — единая таблица, чтобы и подсказка в
+ * инвентаре, и сама система колдовства считали одинаково.
+ */
+export const SPELL_COOLDOWN = {
+  flash: 6,
+  heal: 12,
+  light: 10,
+};
+
+/** Все предметы по id: рыба + оружие + товары + материалы + снаряжение + заклинания. */
 export const ITEMS = (() => {
   const map = new Map();
   for (const f of FISH) map.set(f.id, { ...f, kind: 'fish' });
   for (const w of WEAPONS) map.set(w.id, { ...w, kind: 'weapon' });
   for (const g of GOODS) map.set(g.id, { ...g });
   for (const m of MATERIALS) map.set(m.id, { ...m });
+  for (const g of GEAR) map.set(g.id, { ...g });
+  for (const s of SPELLS) map.set(s.id, { ...s });
   return map;
 })();
 
@@ -222,6 +318,9 @@ export function itemBadge(spec, stack) {
   if (spec.kind === 'weapon') {
     return `${spec.dmg[0]}–${spec.dmg[1]}`;
   }
+  if (spec.kind === 'spell') {
+    return `${spec.mana} маны`;
+  }
   return '';
 }
 
@@ -246,6 +345,9 @@ export function itemDesc(spec, stack) {
     rows.push(['Дальность', `${spec.reach} м`]);
     rows.push(['Руки', spec.hands === 'two' ? 'две' : 'одна']);
     if (spec.mana) rows.push(['Мана', `${spec.mana} за удар`]);
+  } else if (spec.kind === 'spell') {
+    rows.push(['Мана', `${spec.mana}`]);
+    rows.push(['Откат', `${SPELL_COOLDOWN[spec.spell] ?? 6} с`]);
   } else {
     rows.push(['Вес', `${spec.weight ?? 0} кг`]);
   }
@@ -276,7 +378,9 @@ export function itemIcon(spec, size = 96) {
   if (cached) return copyCanvas(cached);
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = px;
-  drawGoodsIcon(canvas.getContext('2d'), spec, px);
+  if (spec.kind === 'gear') drawTorchIcon(canvas.getContext('2d'), spec, px);
+  else if (spec.kind === 'spell') drawSpellIcon(canvas.getContext('2d'), spec, px);
+  else drawGoodsIcon(canvas.getContext('2d'), spec, px);
   iconCache.set(key, canvas);
   return copyCanvas(canvas);
 }
@@ -287,6 +391,104 @@ function copyCanvas(src) {
   c.height = src.height;
   c.getContext('2d').drawImage(src, 0, 0);
   return c;
+}
+
+/**
+ * Рисунок иконки факела: палка с обмоткой и живой огонь.
+ *
+ * @param {CanvasRenderingContext2D} ctx контекст
+ * @param {object} spec предмет
+ * @param {number} px сторона квадрата
+ */
+function drawTorchIcon(ctx, spec, px) {
+  const g = ctx.createLinearGradient(0, 0, px, px);
+  g.addColorStop(0, '#2b2620');
+  g.addColorStop(1, '#15120e');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, px, px);
+  const c = px / 2;
+  // палка
+  ctx.strokeStyle = '#7a5c33';
+  ctx.lineWidth = px * 0.09;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(c, px * 0.82);
+  ctx.lineTo(c, px * 0.42);
+  ctx.stroke();
+  // обмотка
+  ctx.strokeStyle = '#3a2a18';
+  ctx.lineWidth = px * 0.035;
+  for (let i = 0; i < 3; i++) {
+    const y = px * (0.44 + i * 0.05);
+    ctx.beginPath();
+    ctx.moveTo(c - px * 0.07, y);
+    ctx.lineTo(c + px * 0.07, y - px * 0.02);
+    ctx.stroke();
+  }
+  // пламя
+  const fl = ctx.createRadialGradient(c, px * 0.3, px * 0.01, c, px * 0.3, px * 0.22);
+  fl.addColorStop(0, '#fff3c4');
+  fl.addColorStop(0.45, '#f6a83c');
+  fl.addColorStop(1, 'rgba(200,80,20,0)');
+  ctx.fillStyle = fl;
+  ctx.beginPath();
+  ctx.moveTo(c, px * 0.08);
+  ctx.bezierCurveTo(c + px * 0.16, px * 0.22, c + px * 0.12, px * 0.4, c, px * 0.46);
+  ctx.bezierCurveTo(c - px * 0.12, px * 0.4, c - px * 0.16, px * 0.22, c, px * 0.08);
+  ctx.fill();
+}
+
+/**
+ * Рисунок иконки заклинания: свиток со знаком.
+ *
+ * @param {CanvasRenderingContext2D} ctx контекст
+ * @param {object} spec предмет
+ * @param {number} px сторона квадрата
+ */
+function drawSpellIcon(ctx, spec, px) {
+  const g = ctx.createLinearGradient(0, 0, px, px);
+  g.addColorStop(0, '#2b2620');
+  g.addColorStop(1, '#15120e');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, px, px);
+  const c = px / 2;
+  // свиток
+  ctx.fillStyle = '#d8c9a6';
+  ctx.beginPath();
+  ctx.roundRect(c - px * 0.2, px * 0.16, px * 0.4, px * 0.68, px * 0.03);
+  ctx.fill();
+  ctx.fillStyle = '#b9a880';
+  ctx.fillRect(c - px * 0.2, px * 0.14, px * 0.4, px * 0.07);
+  ctx.fillRect(c - px * 0.2, px * 0.79, px * 0.4, px * 0.07);
+  // знак: цвет заклинания
+  const colors = { flash: '#e8843c', heal: '#63b86a', light: '#e8c14a' };
+  ctx.strokeStyle = colors[spec.spell] || '#9a7fd0';
+  ctx.fillStyle = ctx.strokeStyle;
+  ctx.lineWidth = px * 0.035;
+  ctx.lineCap = 'round';
+  if (spec.spell === 'flash') {
+    // молния
+    ctx.beginPath();
+    ctx.moveTo(c + px * 0.06, px * 0.28);
+    ctx.lineTo(c - px * 0.07, px * 0.5);
+    ctx.lineTo(c + px * 0.02, px * 0.5);
+    ctx.lineTo(c - px * 0.05, px * 0.72);
+    ctx.stroke();
+  } else if (spec.spell === 'heal') {
+    // крест
+    ctx.beginPath();
+    ctx.moveTo(c, px * 0.3); ctx.lineTo(c, px * 0.68);
+    ctx.moveTo(c - px * 0.1, px * 0.49); ctx.lineTo(c + px * 0.1, px * 0.49);
+    ctx.stroke();
+  } else {
+    // свеча с огнём
+    ctx.beginPath();
+    ctx.moveTo(c, px * 0.34);
+    ctx.bezierCurveTo(c + px * 0.09, px * 0.44, c + px * 0.06, px * 0.54, c, px * 0.58);
+    ctx.bezierCurveTo(c - px * 0.06, px * 0.54, c - px * 0.09, px * 0.44, c, px * 0.34);
+    ctx.fill();
+    ctx.fillRect(c - px * 0.035, px * 0.6, px * 0.07, px * 0.12);
+  }
 }
 
 /**

@@ -50,11 +50,27 @@ const res = await page.evaluate(async () => {
   out.loc = ctx.loc;
   out.active = combat.state.active;
   out.shadowCount = shadows.list.length;
-  // бранд живёт в левой руке (viewmodel.torch), а не в «обычном» предмете
+  // факел — снаряжение: в подземелье он сам не зажигается и в руке не появляется
+  out.torchAutoLit = combat.state.lit;
   out.brandInHand = ctx.viewmodel.torch ? 'brand' : ctx.viewmodel.itemName;
+
+  // игрок берёт факел из сумки и кладёт в левую руку
+  const torchSpec = ctx.itemById('torch');
+  out.torchInCatalog = !!torchSpec;
+  if (torchSpec) {
+    ctx.inventory.slots[0] = { id: 'torch', spec: torchSpec, count: 1, best: null };
+    ctx.inventory.touch();
+  }
+  ctx.systems.loadout.toggleTorch();
+  out.torchEquipped = ctx.systems.loadout.torchEquipped;
+  out.brandAfterEquip = ctx.viewmodel.torch ? 'brand' : ctx.viewmodel.itemName;
   out.handVisible = ctx.viewmodel.visible;
 
   /* ---------- 1. топливо тратится ---------- */
+  // сначала факел надо зажечь: горение начинается только по команде
+  combat.toggleTorch();
+  for (let i = 0; i < 40; i++) combat.update(0.05, i * 0.05);
+  out.litAfterLight = combat.state.lit;
   const fuel0 = combat.state.fuel;
   for (let i = 0; i < 60; i++) combat.update(0.05, i * 0.05);
   out.fuelBurned = +(fuel0 - combat.state.fuel).toFixed(2);
@@ -145,6 +161,7 @@ const res = await page.evaluate(async () => {
   ctx.systems.locations.setLocation('village');
   await new Promise((r) => setTimeout(r, 100));
   out.shadowsInVillage = shadows.list.length;
+  // факел — снаряжение: вышел из подземелья, а он остался в руке
   out.brandInVillage = ctx.viewmodel.torch ? 'brand' : ctx.viewmodel.itemName;
   const forgeShop = ctx.interactables.find((x) => x.label && x.label.includes('смолу'));
   out.forgeShopExists = !!forgeShop;
@@ -175,7 +192,11 @@ const res = await page.evaluate(async () => {
 const checks = [
   ['вошли в подземелье', res.loc === 'dungeon'],
   ['боёвка включилась', res.active === true],
-  ['бранд в руке', res.brandInHand === 'brand' && res.handVisible],
+  ['факел не зажигается сам', res.torchAutoLit === false],
+  ['без факела в руке ничего нет', res.brandInHand !== 'brand'],
+  ['факел есть в каталоге предметов', res.torchInCatalog === true],
+  ['факел берётся в левую руку', res.torchEquipped === true && res.brandAfterEquip === 'brand'],
+  ['факел зажигается по команде', res.litAfterLight === true],
   ['теней ровно шесть', res.shadowCount === 6],
   ['топливо тратится при горении', res.fuelBurned > 0.5],
   ['F гасит факел', res.litAfterToggle === false],
@@ -195,7 +216,7 @@ const checks = [
   ['у жаровни топливо восстанавливается', res.fuelAtBrazier > 15],
   ['у жаровни HP лечится', res.hpAtBrazier > 50],
   ['в деревне теней нет', res.shadowsInVillage === 0],
-  ['в деревне бранда в руке нет', res.brandInVillage !== 'brand'],
+  ['в деревне факел остаётся в руке', res.brandInVillage === 'brand'],
   ['у кузнеца есть «смола и фитиль»', res.forgeShopExists === true],
   ['смола и фитиль: −12 монет и +100 топлива',
     res.coinsAfterShop === 38 && res.fuelAfterShop === 100],

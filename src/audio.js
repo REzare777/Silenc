@@ -930,6 +930,29 @@ export class Ambience {
     o.start(t); o.stop(t + 0.5);
   }
 
+  /** Заклинание: короткий «хор» — колокольчик для лечения, шёпот для огня. */
+  spell(kind = 'flash') {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const freqs = kind === 'heal' ? [523.25, 659.25, 783.99]
+      : kind === 'light' ? [392, 587.33]
+        : [196, 293.66, 440];
+    freqs.forEach((f0, i) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = kind === 'heal' ? 'sine' : 'triangle';
+      o.frequency.setValueAtTime(f0, t);
+      if (kind === 'flash') o.frequency.exponentialRampToValueAtTime(f0 * 0.6, t + 0.35);
+      const start = t + i * 0.035;
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.exponentialRampToValueAtTime(0.05 / (i + 1), start + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + 0.55);
+      o.connect(g).connect(this.master);
+      if (this.caveBus) g.connect(this.caveBus);
+      o.start(start); o.stop(start + 0.6);
+    });
+  }
+
   /** Сухой щелчок: не хватило маны или топлива. */
   dryClick() {
     if (!this.ctx || !this.enabled) return;

@@ -470,7 +470,9 @@ export function createVillage(ctx) {
       [26, 29, { w: 6, d: 5, h: 3.45, roof: 'thatch', floors: 1 }],
       [-40, -8, { w: 6, d: 5, h: 3.35, roof: 'thatch', floors: 1 }],
       [29, -22, { w: 6, d: 5, h: 3.35, roof: 'thatch', floors: 1 }],
-      [-19, -34, { w: 5.5, d: 4.6, h: 3.25, roof: 'thatch', floors: 1 }],
+      // дом на отшибе: раньше стоял прямо на дороге к скале (−19, −34) и
+      // перекрывал её — оттуда его перенесли к западной окраине
+      [-34, -16, { w: 5.5, d: 4.6, h: 3.25, roof: 'thatch', floors: 1 }],
       [19, -34, { w: 5.5, d: 4.6, h: 3.25, roof: 'thatch', floors: 1 }],
     ];
     const wallKinds = ['plaster', 'plasterWarm', 'plasterGrey'];
