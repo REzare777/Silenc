@@ -44,7 +44,7 @@ const M = {
   woodDark: new THREE.MeshStandardMaterial({ color: 0x4a331d, roughness: 0.92 }),
   leather: new THREE.MeshStandardMaterial({ color: 0x7a4f2c, roughness: 0.95 }),
   brass: new THREE.MeshStandardMaterial({ color: 0xb08a3e, roughness: 0.36, metalness: 0.8 }),
-  bow: new THREE.MeshStandardMaterial({ color: 0x8a6238, roughness: 0.88 }),
+  bow: new THREE.MeshStandardMaterial({ color: 0x9c7444, roughness: 0.88 }),
   string: new THREE.MeshStandardMaterial({ color: 0xd9cfb4, roughness: 1 }),
   shaft: new THREE.MeshStandardMaterial({ color: 0x5c4526, roughness: 0.9 }),
   gem: new THREE.MeshStandardMaterial({
@@ -260,15 +260,15 @@ function bowModel() {
   const g = new THREE.Group();
   // дуги — три изогнутых сегмента каждая
   for (const s of [-1, 1]) {
-    const limb = cyl(0.016, 0.02, 0.42, 7);
+    const limb = cyl(0.021, 0.026, 0.42, 8);
     g.add(mesh(limb, M.bow, 0, s * 0.34, 0.02, 0, 0, s * 0.12));
-    const tip = cyl(0.011, 0.016, 0.26, 7);
+    const tip = cyl(0.014, 0.021, 0.26, 8);
     g.add(mesh(tip, M.bow, 0, s * 0.62, 0.075, 0, 0, s * 0.4));
   }
   // рукоять
-  g.add(mesh(cyl(0.021, 0.021, 0.3, 8), M.leather, 0, 0, -0.005));
+  g.add(mesh(cyl(0.027, 0.027, 0.3, 8), M.leather, 0, 0, -0.005));
   // тетива
-  const str = cyl(0.004, 0.004, 1.28, 5);
+  const str = cyl(0.0055, 0.0055, 1.28, 6);
   g.add(mesh(str, M.string, 0, 0, -0.02));
   // стрела
   g.add(mesh(cyl(0.006, 0.006, 0.66, 5), M.shaft, 0, 0.42, 0.01));
@@ -312,32 +312,59 @@ const GRIPS = {
   blade: {
     pose: 'sword',
     hand: 'right',
-    pos: [0.0, -0.015, -0.02],
-    rot: [-1.08, 0.0, 0.14],
+    origin: [0, -0.09, 0],    // центр рукояти — сюда ложится кулак
+    rot: [-1.32, 0.0, 0.14],
     scale: 0.26,
   },
   axe: {
     pose: 'sword',
     hand: 'right',
-    pos: [0.0, -0.01, -0.03],
-    rot: [-1.10, 0.0, 0.18],
+    origin: [0, -0.02, 0],    // нижняя часть древка
+    rot: [-1.36, 0.0, 0.18],
     scale: 0.25,
   },
   bow: {
     pose: 'bow',
-    hand: 'left',          // лук держит защитная рука
-    pos: [0.0, 0.03, 0.0],
+    hand: 'left',             // лук держит защитная рука
+    origin: [0, 0, -0.005],    // середина рукояти лука
     rot: [0.0, 0.0, 0.0],
-    scale: 0.30,
+    scale: 0.33,
   },
   magic: {
     pose: 'staff',
     hand: 'right',
-    pos: [0.0, -0.03, -0.02],
+    origin: [0, 0.12, 0],     // намотка на древке
     rot: [0.03, 0.0, 0.16],
     scale: 0.30,
   },
 };
+
+/**
+ * Центр кулака в пространстве кисти: сюда попадает рукоять.
+ *
+ * Должен совпадать с `hold` в `world/hands.js`.
+ */
+const FIST_ANCHOR = [0, 0, 0];   // центр кулака: рукоять проходит здесь
+
+/**
+ * Положение модели оружия так, чтобы точка хвата попала в центр кулака.
+ *
+ * @param {number[]} rot поворот модели
+ * @param {number} scale масштаб модели
+ * @param {number[]} origin точка хвата в координатах модели
+ * @returns {number[]} смещение модели относительно узла захвата
+ */
+function gripPos(rot, scale, origin) {
+  const a = rot[0];
+  const cy = Math.cos(a), sy = Math.sin(a);
+  const y = (origin[1] * cy - origin[2] * sy) * scale;
+  const z = (origin[1] * sy + origin[2] * cy) * scale;
+  return [
+    FIST_ANCHOR[0] - origin[0] * scale,
+    FIST_ANCHOR[1] - y,
+    FIST_ANCHOR[2] - z,
+  ];
+}
 
 /**
  * Хват оружия для рук.
@@ -349,16 +376,16 @@ export function weaponGrip(spec) {
   const g = GRIPS[spec && spec.subclass] || GRIPS.blade;
   // длинный клинок отодвигаем подальше от камеры и уменьшаем
   let scale = g.scale;
-  let z = g.pos[2];
   if (spec && spec.subclass === 'blade') {
-    if (spec.id === 'greatsword') { scale = 0.26; z = -0.08; }
-    else if (spec.id === 'longsword') { scale = 0.24; z = -0.04; }
-    else if (spec.id === 'shortsword') { scale = 0.26; z = -0.02; }
-    else if (spec.id === 'dagger') { scale = 0.34; z = 0.02; }
+    if (spec.id === 'greatsword') scale = 0.26;
+    else if (spec.id === 'longsword') scale = 0.24;
+    else if (spec.id === 'shortsword') scale = 0.26;
+    else if (spec.id === 'dagger') scale = 0.34;
   }
   // двуручный хват: обе руки на рукояти
   const pose = spec && spec.hands === 'two' && spec.subclass === 'blade' ? 'sword2' : g.pose;
-  return { pose, hand: g.hand, pos: [g.pos[0], g.pos[1], z], rot: g.rot, scale };
+  const pos = gripPos(g.rot, scale, g.origin);
+  return { pose, hand: g.hand, pos, rot: g.rot, scale };
 }
 
 /**

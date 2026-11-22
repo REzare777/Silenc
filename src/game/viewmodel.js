@@ -309,6 +309,8 @@ export class ViewModel {
    */
   update(dt, mainCamera, player) {
     this.time += dt;
+    // пальцы подводятся к нужному состоянию (кулак или раскрытая ладонь)
+    if (this.hands.update) this.hands.update(dt);
     if (this.visible) {
       this._fade = Math.min(1, this._fade + dt * 7);
       if (this.lifetime > 0) {

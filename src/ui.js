@@ -163,9 +163,37 @@ export class UI {
     this.pxPerDeg = pxPerDeg;
   }
 
+  /**
+   * Скрыть панель подсказок по управлению.
+   *
+   * Панель занимает левую часть кадра и закрывает лук и оружие,
+   * поэтому через несколько секунд после старта (или при первом
+   * движении) она исчезает.
+   *
+   * @param {number} [delay] через сколько секунд скрыть
+   */
+  hideHintsSoon(delay = 14000) {
+    const hints = document.getElementById('hints');
+    if (!hints || hints.dataset.gone) return;
+    const hide = () => {
+      hints.classList.add('hide');
+      hints.dataset.gone = '1';
+    };
+    setTimeout(hide, delay);
+    const moveKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'];
+    const onKey = (e) => {
+      if (moveKeys.includes(e.code)) {
+        hide();
+        window.removeEventListener('keydown', onKey);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+  }
+
   _bind() {
     this.el.begin.addEventListener('click', () => {
       if (this.onStart) this.onStart();
+      this.hideHintsSoon();
     });
     this.el.loadGame.addEventListener('click', (e) => {
       e.stopPropagation();

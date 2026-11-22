@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<title>Превью кисти</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #2a2b31; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<script type="module">
+/**
+ * Превью кисти от первого лица.
+ *
+ * Нужен, чтобы быстро проверять форму руки: рендерится только кисть,
+ * без мира и постобработки — кадр выходит за доли секунды.
+ *
+ * Параметры в адресе:
+ *   ?pose=sword|sword2|bow|staff|torchRight|two|present
+ *   ?fist=1|0            — сжат ли кулак
+ *   ?cam=top|side|front|under|game
+ */
+import * as THREE from 'three';
+import { buildHands, holdTransform } from '/src/world/hands.js';
+import { FISH, fishModel } from '/src/world/fish.js';
+import { weaponModel, weaponGrip } from '/src/world/weapons.js';
+import { getItem } from '/src/game/items.js';
+
+const q = new URLSearchParams(location.search);
+const poseName = q.get('pose') || 'sword';
+const fist = q.get('fist') !== '0';
+const camName = q.get('cam') || 'game';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x2a2b31);
+
+const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.01, 20);
+const key = new THREE.DirectionalLight(0xffeacb, 2.0);
+key.position.set(-0.6, 1.0, 0.7);
+const fill = new THREE.DirectionalLight(0xa8c6f0, 0.6);
+fill.position.set(0.9, -0.4, 0.5);
+scene.add(key, fill, new THREE.AmbientLight(0x9a8f80, 0.8));
+
+const hands = buildHands();
+scene.add(hands.group);
+
+if (poseName.startsWith('sword') || poseName === 'bow' || poseName === 'staff' || poseName.startsWith('torch')) {
+  hands.setArms(poseName);
+} else {
+  hands.setPose(poseName, q.get('sub') || 'present');
+}
+if (!fist) {
+  // раскрытая ладонь: снимаем цель сжатия
+  hands.right.userData.setFist(false);
+  hands.left.userData.setFist(false);
+}
+
+// оружие в руке
+const wid = q.get('w');
+if (wid) {
+  const spec = getItem(wid);
+  const model = weaponModel(wid);
+  const g = weaponGrip(spec);
+  model.scale.setScalar(g.scale);
+  model.position.fromArray(g.pos);
+  model.rotation.set(g.rot[0], g.rot[1], g.rot[2]);
+  const hand = g.hand === 'left' ? hands.left : hands.right;
+  hand.userData.hold.add(model);
+}
+
+// рыба в руках
+if (q.get('fish')) {
+  const spec = FISH[0];
+  const model = fishModel(spec);
+  model.scale.setScalar(0.16);
+  const t = holdTransform('two');
+  model.position.fromArray(t.pos);
+  model.rotation.set(t.rot[0], t.rot[1], t.rot[2]);
+  hands.right.userData.hold.add(model);
+}
+
+// поза камеры: смотрим на кисть
+const HAND = [0.155, -0.115, -0.29];
+const HAND_L = [-0.145, -0.215, -0.40];
+const CAMS = {
+  game: { pos: [0, 0, 0], look: [0, 0, -1] },
+  close: { pos: [0.10, -0.05, -0.06], look: HAND },
+  top: { pos: [0.155, 0.09, -0.29], look: HAND },
+  side: { pos: [0.42, -0.115, -0.29], look: HAND },
+  front: { pos: [0.155, -0.115, 0.08], look: HAND },
+  under: { pos: [0.155, -0.40, -0.29], look: HAND },
+  // левая рука
+  lclose: { pos: [-0.10, -0.12, -0.18], look: HAND_L },
+  ltop: { pos: [-0.145, 0.08, -0.40], look: HAND_L },
+  lside: { pos: [0.16, -0.215, -0.40], look: HAND_L },
+};
+const c = CAMS[camName] || CAMS.game;
+camera.position.fromArray(c.pos);
+camera.lookAt(new THREE.Vector3().fromArray(c.look));
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(1);
+document.body.appendChild(renderer.domElement);
+
+let t = 0;
+function loop() {
+  requestAnimationFrame(loop);
+  t += 0.016;
+  hands.update(0.016);
+  renderer.render(scene, camera);
+  window.__frames = (window.__frames || 0) + 1;
+}
+loop();
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>

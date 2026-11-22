@@ -626,6 +626,7 @@ function enterGame(message) {
 ui.onStart = () => {
   newGame();
   enterGame('Добро пожаловать в долину. Идите, куда зовёт сердце.');
+  ui.hideHintsSoon();
 };
 
 // «Продолжить» на титульном экране: грузим последнее сохранение и входим в игру
@@ -636,6 +637,7 @@ ui.onContinue = () => {
   }
   death.revive();
   enterGame(`С возвращением. ${ctx.calendar.label()}.`);
+  ui.hideHintsSoon();
 };
 
 // «Загрузить игру» — окно со слотами
@@ -647,6 +649,7 @@ ui.onLoadGame = () => {
 ui.onSlotLoad = (key, index) => {
   if (!loadSlot(key, index)) return;
   enterGame(`Загружено. ${ctx.calendar.label()}.`);
+  ui.hideHintsSoon();
 };
 
 // Сохранение в выбранный слот

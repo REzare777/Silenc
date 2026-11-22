@@ -93,6 +93,8 @@
   #hints{position:absolute;left:22px;bottom:142px;display:grid;grid-template-columns:repeat(3,max-content);gap:6px 14px;
     justify-content:center;padding:9px 14px;max-width:92vw}
   #hints div{font-size:11px;color:var(--ink-dim);display:flex;align-items:center;gap:6px;letter-spacing:.04em}
+  #hints{transition:opacity .8s ease}
+  #hints.hide{opacity:0;pointer-events:none}
   #hints kbd{font:inherit;font-size:10px;font-weight:600;color:var(--ink);background:rgba(255,255,255,.09);
     border:1px solid rgba(255,255,255,.14);border-bottom-width:2px;border-radius:5px;padding:2px 6px;min-width:20px;text-align:center}
   /* ---------- interaction prompt ---------- */
