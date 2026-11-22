@@ -37,16 +37,16 @@ import { box, cyl, cone, sphere, torus } from './geo.js';
 const M = {
   // металл держим «серебристым», а не зеркальным: в оверлейной сцене нет
   // окружения, и сильный metalness превращает сталь в тёмную полосу
-  steel: new THREE.MeshStandardMaterial({ color: 0xb4bcc4, roughness: 0.42, metalness: 0.35 }),
+  steel: new THREE.MeshStandardMaterial({ color: 0xc2cbd4, roughness: 0.38, metalness: 0.22 }),
   steelDark: new THREE.MeshStandardMaterial({ color: 0x6e757b, roughness: 0.5, metalness: 0.3 }),
   bladeEdge: new THREE.MeshStandardMaterial({ color: 0xe4ebf1, roughness: 0.25, metalness: 0.45 }),
-  wood: new THREE.MeshStandardMaterial({ color: 0x6b4a2c, roughness: 0.9 }),
+  wood: new THREE.MeshStandardMaterial({ color: 0x7d5834, roughness: 0.9 }),
   woodDark: new THREE.MeshStandardMaterial({ color: 0x4a331d, roughness: 0.92 }),
   leather: new THREE.MeshStandardMaterial({ color: 0x7a4f2c, roughness: 0.95 }),
   brass: new THREE.MeshStandardMaterial({ color: 0xb08a3e, roughness: 0.36, metalness: 0.8 }),
   bow: new THREE.MeshStandardMaterial({ color: 0x9c7444, roughness: 0.88 }),
   string: new THREE.MeshStandardMaterial({ color: 0xd9cfb4, roughness: 1 }),
-  shaft: new THREE.MeshStandardMaterial({ color: 0x5c4526, roughness: 0.9 }),
+  shaft: new THREE.MeshStandardMaterial({ color: 0x7a5c33, roughness: 0.9 }),
   gem: new THREE.MeshStandardMaterial({
     color: 0x4f7fb5, roughness: 0.15, metalness: 0.1,
     emissive: 0x2b4f7a, emissiveIntensity: 0.55,
@@ -220,12 +220,17 @@ function blade(len, wide, thick, matM = M.steel) {
   }
   body.computeVertexNormals();
   g.add(mesh(body, matM, 0, len / 2, 0));
-  // дол — короткий выступ, куда ложится рука
+  // светлая полоса вдоль кромки — клинок читается как сталь, а не как палка
+  g.add(mesh(box(wide * 0.16, len * 0.92, thick * 1.06), M.bladeEdge, wide * 0.40, len * 0.5, 0));
+  // дол — короткий выступ над гардой
   g.add(mesh(box(wide * 0.9, 0.09, thick * 1.5), M.steelDark, 0, 0.03, 0));
+  // гарда — поперечная перекладина
+  g.add(mesh(box(wide * 2.4, 0.024, thick * 2.0), M.steelDark, 0, -0.012, 0));
   // рукоять
   g.add(mesh(cyl(0.022, 0.026, 0.16, 8), M.leather, 0, -0.09, 0));
-  // навершие
+  // навершие — капля
   g.add(mesh(sphere(0.03, 10, 8), M.brass, 0, -0.18, 0));
+  g.add(mesh(cyl(0.012, 0.022, 0.03, 8), M.brass, 0, -0.155, 0));
   return g;
 }
 
@@ -236,18 +241,44 @@ function blade(len, wide, thick, matM = M.steel) {
  */
 function axeModel() {
   const g = new THREE.Group();
-  g.add(mesh(cyl(0.022, 0.028, 0.78, 8), M.wood, 0, 0.3, 0));
-  // лезвие — изогнутая пластина
-  const head = box(0.055, 0.19, 0.03);
-  const pos = head.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    if (pos.getX(i) > 0) pos.setZ(i, pos.getZ(i) * 1.9);   // расширение к краю
+  g.add(mesh(cyl(0.024, 0.030, 0.86, 8), M.wood, 0, 0.32, 0));
+
+  /**
+   * Пластина между двумя точками — так лезвие получается «полумесяцем».
+   *
+   * @param {THREE.Vector3} p0 начало
+   * @param {THREE.Vector3} p1 конец
+   * @param {number} w ширина (поперёк лезвия)
+   * @param {number} th толщина
+   * @param {THREE.Material} matM материал
+   * @returns {THREE.Mesh} пластина
+   */
+  function plate(p0, p1, w, th, matM) {
+    const dir = new THREE.Vector3().subVectors(p1, p0);
+    const len = dir.length();
+    const m = new THREE.Mesh(box(th, len, w), matM);
+    m.position.copy(p0).add(p1).multiplyScalar(0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+    return m;
   }
-  head.computeVertexNormals();
-  g.add(mesh(head, M.steel, 0.0, 0.62, 0.09));
-  g.add(mesh(box(0.05, 0.2, 0.055), M.steelDark, 0, 0.62, -0.02));
-  // обух и зарубки
-  g.add(mesh(box(0.07, 0.03, 0.06), M.bladeEdge, 0, 0.73, 0.09));
+
+  // лезвие — дуга из четырёх пластин
+  const arc = [
+    new THREE.Vector3(0.005, 0.53, 0.01),
+    new THREE.Vector3(0.10, 0.57, 0.03),
+    new THREE.Vector3(0.18, 0.68, 0.05),
+    new THREE.Vector3(0.20, 0.82, 0.05),
+    new THREE.Vector3(0.14, 0.92, 0.03),
+  ];
+  for (let i = 0; i < arc.length - 1; i++) {
+    g.add(plate(arc[i], arc[i + 1], 0.085 - i * 0.008, 0.030, M.steel));
+  }
+  // светлая кромка по внешнему краю
+  g.add(plate(new THREE.Vector3(0.19, 0.68, 0.05), new THREE.Vector3(0.21, 0.82, 0.05), 0.055, 0.034, M.bladeEdge));
+  // обух
+  g.add(mesh(box(0.055, 0.34, 0.075), M.steelDark, 0, 0.70, -0.015));
+  // втулка древка
+  g.add(mesh(cyl(0.040, 0.040, 0.10, 8), M.steelDark, 0, 0.53, 0));
   return g;
 }
 
@@ -258,21 +289,53 @@ function axeModel() {
  */
 function bowModel() {
   const g = new THREE.Group();
-  // дуги — три изогнутых сегмента каждая
-  for (const s of [-1, 1]) {
-    const limb = cyl(0.021, 0.026, 0.42, 8);
-    g.add(mesh(limb, M.bow, 0, s * 0.34, 0.02, 0, 0, s * 0.12));
-    const tip = cyl(0.014, 0.021, 0.26, 8);
-    g.add(mesh(tip, M.bow, 0, s * 0.62, 0.075, 0, 0, s * 0.4));
+
+  /**
+   * Отрезок трубки между двумя точками — так дуги получаются настоящими,
+   * а не «палочками».
+   *
+   * @param {THREE.Vector3} p0 начало
+   * @param {THREE.Vector3} p1 конец
+   * @param {number} r0 радиус в начале
+   * @param {number} r1 радиус в конце
+   * @param {THREE.Material} matM материал
+   * @returns {THREE.Mesh} трубка
+   */
+  function tube(p0, p1, r0, r1, matM) {
+    const dir = new THREE.Vector3().subVectors(p1, p0);
+    const len = dir.length();
+    const m = new THREE.Mesh(cyl(r1, r0, len, 7), matM);
+    m.position.copy(p0).add(p1).multiplyScalar(0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+    return m;
+  }
+
+  // дуги: от рукояти вверх и наружу
+  const tips = [];
+  for (const side of [-1, 1]) {
+    const N = 7;
+    let prev = new THREE.Vector3(0, -0.16, 0);
+    for (let i = 1; i <= N; i++) {
+      const t = i / N;
+      const p = new THREE.Vector3(
+        side * 0.30 * Math.sin(t * Math.PI * 0.5),
+        -0.16 + 0.92 * t,
+        0.03 * Math.cos(t * Math.PI),
+      );
+      g.add(tube(prev, p, 0.026 - 0.010 * ((i - 1) / N), 0.026 - 0.010 * (i / N), M.bow));
+      prev = p;
+    }
+    tips.push(prev);
   }
   // рукоять
-  g.add(mesh(cyl(0.027, 0.027, 0.3, 8), M.leather, 0, 0, -0.005));
-  // тетива
-  const str = cyl(0.0055, 0.0055, 1.28, 6);
-  g.add(mesh(str, M.string, 0, 0, -0.02));
-  // стрела
-  g.add(mesh(cyl(0.006, 0.006, 0.66, 5), M.shaft, 0, 0.42, 0.01));
-  g.add(mesh(cone(0.014, 0.07, 6), M.steel, 0, 0.78, 0.01));
+  g.add(mesh(cyl(0.028, 0.028, 0.34, 8), M.leather, 0, 0, -0.005));
+  // тетива — от концов дуг к рукояти
+  g.add(tube(tips[0], new THREE.Vector3(0, -0.02, -0.03), 0.005, 0.005, M.string));
+  g.add(tube(tips[1], new THREE.Vector3(0, -0.02, -0.03), 0.005, 0.005, M.string));
+  // стрела — поперёк лука, остриём вперёд
+  const shaft = mesh(cyl(0.006, 0.006, 0.66, 5), M.shaft, 0, 0.16, -0.30, Math.PI / 2, 0, 0);
+  g.add(shaft);
+  g.add(mesh(cone(0.016, 0.08, 6), M.steel, 0, 0.16, -0.66, Math.PI / 2, 0, 0));
   return g;
 }
 
@@ -302,90 +365,36 @@ function staffModel() {
  * @returns {THREE.Group|null}
  */
 /**
- * Хваты: как оружие лежит в руках.
+ * Посадка парящего оружия: где оно висит перед камерой и какого размера.
  *
- * `pose` — поза рук в `world/hands.js`; `pos`/`rot` — положение модели
- * относительно точки захвата; `scale` — уменьшение модели (в кадре от
- * первого лица метровый клинок рядом с камерой выглядит чудовищно).
+ * Оружия без руки: оно крупное, справа-снизу, целиком в кадре.
  */
-const GRIPS = {
-  blade: {
-    pose: 'sword',
-    hand: 'right',
-    origin: [0, -0.09, 0],    // центр рукояти — сюда ложится кулак
-    rot: [-1.32, 0.0, 0.14],
-    scale: 0.26,
-  },
-  axe: {
-    pose: 'sword',
-    hand: 'right',
-    origin: [0, -0.02, 0],    // нижняя часть древка
-    rot: [-1.36, 0.0, 0.18],
-    scale: 0.25,
-  },
-  bow: {
-    pose: 'bow',
-    hand: 'left',             // лук держит защитная рука
-    origin: [0, 0, -0.005],    // середина рукояти лука
-    rot: [0.0, 0.0, 0.0],
-    scale: 0.33,
-  },
-  magic: {
-    pose: 'staff',
-    hand: 'right',
-    origin: [0, 0.12, 0],     // намотка на древке
-    rot: [0.03, 0.0, 0.16],
-    scale: 0.30,
-  },
+const FLOATS = {
+  blade: { pos: [0.175, -0.030, -0.500], rot: [-0.42, -0.16, 0.16], scale: 0.46 },
+  axe: { pos: [0.175, -0.080, -0.470], rot: [-0.34, -0.14, 0.20], scale: 0.34 },
+  bow: { pos: [0.020, -0.150, -0.620], rot: [0.02, -0.15, 0.02], scale: 0.26 },
+  magic: { pos: [0.125, -0.230, -0.520], rot: [0.0, -0.22, 0.06], scale: 0.30 },
 };
 
 /**
- * Центр кулака в пространстве кисти: сюда попадает рукоять.
- *
- * Должен совпадать с `hold` в `world/hands.js`.
- */
-const FIST_ANCHOR = [0, 0, 0];   // центр кулака: рукоять проходит здесь
-
-/**
- * Положение модели оружия так, чтобы точка хвата попала в центр кулака.
- *
- * @param {number[]} rot поворот модели
- * @param {number} scale масштаб модели
- * @param {number[]} origin точка хвата в координатах модели
- * @returns {number[]} смещение модели относительно узла захвата
- */
-function gripPos(rot, scale, origin) {
-  const a = rot[0];
-  const cy = Math.cos(a), sy = Math.sin(a);
-  const y = (origin[1] * cy - origin[2] * sy) * scale;
-  const z = (origin[1] * sy + origin[2] * cy) * scale;
-  return [
-    FIST_ANCHOR[0] - origin[0] * scale,
-    FIST_ANCHOR[1] - y,
-    FIST_ANCHOR[2] - z,
-  ];
-}
-
-/**
- * Хват оружия для рук.
+ * Посадка парящего оружия.
  *
  * @param {object} spec спецификация оружия
- * @returns {{pose: string, pos: number[], rot: number[], scale: number}}
+ * @returns {{pos: number[], rot: number[], scale: number}}
  */
-export function weaponGrip(spec) {
-  const g = GRIPS[spec && spec.subclass] || GRIPS.blade;
-  // длинный клинок отодвигаем подальше от камеры и уменьшаем
-  let scale = g.scale;
-  if (spec && spec.subclass === 'blade') {
-    if (spec.id === 'greatsword') scale = 0.26;
-    else if (spec.id === 'longsword') scale = 0.24;
-    else if (spec.id === 'shortsword') scale = 0.26;
-    else if (spec.id === 'dagger') scale = 0.34;
-  }
-  // двуручный хват: обе руки на рукояти
-  const pose = spec && spec.hands === 'two' && spec.subclass === 'blade' ? 'sword2' : g.pose;
-  const pos = gripPos(g.rot, scale, g.origin);
-  return { pose, hand: g.hand, pos, rot: g.rot, scale };
+export function weaponFloat(spec) {
+  const base = FLOATS[(spec && spec.subclass) || 'blade'] || FLOATS.blade;
+  let scale = base.scale;
+  let pos = base.pos.slice();
+  const id = spec && spec.id;
+  if (id === 'dagger') { scale = 0.58; pos[1] -= 0.02; }
+  else if (id === 'shortsword') scale = 0.46;
+  else if (id === 'longsword') { scale = 0.36; pos[1] -= 0.05; pos[2] -= 0.10; }
+  else if (id === 'greatsword') { scale = 0.30; pos[1] -= 0.05; pos[2] -= 0.20; }
+  else if (id === 'axe') scale = 0.34;
+  else if (id === 'bow') scale = 0.34;
+  else if (id === 'staff') scale = 0.34;
+  return { pos, rot: base.rot.slice(), scale };
 }
 
 /**
@@ -407,7 +416,7 @@ export function weaponModel(id) {
       const len = spec.id === 'greatsword' ? 1.35
         : spec.id === 'longsword' ? 0.95
           : spec.id === 'shortsword' ? 0.7 : 0.34;
-      const wide = spec.id === 'greatsword' ? 0.1 : spec.id === 'dagger' ? 0.035 : 0.062;
+      const wide = spec.id === 'greatsword' ? 0.115 : spec.id === 'dagger' ? 0.042 : 0.078;
       g = blade(len, wide, spec.id === 'greatsword' ? 0.022 : 0.014);
     }
   }

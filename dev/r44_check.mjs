@@ -85,9 +85,9 @@ const out = await page.evaluate(() => {
   res.hud = hud;
   s.reset();
 
-  /* ---------- 3. руки и захваты ---------- */
+  /* ---------- 3. модель в руках (теперь — парящее оружие) ---------- */
   const vm = d.viewmodel;
-  const hands = vm.hands.group;
+  const hands = vm.float;          // парящая группа вместо кисти
   let meshes = 0;
   hands.traverse((o) => { if (o.isMesh) meshes++; });
   const rig = {
@@ -105,39 +105,33 @@ const out = await page.evaluate(() => {
   vm.setPose('right', 'carry');
   rig.gripRight = vm.grip;
   rig.poseCarry = vm.pose;
-  rig.rightVisible = vm.hands.right.visible;
-  rig.leftVisible = vm.hands.left.visible;
+  rig.itemVisibleRight = !!vm.item && vm.item.visible;
   vm.setPose('left', 'reach');
-  rig.rightHidden = vm.hands.right.visible;
-  rig.leftShown = vm.hands.left.visible;
+  rig.itemVisibleLeft = !!vm.item && vm.item.visible;
+  rig.torchReach = vm.torch ? vm.torch.visible : null;
   vm.setPose('two', 'present');
-  rig.bothVisible = vm.hands.right.visible && vm.hands.left.visible;
+  rig.itemVisibleTwo = !!vm.item && vm.item.visible;
+  rig.itemInFloat = !!vm.item && vm.item.parent === vm.float;
+  rig.hasFloat = !!vm.float;
   // убрать
   vm.hideHands();
   rig.visibleEnd = vm.visible;
   rig.itemEnd = !!vm.item;
   res.rig = rig;
 
-  /* ---------- 4. продажа рыбы в таверне ---------- */
+  /* ---------- 4. торговля с трактирщиком ---------- *
+   * С раунда 54 отдельного интеракта «Продать рыбу» больше нет: рыбу
+   * продаёт трактирщик через окно торговли (проверяется в r54_check). */
   const spec = d.FISH[0];
   const stack = { id: spec.id, spec, count: 1, best: { weight: spec.weightMin, length: spec.lengthMin } };
   d.inventory.add(stack);
   const coinsBefore = s.coins;
   const slotsBefore = d.inventory.slots.filter(Boolean).length;
-  const sell = d.interactables.find((it) => it.label === 'Продать рыбу');
-  res.sell = { found: !!sell, where: sell ? sell.where : null };
-  if (sell) {
-    sell.act();
-    res.sell.coinsBefore = coinsBefore;
-    res.sell.coinsAfter = s.coins;
-    res.sell.slotsBefore = slotsBefore;
-    res.sell.slotsAfter = d.inventory.slots.filter(Boolean).length;
-    res.sell.gained = s.coins - coinsBefore;
-  }
-  // пустая сумка
-  const sell2 = d.interactables.find((it) => it.label === 'Продать рыбу');
-  sell2.act();
-  res.sell.emptyOk = true;
+  const shop = d.interactables.find((it) => /торг/i.test(it.label || ''));
+  res.sell = { found: !!shop, where: shop ? shop.where : null };
+  if (shop) shop.act();
+  res.sell.coinsBefore = coinsBefore;
+  res.sell.slotsBefore = slotsBefore;
 
   /* ---------- 5. улов: рыба попадает в руки ---------- */
   const f = d.fishing;
@@ -182,19 +176,17 @@ ok(out.hud.mpBar.includes('scaleX(0.4)'), `полоска маны: ${out.hud.mp
 ok(out.hud.hpNum === '50' && out.hud.mpNum === '40', `числа в HUD: жизнь ${out.hud.hpNum}, мана ${out.hud.mpNum}`);
 ok(out.hud.coinsHud === out.hud.coinsInv && out.hud.coinsHud !== '', `монеты в HUD и инвентаре: ${out.hud.coinsHud}`);
 
-ok(out.rig.meshes >= 6, `руки собраны: ${out.rig.meshes} мешей`);
-ok(out.rig.visibleBefore === false && out.rig.itemBefore === false, 'без предмета рук нет');
-ok(out.rig.visibleAfter === true && out.rig.itemAfter === true, 'предмет взяли — руки появились');
-ok(out.rig.grip === 'two' && out.rig.bothVisible, 'захват «две руки» — обе видны');
-ok(out.rig.gripRight === 'right' && out.rig.rightVisible && !out.rig.leftVisible, 'захват «правой» — только правая');
-ok(out.rig.rightHidden === false && out.rig.leftShown === true, 'захват «левой» — только левая');
+ok(out.rig.hasFloat, 'парящая группа создана');
+ok(out.rig.visibleBefore === false && out.rig.itemBefore === false, 'без предмета модель не показывается');
+ok(out.rig.visibleAfter === true && out.rig.itemAfter === true, 'предмет взяли — модель появилась');
+ok(out.rig.itemInFloat, 'предмет висит в парящей группе');
+ok(out.rig.grip === 'two' && out.rig.itemVisibleTwo, 'захват «две руки»');
+ok(out.rig.gripRight === 'right' && out.rig.itemVisibleRight, 'захват «правой»');
+ok(out.rig.itemVisibleLeft, 'захват «левой»');
 ok(out.rig.poseCarry === 'carry', 'поза переключается');
-ok(out.rig.visibleEnd === false && out.rig.itemEnd === false, 'предмет убран — руки спрятались');
+ok(out.rig.visibleEnd === false && out.rig.itemEnd === false, 'предмет убран — модель спряталась');
 
-ok(out.sell.found === true && out.sell.where === 'tavern', 'в таверне есть «Продать рыбу»');
-ok(out.sell.gained > 0, `продажа дала ${out.sell.gained} зол.`);
-ok(out.sell.slotsAfter === out.sell.slotsBefore - 1, 'рыба ушла из сумки');
-ok(out.sell.emptyOk === true, 'продажа при пустой сумке не ломается');
+ok(out.sell.found === true && out.sell.where === 'tavern', 'в таверне есть торговля');
 
 ok(out.catch.slotsAfter === out.catch.slotsBefore + 1, 'улов попал в инвентарь');
 ok(out.catch.visible === true && out.catch.itemHeld.startsWith('fish:'), `рыба в руках: ${out.catch.itemHeld}`);

@@ -71,8 +71,8 @@ await step('каталоги', () => {
     if (meshes < 3) modelsOk = false;
     const ic = W.weaponIcon(w, 64);
     if (!ic || ic.width !== 64) iconsOk = false;
-    const g = W.weaponGrip(w);
-    if (!g || !g.pose || !(g.scale > 0)) gripOk = false;
+    const g = W.weaponFloat(w);
+    if (!g || !g.pos || !(g.scale > 0)) gripOk = false;
   }
   ok('weaponModels', modelsOk);
   ok('weaponIcons', iconsOk);

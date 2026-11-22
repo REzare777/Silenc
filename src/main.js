@@ -88,7 +88,7 @@ import { createDialog } from './game/dialog.js';
 import { createTrade } from './game/trade.js';
 import { createLoadout } from './game/loadout.js';
 import { ITEMS, GOODS, MATERIALS, itemIcon, itemBadge, itemDesc, sellPrice, buyPrice, getItem } from './game/items.js';
-import { WEAPONS, weaponModel, weaponIcon, getWeapon, weaponGrip } from './world/weapons.js';
+import { WEAPONS, weaponModel, weaponIcon, getWeapon, weaponFloat } from './world/weapons.js';
 import { createInteractions } from './game/interactions.js';
 import { createBag } from './game/bag.js';
 import { PlayerStats } from './game/stats.js';
@@ -1231,7 +1231,7 @@ window.__dbg = {
   trade: ctx.systems.trade, loadout: ctx.systems.loadout,
   npcs: Object.assign({}, locations.npcs || {}, ctx.npcs || {}),
   items: { ITEMS, GOODS, MATERIALS, itemIcon, itemBadge, itemDesc, sellPrice, buyPrice, getItem },
-  weapons: { WEAPONS, weaponModel, weaponIcon, getWeapon, weaponGrip },
+  weapons: { WEAPONS, weaponModel, weaponIcon, getWeapon, weaponFloat },
   startFishing: fishing.startFishing, hookFish: fishing.hookFish,
   updateFishing: fishing.updateFishing, toggleInventory: bag.toggle,
   rollFish: fishing.rollFish, FISH,

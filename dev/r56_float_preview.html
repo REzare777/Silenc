@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<title>Превью парящего оружия</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1d1e24; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<script type="module">
+/**
+ * Превью парящего оружия (раунд 56).
+ *
+ * Рендерится только оверлейная сцена viewmodel — без мира и постобработки,
+ * поэтому кадр выходит за доли секунды.
+ *
+ * Параметры в адресе:
+ *   ?w=shortsword — вид оружия
+ *   ?fov=58       — угол обзора (меньше — крупнее)
+ *   ?view=game    — ракурс: game | top | side | close
+ */
+import * as THREE from 'three';
+import { ViewModel } from '/src/game/viewmodel.js';
+import { getWeapon, weaponModel } from '/src/world/weapons.js';
+
+const q = new URLSearchParams(location.search);
+const wid = q.get('w') || 'shortsword';
+const fov = Number(q.get('fov') || 58);
+const view = q.get('view') || 'game';
+
+const vm = new ViewModel();
+vm.camera.fov = fov;
+vm.camera.updateProjectionMatrix();
+
+const spec = getWeapon(wid);
+if (spec) vm.setWeapon(weaponModel(wid), spec);
+
+const VIEWS = {
+  game: [0, 0, 0],
+  top: [-0.55, 0, 0],
+  side: [0, -0.85, 0],
+  close: [-0.18, -0.55, 0],
+};
+const v = VIEWS[view] || VIEWS.game;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(1);
+document.body.appendChild(renderer.domElement);
+
+let t = 0;
+function loop() {
+  requestAnimationFrame(loop);
+  t += 0.016;
+  vm.update(0.016, null, null);
+  vm.camera.quaternion.setFromEuler(new THREE.Euler(v[0], v[1], v[2]));
+  renderer.render(vm.scene, vm.camera);
+  window.__frames = (window.__frames || 0) + 1;
+}
+loop();
+addEventListener('resize', () => {
+  vm.resize(innerWidth, innerHeight);
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
