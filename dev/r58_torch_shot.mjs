@@ -1,0 +1,26 @@
+import { chromium } from 'playwright';
+import { LAUNCH } from './browser.mjs';
+const OUT = '/workspace/village/shots';
+const browser = await chromium.launch(LAUNCH);
+const page = await browser.newPage({ viewport: { width: 1000, height: 600 } });
+page.setDefaultTimeout(300000);
+page.on('pageerror', (e) => console.log('PAGEERROR', e.message));
+await page.goto(`http://127.0.0.1:4205/?v=${Date.now()}`, { waitUntil: 'domcontentloaded' });
+await page.waitForFunction(() => window.__villageReady === true, null, { timeout: 300000 });
+await page.evaluate(() => document.getElementById('begin').click());
+await page.waitForTimeout(600);
+const start = await page.evaluate(() => window.__frames || 0);
+await page.evaluate(() => {
+  const D = window.__dbg;
+  D.setLocation('dungeon');
+  D.player.teleport(0, -8, 0);
+  for (let i = 0; i < 20; i++) D.player.update(0.05);
+  D.inventory.slots[27] = { id: 'torch', spec: D.items.getItem('torch'), count: 1, best: null };
+  D.loadout.setTorchEquipped(true);
+  D.combat.addFuel(100);
+  D.combat.lightNow();
+});
+await page.waitForFunction((t) => (window.__frames || 0) >= t, start + 2, { timeout: 240000 });
+await page.screenshot({ path: `${OUT}/R58_dungeon_torch.jpg`, type: 'jpeg', quality: 90 });
+console.log('снимок: R58_dungeon_torch');
+await browser.close();

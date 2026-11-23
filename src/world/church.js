@@ -598,9 +598,10 @@ export function buildChurchInterior(M, glowTex) {
   const east = new THREE.PointLight(0x5f9ade, 11, 20, 1.2);
   east.position.set(W / 2 - 1.0, 3.1, NEZ + 1.2);
   scene.add(east);
-  // тёплый огонёк свечи у запертой двери
-  const doorCandle = new THREE.PointLight(0xffb45a, 2.6, 7, 1.8);
-  doorCandle.position.set(ARK_X + ARK_W / 2 + 0.38, 1.9, nz(D / 2 - T - 0.25));
+  // тёплый огонёк свечи у запертой двери.
+  // Свет отодвинут от арки: вплотную он выжигал белое пятно на колонне.
+  const doorCandle = new THREE.PointLight(0xffb45a, 2.0, 7, 1.8);
+  doorCandle.position.set(ARK_X + ARK_W / 2 + 0.9, 1.9, nz(D / 2 - T - 0.25));
   scene.add(doorCandle);
   const sky = new THREE.DirectionalLight(0xa8c4e8, 1.2);
   sky.position.set(-6, 14, NEZ + 4);
@@ -618,7 +619,7 @@ export function buildChurchInterior(M, glowTex) {
   const towerFloor = new THREE.PointLight(0xffb45a, 7.5, 16, 1.5);
   towerFloor.position.set(0.6, 2.4, TZ1 - 1.6);
   scene.add(towerFloor);
-  const candle = new THREE.PointLight(0xffb45a, 2.2, 9, 1.9);
+  const candle = new THREE.PointLight(0xffb45a, 1.8, 9, 1.9);
   candle.position.set(TX1 - 0.6, 1.95, TZ - 1.2);
   scene.add(candle);
   scene.add(new THREE.AmbientLight(0x8a8296, 1.5));

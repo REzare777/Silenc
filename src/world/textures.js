@@ -475,11 +475,12 @@ function caveWallCanvas(size = 256) {
     g.stroke();
   }
 
-  // крапины породы — мелкие и негромкие, иначе стена выглядит грязной
-  for (let i = 0; i < 700; i++) {
+  // крапины породы — мелкие и негромкие, иначе стена выглядит грязной.
+  // Их было 700 — на низком разрешении стена читалась как «помеха».
+  for (let i = 0; i < 260; i++) {
     const x = hash2(i, 911, 53) * size, y = hash2(i, 919, 59) * size;
     const v = hash2(i, 929, 61);
-    g.fillStyle = v > 0.6 ? 'rgba(126,132,156,0.13)' : 'rgba(24,26,36,0.14)';
+    g.fillStyle = v > 0.6 ? 'rgba(126,132,156,0.10)' : 'rgba(24,26,36,0.10)';
     g.fillRect(x, y, 1 + (v > 0.94 ? 1 : 0), 1);
   }
   return c;
@@ -707,6 +708,83 @@ function forestFloorCanvas(size = 512) {
 
 /* ------------------------------------------------------------------ */
 
+/**
+ * Витраж: мозаика цветных стёкол с тёмным швом и розеткой в центре.
+ *
+ * Раньше окно храма было однотонной панелью — читалось как заглушка.
+ * Теперь это настоящее стекло: кусочки разного оттенка, швы между ними
+ * и круглый медальон.
+ *
+ * @param {string} base основной цвет стекла
+ * @param {string} accent цвет акцента (розетка и края)
+ * @param {number} seed зерно рисунка
+ * @returns {HTMLCanvasElement} готовая текстура
+ */
+function stainedGlassCanvas(base, accent, seed = 3, w = 96, h = 160) {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const g = c.getContext('2d');
+  g.fillStyle = base;
+  g.fillRect(0, 0, w, h);
+
+  // кусочки стекла: неровные прямоугольники, у каждого свой оттенок
+  const cols = 4;
+  const rows = 6;
+  const cw = w / cols;
+  const rh = h / rows;
+  for (let r = 0; r < rows; r++) {
+    for (let k = 0; k < cols; k++) {
+      const v = hash2(k, r, seed);
+      g.globalAlpha = 0.32 + v * 0.5;
+      g.fillStyle = v > 0.72 ? accent : base;
+      g.fillRect(k * cw + 1, r * rh + 1, cw - 2, rh - 2);
+      // блик по краю стекла
+      g.globalAlpha = 0.35;
+      g.fillStyle = '#ffffff';
+      g.fillRect(k * cw + 1, r * rh + 1, cw - 2, 1.5);
+    }
+  }
+  g.globalAlpha = 1;
+
+  // розетка в центре окна
+  const cx = w / 2;
+  const cy = h / 2;
+  const rad = Math.min(w, h) * 0.24;
+  g.fillStyle = accent;
+  g.beginPath();
+  g.arc(cx, cy, rad, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = base;
+  g.beginPath();
+  g.arc(cx, cy, rad * 0.55, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = accent;
+  g.beginPath();
+  g.arc(cx, cy, rad * 0.22, 0, Math.PI * 2);
+  g.fill();
+
+  // шов (свинец между стёклами)
+  g.strokeStyle = 'rgba(18,16,20,0.85)';
+  g.lineWidth = 2.2;
+  for (let k = 0; k <= cols; k++) {
+    g.beginPath();
+    g.moveTo(k * cw, 0);
+    g.lineTo(k * cw, h);
+    g.stroke();
+  }
+  for (let r = 0; r <= rows; r++) {
+    g.beginPath();
+    g.moveTo(0, r * rh);
+    g.lineTo(w, r * rh);
+    g.stroke();
+  }
+  // ободок окна
+  g.lineWidth = 5;
+  g.strokeRect(2.5, 2.5, w - 5, h - 5);
+  return c;
+}
+
 export function buildTextures() {
   const grassCanvasImage = grassCanvas(512);
   // Газон по сезонам. Зимний — серо-белый: снег лёг на траву, но зелёное
@@ -754,6 +832,11 @@ export function buildTextures() {
     bone: tex(boneCanvas(64), 1),
     windowLit: tex(windowCanvas(128, true), 1),
     windowDark: tex(windowCanvas(128, false), 1),
+    // витражи храма: четыре варианта цветного стекла
+    stainedRed: tex(stainedGlassCanvas('#a83a2c', '#e0a03a', 3), 1),
+    stainedBlue: tex(stainedGlassCanvas('#2b5c96', '#7fc8e8', 5), 1),
+    stainedGold: tex(stainedGlassCanvas('#c99a34', '#8fc25a', 7), 1),
+    stainedGreen: tex(stainedGlassCanvas('#3d7a4c', '#e2c04a', 11), 1),
     fabric: tex(fabricCanvas(128, '#a8453c', '#e3d3b4'), 1),
     fabric2: tex(fabricCanvas(128, '#3f6b6a', '#ded0ad'), 1),
     water: tex(waterCanvas(256), 4),

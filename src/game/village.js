@@ -275,8 +275,18 @@ export function createVillage(ctx) {
     forgeLight.position.copy(bs.forge);
     forgeLight.position.y += 0.9;
     ctx.scene.add(forgeLight);
+    // очаг горна: тёплое пятно, чтобы проём кузни не читался чёрной дырой
+    const forgeGlow = makeGlow(ctx.glowTex, 2.2, 0xff8a3c, 0.55);
+    forgeGlow.position.set(bs.forge.x, bs.forge.y + 0.1, bs.forge.z);
+    ctx.scene.add(forgeGlow);
+    // мягкая подсветка внутри кузни: видно стены, наковальню, бочки
+    const forgeFill = new THREE.PointLight(0xffb066, 7, 12, 2);
+    forgeFill.position.set(LAYOUT.blacksmith.x, 2.1, LAYOUT.blacksmith.z);
+    ctx.scene.add(forgeFill);
     ctx.animated.push((tt) => {
       forgeLight.intensity = 13.5 + Math.sin(tt * 11.3) * 1.8 + Math.sin(tt * 27.1) * 1.0;
+      forgeGlow.scale.setScalar(2.1 + Math.sin(tt * 9.7) * 0.18);
+      forgeFill.intensity = 6.6 + Math.sin(tt * 7.3) * 0.6;
     });
     ctx.interactables.push({
       pos: bs.forge.clone(), radius: 2.8, label: 'Подуть на горн',
@@ -898,7 +908,7 @@ export function createVillage(ctx) {
     fire.group.position.set(FIRE.x, 0, FIRE.z);
     ctx.scene.add(fire.group);
     ctx.emberSys = new Embers(ctx.scene, ctx.glowTex, new THREE.Vector3(FIRE.x, 0.6, FIRE.z));
-    ctx.colliders.circles.push({ x: FIRE.x, z: FIRE.z, r: 1.0 });   // круг камней костра
+    ctx.colliders.circles.push({ x: FIRE.x, z: FIRE.z, r: 1.5 });   // круг камней костра
     ctx.interactables.push({
       pos: new THREE.Vector3(FIRE.x, 1, FIRE.z), radius: 2.8, label: 'Подбросить дрова',
       act: () => { ctx.fireBoost = 12; ctx.ui.toast('Огонь разгорелся — тепло до ушей.'); },
@@ -908,7 +918,7 @@ export function createVillage(ctx) {
       fire.flame.scale.set(0.9 + f * 0.2, f * 1.35, 0.9 + f * 0.2);
       fire.flame.rotation.y = tt * 1.4;
       fire.light.intensity = (2.2 + f * 1.4) * (1 + ctx.fireBoost * 0.1);
-      fire.glow.scale.setScalar(3.2 + f * 0.9 + ctx.fireBoost * 0.04);
+      fire.glow.scale.setScalar(2.5 + f * 0.7 + ctx.fireBoost * 0.03);
     });
 
     /* --- поляна кострища: брёвна, поленница, фонари --- */

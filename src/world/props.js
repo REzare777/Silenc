@@ -128,9 +128,20 @@ export function forest(M, placements) {
 
 /* ---------- трава-кустики и цветы (инстансы) ---------- */
 export function scatterGrass(M, spots, count = 900) {
-  const geo = cone(0.075, 0.26, 4);
-  geo.translate(0, 0.13, 0);
-  geo.scale(1, 0.8, 1);
+  // Кустик, а не дорожный конус: три тонких стебля, расходящихся в стороны.
+  // Один цельный конус с высоты читался как дорожный конус.
+  const blade = (r, h, tilt, dir, ox, oz) => {
+    const g = cone(r, h, 3);
+    g.rotateZ(tilt * dir);
+    g.translate(ox, h / 2, oz);
+    return g;
+  };
+  const geo = mergeGeometries([
+    blade(0.042, 0.30, 0.20, 1, 0.012, 0.010),
+    blade(0.036, 0.22, 0.28, -1, -0.026, 0.018),
+    blade(0.032, 0.26, 0.24, 1, 0.030, -0.026),
+  ], false);
+  geo.scale(1, 0.85, 1);
   const mesh = new THREE.InstancedMesh(geo, M.foliageInstanced, count);
   const dummy = new THREE.Object3D();
   const rng = mulberry(77);
@@ -160,18 +171,20 @@ export function scatterFlowers(M, spots, perKind = 90) {
   const rng = mulberry(913);
   // Цветок, а не квадратик: пять лепестков, стебель и сердцевина.
   // Раньше это был плоский квад, и с высоты он читался как цветной артефакт.
+  // Лепестки приподняты: плоский диск на стебле читался как «зонтик».
   const petalParts = [];
   for (let i = 0; i < 5; i++) {
     const a = (i / 5) * Math.PI * 2;
-    const p = new THREE.PlaneGeometry(0.075, 0.12);
+    const p = new THREE.PlaneGeometry(0.068, 0.105);
+    p.rotateX(0.42);
     p.rotateX(-Math.PI / 2);
     p.rotateY(-a);
-    p.translate(Math.cos(a) * 0.05, 0, Math.sin(a) * 0.05);
+    p.translate(Math.cos(a) * 0.042, 0.012, Math.sin(a) * 0.042);
     petalParts.push(p);
   }
-  const core = new THREE.CircleGeometry(0.028, 6);
+  const core = new THREE.CircleGeometry(0.026, 6);
   core.rotateX(-Math.PI / 2);
-  core.translate(0, 0.004, 0);
+  core.translate(0, 0.016, 0);
   petalParts.push(core);
   const petal = mergeGeometries(petalParts, false);
   const stemGeo = cyl(0.01, 0.014, 0.22, 4);
@@ -325,10 +338,55 @@ export function campfire(M, glowTex) {
   const light = new THREE.PointLight(0xff8a33, 3.2, 13, 2);
   light.position.y = 0.9;
   group.add(light);
-  const glow = makeGlow(glowTex, 3.0, 0xffa050, 0.6);
+  const glow = makeGlow(glowTex, 2.4, 0xffa050, 0.45);
   glow.position.y = 0.8;
   group.add(glow);
   return { group, flame, light, glow, flicker: Math.random() * 10 };
+}
+
+/* ---------- дневной свет за порталом подземелья ----------
+ *
+ *  За проёмом входа в подземелье стоял плоский серый прямоугольник —
+ *  читался как пустая табличка. Теперь это кусочек настоящего дня:
+ *  небо, дымка у горизонта, земля и силуэты деревьев.
+ */
+export function daylightTexture() {
+  const c = document.createElement('canvas');
+  c.width = 160;
+  c.height = 320;
+  const g = c.getContext('2d');
+  const grd = g.createLinearGradient(0, 0, 0, 320);
+  grd.addColorStop(0.00, '#eef4fc');
+  grd.addColorStop(0.34, '#cfdef0');
+  grd.addColorStop(0.50, '#b7c8dc');
+  grd.addColorStop(0.56, '#7e8b6c');
+  grd.addColorStop(1.00, '#54624a');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 160, 320);
+
+  // силуэты деревьев вдоль горизонта
+  g.fillStyle = 'rgba(40,54,40,0.8)';
+  for (let i = 0; i < 11; i++) {
+    const x = (i * 31 + 11) % 160;
+    const h = 14 + ((i * 23) % 20);
+    const y = 180;
+    g.beginPath();
+    g.moveTo(x - 5, y);
+    g.lineTo(x, y - h);
+    g.lineTo(x + 5, y);
+    g.closePath();
+    g.fill();
+  }
+  // светлая дымка поверх силуэтов — воздух между стволами
+  const haze = g.createLinearGradient(0, 150, 0, 200);
+  haze.addColorStop(0, 'rgba(210,225,240,0.55)');
+  haze.addColorStop(1, 'rgba(210,225,240,0)');
+  g.fillStyle = haze;
+  g.fillRect(0, 150, 160, 50);
+
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
 }
 
 /* ---------- бочки, ящики, поленница ---------- */

@@ -54,6 +54,7 @@ export function createContext() {
     player: null,            // игрок (Player)
     nav: null,               // сетка поиска пути для пса (NavGrid)
     inventory: null,         // инвентарь (Inventory)
+    loading: false,          // идёт загрузка сохранения — автосейв молчит
 
     /* ---------------- Геометрия мира ---------------- */
     colliders: { boxes: [], circles: [] },  // препятствия для игрока

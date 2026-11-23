@@ -315,7 +315,7 @@ export function snapshot(ctx) {
     stamina: ctx.stats ? ctx.stats.stamina : 100,
     mana: ctx.stats ? ctx.stats.mana : 100,
     coins: ctx.stats ? ctx.stats.coins : 30,
-    pos: p ? { x: p.pos.x, z: p.pos.z, yaw: p.yaw } : { x: 0, z: 16, yaw: 0 },
+    pos: p ? { x: p.pos.x, y: p.y, z: p.pos.z, yaw: p.yaw } : { x: 0, y: 0, z: 16, yaw: 0 },
     loc: ctx.loc || 'village',
     inv: slots,
     invSel: inv ? inv.sel : 0,
@@ -406,10 +406,48 @@ export function applySnapshot(ctx, data) {
     }
   }
 
-  // позиция — только в деревне: в локациях игрок появляется у входа
-  if (ctx.player && data.pos && !ctx.systems?.locations?.isInside?.()) {
+  // локация и позиция
+  // ------------------
+  // Сохранение всегда восстанавливает и МЕСТО, и ТОЧКУ. Раньше локация
+  // не читалась вовсе: игрок оказывался в координатах интерьера, но в
+  // сцене деревни (или наоборот — в стене таверны).
+  const loc = typeof data.loc === 'string' ? data.loc : 'village';
+  const locSys = ctx.systems && ctx.systems.locations;
+  if (locSys && typeof locSys.setLocation === 'function' && ctx.loc !== loc && isKnownLoc(loc)) {
+    // во время загрузки автосохранение не нужно — иначе загрузка
+    // тут же перезапишет сама себя
+    const wasLoading = ctx.loading;
+    ctx.loading = true;
+    try {
+      locSys.setLocation(loc);
+    } finally {
+      ctx.loading = wasLoading;
+    }
+  }
+  if (ctx.player && data.pos) {
     ctx.player.teleport(data.pos.x, data.pos.z, data.pos.yaw ?? 0);
+    // высота: в подземелье два яруса, и игрок мог стоять на нижнем
+    if (typeof data.pos.y === 'number') ctx.player.y = data.pos.y;
+    ctx.player.vy = 0;
+    ctx.player.camY = null;
+    // пол под ногами — тот, на котором игрок стоял при сохранении
+    if (typeof ctx.player.groundAt === 'function') {
+      ctx.player.groundY = ctx.player.groundAt(data.pos.x, data.pos.z, ctx.player.y, 0.6);
+    }
   }
 
   return true;
+}
+
+/**
+ * Известные локации: village, barn, tavern, dungeon, church, home1..home12.
+ *
+ * @param {string} loc идентификатор локации
+ * @returns {boolean}
+ */
+function isKnownLoc(loc) {
+  if (loc === 'village' || loc === 'barn' || loc === 'tavern'
+    || loc === 'dungeon' || loc === 'church') return true;
+  const m = /^home(\d+)$/.exec(loc);
+  return !!m && Number(m[1]) >= 1 && Number(m[1]) <= 12;
 }

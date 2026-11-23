@@ -93,18 +93,24 @@ export function createLoadout(ctx) {
 
   /**
    * Синхронизировать руки с тем, что выбрано на поясе.
+   *
+   * Важное правило: пустая ячейка пояса НЕ отнимает оружие из руки.
+   * Иначе пришлось бы каждый раз переодевать топор, нажимая на пустую
+   * ячейку. Оружие уходит из руки только когда его больше нет в сумке
+   * (продали, выбросили) — и тогда рука остаётся пустой.
    */
   function sync() {
     // оружие в правой руке
     const spec = currentWeapon();
-    const id = spec ? spec.id : null;
-    if (id !== state.weaponId) {
-      state.weaponId = id;
-      if (spec) {
+    if (spec) {
+      if (spec.id !== state.weaponId) {
+        state.weaponId = spec.id;
         ctx.viewmodel.setWeapon(weaponModel(spec.id), spec);
-      } else {
-        ctx.viewmodel.clearWeapon();
       }
+    } else if (state.weaponId && ctx.inventory.findById(state.weaponId) < 0) {
+      // оружие пропало из сумки — убираем его из руки
+      state.weaponId = null;
+      ctx.viewmodel.clearWeapon();
     }
     // факел в левой руке
     const combat = ctx.systems && ctx.systems.combat;

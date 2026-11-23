@@ -196,7 +196,10 @@ const GradeShader = {
       c.rgb *= clamp(v, 0.0, 1.0);
       c.rgb *= vec3(1.0 + uWarm, 1.0, 1.0 - uWarm * 0.7);
       float g = fract(sin(dot(vUv * uResolution + uTime, vec2(12.9898, 78.233))) * 43758.5453);
-      c.rgb += (g - 0.5) * uGrain;
+      // зерно — только по светлым местам: в тёмном подземелье равномерный
+      // шум превращался в «телевизионную помеху»
+      float lum = dot(c.rgb, vec3(0.299, 0.587, 0.114));
+      c.rgb += (g - 0.5) * uGrain * smoothstep(0.02, 0.4, lum);
       gl_FragColor = c;
     }`,
 };
@@ -385,7 +388,7 @@ const death = ctx.systems.death;
  * должно остаться тем, с которого игрок вернётся.
  */
 ctx.onLocationChanged = () => {
-  if (started && !death.isDead) autosave();
+  if (started && !death.isDead && !ctx.loading) autosave();
 };
 
 // Огонь — единственный источник света, топлива и лечения.
@@ -460,6 +463,16 @@ for (let i = 0; i < LIGHT_POOL; i++) {
  * ================================================================== */
 
 /**
+ * Когда игрок в последний раз сохранял игру сам (мс).
+ *
+ * Сразу после ручного сохранения автосейв не затирает его — иначе
+ * сохранение «в таверне» мгновенно превращалось бы в «у двери таверны».
+ *
+ * @type {number}
+ */
+let lastManualSave = 0;
+
+/**
  * Открыть окно настроек (Esc или O).
  */
 function openMenu() {
@@ -474,11 +487,16 @@ function openMenu() {
 /**
  * Сохранить игру.
  *
+ * Ручное сохранение «помечает» себя: следующий автосейв не спешит его
+ * затирать (иначе сохранение, сделанное в таверне, мгновенно
+ * перезаписывалось бы состоянием у двери).
+ *
  * @param {boolean} quiet не показывать подтверждение
  * @returns {boolean} true, если сохранение записалось
  */
 function saveGame(quiet = false) {
   const ok = writeSave(snapshot(ctx));
+  if (ok) lastManualSave = performance.now();
   if (!quiet && ctx.ui) {
     ctx.ui.toast(ok ? 'Игра сохранена.' : 'Не удалось сохранить игру.', ok ? 2200 : 3600);
   }
@@ -491,6 +509,8 @@ function saveGame(quiet = false) {
  * @returns {boolean}
  */
 function autosave() {
+  // сразу после ручного сохранения автосейв не трогает его
+  if (performance.now() - lastManualSave < 20000) return false;
   return writeSave(snapshot(ctx));
 }
 
@@ -502,7 +522,12 @@ function autosave() {
 function loadGame() {
   const data = readSave();
   if (!data) return false;
-  applySnapshot(ctx, data);
+  ctx.loading = true;
+  try {
+    applySnapshot(ctx, data);
+  } finally {
+    ctx.loading = false;
+  }
   if (ctx.ui) {
     ctx.ui.setDate(ctx.calendar ? ctx.calendar.label() : '');
     ctx.ui.renderInventory(ctx.inventory);
@@ -521,6 +546,16 @@ function newGame() {
   if (ctx.calendar) {
     ctx.calendar.restore(1, 'spring', 1);
     ctx.calendar.applyLook();
+  }
+  // новая игра всегда начинается в деревне: после смерти в подземелье
+  // игрок мог остаться в сцене подземелья с координатами деревни
+  if (ctx.systems && ctx.systems.locations && ctx.loc !== 'village') {
+    ctx.loading = true;
+    try {
+      ctx.systems.locations.setLocation('village');
+    } finally {
+      ctx.loading = false;
+    }
   }
   // игрок — на стартовую точку (та же, что и при первой загрузке игры)
   ctx.player.teleport(0, 16, 0);
@@ -560,7 +595,12 @@ function loadSlot(key, index) {
     if (ctx.ui) ctx.ui.toast('Сохранение не найдено или повреждено.', 3200);
     return false;
   }
-  applySnapshot(ctx, data);
+  ctx.loading = true;
+  try {
+    applySnapshot(ctx, data);
+  } finally {
+    ctx.loading = false;
+  }
   // смерть отменяется: игрок снова жив, бой возобновляется
   death.revive();
   if (ctx.ui) {
@@ -630,6 +670,10 @@ ui.onSlotsOpen = () => {
 /** Войти в игру: общие шаги для «Начать», «Продолжить» и загрузки слота. */
 function enterGame(message) {
   started = true;
+  // режим переключаем сами: захват мыши браузер может дать не сразу
+  // (после Esc он запрещён около секунды), и игра не должна остаться
+  // «на паузе без окна паузы»
+  ctx.mode = 'play';
   ui.hideStart();
   ui.hideDeath();
   ui.renderInventory(bag.inventory);
@@ -1298,6 +1342,13 @@ window.__dbg = {
   saveGame: (quiet) => saveGame(quiet !== false),
   /** Загрузить игру из сохранения. */
   loadGame: () => loadGame(),
+  /** Снимок состояния и его применение — для проверок сохранений. */
+  snapshot: () => snapshot(ctx),
+  applySnapshot: (data) => applySnapshot(ctx, data),
+  /** Войти в игру (как «Продолжить»). */
+  enterGame: () => enterGame(),
+  /** Какая сцена рендерится сейчас. */
+  renderPass,
   /** Есть ли сохранение. */
   hasSave: () => hasSave(),
   /** Удалить сохранение. */

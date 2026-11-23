@@ -29,7 +29,7 @@
 import * as THREE from 'three';
 import { Builder, box, cyl, sphere, cone, mat } from './geo.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { makeGlow } from './props.js';
+import { makeGlow, daylightTexture } from './props.js';
 
 /* ---------------- уровни ---------------- */
 const Y_TOP = 0;         // верхний ярус (входной и кристальный залы)
@@ -1191,20 +1191,21 @@ export function buildDungeon(M, glowTex) {
   group.add(portal.build({ rock, rockDark }, null, { name: 'dungeonPortal' }));
 
   // «улица» за порталом: раньше в проёме была чёрная пустота сцены.
-  // Теперь там светлый прямоугольник дневного света — проём читается
-  // как выход наверх, а не как дыра в стене.
+  // Теперь там кусок дневного света — небо, горизонт и земля, — и проём
+  // читается как выход наверх, а не как дыра в стене.
   const outsideMat = new THREE.MeshBasicMaterial({
-    color: 0x7d8fa8, transparent: true, opacity: 0.95, fog: false,
+    map: daylightTexture(), transparent: true, opacity: 0.96, fog: false,
   });
   const outside = new THREE.Mesh(new THREE.PlaneGeometry(GATE_X * 2 - 0.2, 3.4), outsideMat);
   outside.position.set(0, 1.75, A.z0 + 0.05);
   group.add(outside);
-  // мягкое свечение по краю проёма
-  const outsideGlow = makeGlow(glowTex, 5.6, 0x9fb8d8, 0.4);
+  // мягкое свечение по краю проёма. Оно было таким ярким, что заливал
+  // весь проём белым и дневной свет за порталом не было видно.
+  const outsideGlow = makeGlow(glowTex, 3.4, 0x9fb8d8, 0.22);
   outsideGlow.position.set(0, 1.9, A.z0 + 0.5);
   group.add(outsideGlow);
 
-  const portalGlow = makeGlow(glowTex, 3.8, 0xbcd8ff, 0.4);
+  const portalGlow = makeGlow(glowTex, 2.6, 0xbcd8ff, 0.2);
   portalGlow.position.set(0, 2.1, A.z0 + 0.4);
   group.add(portalGlow);
   const portalLight = new THREE.PointLight(0xa8c8ff, 3.0, 24, 1.7);

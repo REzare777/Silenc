@@ -77,8 +77,35 @@ export function createSpells(ctx) {
   /** Лампа «живого огня» в мире (создаётся по надобности). */
   let glowLight = null;
 
+  /** Короткая вспышка света: своя лампа, своя жизнь. */
+  let pulse = null;
+
   const _org = new THREE.Vector3();
   const _dir = new THREE.Vector3();
+
+  /**
+   * Активная сцена: подземелье, таверна, храм и дома — отдельные сцены,
+   * и свет заклинания должен жить именно в ней.
+   *
+   * @returns {THREE.Scene|null}
+   */
+  function activeScene() {
+    if (ctx.renderPass && ctx.renderPass.scene) return ctx.renderPass.scene;
+    return ctx.scene || null;
+  }
+
+  /**
+   * Поставить лампу в активную сцену и посадить её на игрока.
+   *
+   * @param {THREE.PointLight} light лампа
+   */
+  function placeLight(light) {
+    const scene = activeScene();
+    if (scene && light.parent !== scene) scene.add(light);
+    if (ctx.player) {
+      light.position.set(ctx.player.pos.x, ctx.player.pos.y + 1.5, ctx.player.pos.z);
+    }
+  }
 
   /**
    * Сколько осталось отката.
@@ -165,21 +192,32 @@ export function createSpells(ctx) {
   /**
    * Короткая вспышка света в мире.
    *
+   * Лампа живёт в активной сцене (подземелье, таверна, храм, дом) и гаснет
+   * по своему таймеру — независимо от «живого огня».
+   *
    * @param {number} color цвет
    * @param {number} intensity сила
    * @param {number} time длительность, с
    */
   function pulseLight(color, intensity, time) {
-    if (!ctx.scene) return;
-    if (!glowLight) {
-      glowLight = new THREE.PointLight(color, 0, 18, 2);
-      glowLight.name = 'spellLight';
-      ctx.scene.add(glowLight);
+    const scene = activeScene();
+    if (!scene) return;
+    if (!pulse) {
+      pulse = {
+        light: new THREE.PointLight(color, 0, 20, 2),
+        t: 0,
+        max: 1,
+        base: intensity,
+      };
+      pulse.light.name = 'spellPulse';
+      scene.add(pulse.light);
     }
-    glowLight.color.setHex(color);
-    glowLight.intensity = intensity;
-    glowLight.userData.pulse = time;
-    glowLight.userData.pulseMax = time;
+    pulse.light.color.setHex(color);
+    pulse.light.intensity = intensity;
+    pulse.t = time;
+    pulse.max = Math.max(0.01, time);
+    pulse.base = intensity;
+    placeLight(pulse.light);
   }
 
   /**
@@ -223,23 +261,23 @@ export function createSpells(ctx) {
         if (state.cd[id] === 0) delete state.cd[id];
       }
     }
-    // «живой огонь» без факела: свет вокруг игрока
+    // короткая вспышка: гаснет сама, свет всегда в активной сцене
+    if (pulse) {
+      pulse.t = Math.max(0, pulse.t - dt);
+      placeLight(pulse.light);
+      pulse.light.intensity = pulse.base * (pulse.t / pulse.max);
+      if (pulse.t === 0) pulse.light.intensity = 0;
+    }
+    // «живой огонь» без факела: свет вокруг игрока минуту
     if (state.glowT > 0) {
       state.glowT = Math.max(0, state.glowT - dt);
-      if (glowLight && ctx.player) {
-        // лампа живёт в активной сцене: подземелье, таверна, храм — свои сцены
-        const scene = ctx.renderPass ? ctx.renderPass.scene : ctx.scene;
-        if (scene && glowLight.parent !== scene) scene.add(glowLight);
-        glowLight.position.set(ctx.player.pos.x, ctx.player.pos.y + 1.5, ctx.player.pos.z);
-        if (glowLight.userData.pulse > 0) {
-          glowLight.userData.pulse = Math.max(0, glowLight.userData.pulse - dt);
-        } else {
-          glowLight.intensity = 12;
-        }
+      if (!glowLight) {
+        glowLight = new THREE.PointLight(0xffd07a, 0, 20, 2);
+        glowLight.name = 'spellLight';
       }
-      if (state.glowT === 0 && glowLight) {
-        glowLight.intensity = 0;
-      }
+      placeLight(glowLight);
+      glowLight.intensity = 12;
+      if (state.glowT === 0) glowLight.intensity = 0;
     }
   }
 

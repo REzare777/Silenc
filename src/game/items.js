@@ -560,8 +560,91 @@ function drawGoodsIcon(ctx, spec, px) {
       }
       break;
     }
+    case 'candle': {
+      // свеча: белое тело, фитиль, пламя
+      ctx.fillStyle = '#e8e0cc';
+      ctx.fillRect(c - px * 0.07, c - px * 0.06, px * 0.14, px * 0.3);
+      ctx.fillStyle = '#c9bfa4';
+      ctx.fillRect(c - px * 0.09, c + px * 0.2, px * 0.18, px * 0.05);
+      ctx.fillStyle = '#ffb454';
+      ctx.beginPath();
+      ctx.moveTo(c, c - px * 0.26);
+      ctx.bezierCurveTo(c + px * 0.1, c - px * 0.16, c + px * 0.07, c - px * 0.08, c, c - px * 0.05);
+      ctx.bezierCurveTo(c - px * 0.07, c - px * 0.08, c - px * 0.1, c - px * 0.16, c, c - px * 0.26);
+      ctx.fill();
+      ctx.strokeStyle = '#2b2118';
+      ctx.lineWidth = px * 0.025;
+      ctx.beginPath();
+      ctx.moveTo(c, c - px * 0.06);
+      ctx.lineTo(c, c - px * 0.02);
+      ctx.stroke();
+      break;
+    }
+    case 'honey': {
+      // горшок мёда: тёмный янтарь и медовая капля
+      ctx.fillStyle = '#8a5f2a';
+      ctx.beginPath();
+      ctx.moveTo(c - px * 0.18, c - px * 0.12);
+      ctx.lineTo(c + px * 0.18, c - px * 0.12);
+      ctx.lineTo(c + px * 0.13, c + px * 0.26);
+      ctx.lineTo(c - px * 0.13, c + px * 0.26);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#c98b32';
+      ctx.fillRect(c - px * 0.2, c - px * 0.19, px * 0.4, px * 0.08);
+      ctx.fillStyle = '#e0a63c';
+      ctx.beginPath();
+      ctx.moveTo(c, c - px * 0.22);
+      ctx.bezierCurveTo(c + px * 0.11, c - px * 0.1, c + px * 0.07, c + px * 0.02, c, c + px * 0.04);
+      ctx.bezierCurveTo(c - px * 0.07, c + px * 0.02, c - px * 0.11, c - px * 0.1, c, c - px * 0.22);
+      ctx.fill();
+      break;
+    }
+    case 'salt': {
+      // мешочек соли: белая ткань, хвостик, соль сверху
+      ctx.fillStyle = '#cfc6b2';
+      ctx.beginPath();
+      ctx.moveTo(c - px * 0.16, c - px * 0.1);
+      ctx.bezierCurveTo(c - px * 0.2, c + px * 0.16, c - px * 0.1, c + px * 0.28, c, c + px * 0.28);
+      ctx.bezierCurveTo(c + px * 0.1, c + px * 0.28, c + px * 0.2, c + px * 0.16, c + px * 0.16, c - px * 0.1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#8f8570';
+      ctx.fillRect(c - px * 0.12, c - px * 0.16, px * 0.24, px * 0.07);
+      ctx.fillStyle = '#f2efe4';
+      ctx.beginPath();
+      ctx.arc(c, c - px * 0.14, px * 0.07, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'pitch': {
+      // жестянка смолы с фитилём
+      ctx.fillStyle = '#5c6068';
+      ctx.beginPath();
+      ctx.moveTo(c - px * 0.2, c - px * 0.08);
+      ctx.lineTo(c + px * 0.2, c - px * 0.08);
+      ctx.lineTo(c + px * 0.17, c + px * 0.24);
+      ctx.lineTo(c - px * 0.17, c + px * 0.24);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#787d86';
+      ctx.fillRect(c - px * 0.21, c - px * 0.14, px * 0.42, px * 0.07);
+      // чёрная смола внутри
+      ctx.fillStyle = '#2a2118';
+      ctx.beginPath();
+      ctx.ellipse(c, c - px * 0.105, px * 0.14, px * 0.05, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // фитиль
+      ctx.strokeStyle = '#cdb98c';
+      ctx.lineWidth = px * 0.035;
+      ctx.beginPath();
+      ctx.moveTo(c + px * 0.04, c - px * 0.12);
+      ctx.quadraticCurveTo(c + px * 0.16, c - px * 0.26, c + px * 0.1, c - px * 0.3);
+      ctx.stroke();
+      break;
+    }
     default: {
-      // свеча, мёд, соль, смола — простой «мешочек/банка»
+      // прочий товар — простой «мешочек/банка»
       ctx.fillStyle = '#8a7a5c';
       ctx.beginPath();
       ctx.moveTo(c - px * 0.16, c - px * 0.14);
