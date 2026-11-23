@@ -38,6 +38,26 @@ export function loadVolume(ctx) {
 }
 
 /**
+ * Прочитать сохранённую громкость музыки и применить её.
+ *
+ * @param {object} ctx контекст игры
+ * @returns {number} громкость от 0 до 1
+ */
+export function loadMusicVolume(ctx) {
+  let v = 0.55;
+  try {
+    const raw = localStorage.getItem('wv.music');
+    if (raw !== null && raw !== '') {
+      const n = Number(raw);
+      if (Number.isFinite(n)) v = Math.max(0, Math.min(1, n));
+    }
+  } catch (e) { /* без localStorage — просто значение по умолчанию */ }
+  if (ctx.music) ctx.music.setVolume(v);
+  if (ctx.ui) ctx.ui.setMusicVolume(v);
+  return v;
+}
+
+/**
  * Применить уровень качества графики.
  *
  * @param {object} ctx контекст игры
@@ -73,11 +93,20 @@ export function bindSettings(ctx) {
   ctx.ui.onTime = (t) => ctx.env.setTimeOfDay(t);
   ctx.ui.onQuality = (q) => setQuality(ctx, q);
   ctx.ui.onBloom = (on) => { ctx.bloom.enabled = on; };
-  ctx.ui.onSound = (on) => { ctx.ambience.start(); ctx.ambience.setMuted(!on); };
+  ctx.ui.onSound = (on) => {
+    ctx.ambience.start();
+    ctx.ambience.setMuted(!on);
+    // музыка молчит вместе со звуком
+    if (ctx.music) ctx.music.setMuted(!on);
+  };
   ctx.ui.onVol = (v) => {
     ctx.ambience.start();
     ctx.ambience.setVolume(v);
     try { localStorage.setItem('wv.volume', String(v)); } catch (e) { /* без localStorage — просто не сохраняем */ }
+  };
+  ctx.ui.onMus = (v) => {
+    if (ctx.music) ctx.music.setVolume(v);
+    try { localStorage.setItem('wv.music', String(v)); } catch (e) { /* без localStorage */ }
   };
   ctx.ui.onSens = (v) => { ctx.player.sensitivity = v; };
   ctx.ui.onBob = (v) => { ctx.player.bobScale = v; };

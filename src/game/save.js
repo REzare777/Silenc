@@ -351,13 +351,18 @@ export function applySnapshot(ctx, data) {
     if (ctx.ui) ctx.ui.setTime(data.tod);
   }
 
-  // характеристики
+  // характеристики — принимаем только конечные числа: битое сохранение
+  // не должно превращать здоровье в NaN
   if (ctx.stats) {
     const st = ctx.stats;
-    if (typeof data.hp === 'number') st.hp = Math.max(0, Math.min(st.maxHp, data.hp));
-    if (typeof data.stamina === 'number') st.stamina = Math.max(0, Math.min(st.maxStamina, data.stamina));
-    if (typeof data.mana === 'number') st.mana = Math.max(0, Math.min(st.maxMana, data.mana));
-    if (typeof data.coins === 'number') st.coins = Math.max(0, Math.round(data.coins));
+    const hp = finite(data.hp);
+    const stam = finite(data.stamina);
+    const mana = finite(data.mana);
+    const coins = finite(data.coins);
+    if (hp !== null) st.hp = Math.max(0, Math.min(st.maxHp, hp));
+    if (stam !== null) st.stamina = Math.max(0, Math.min(st.maxStamina, stam));
+    if (mana !== null) st.mana = Math.max(0, Math.min(st.maxMana, mana));
+    if (coins !== null) st.coins = Math.max(0, Math.round(coins));
     st._changed();
   }
 
@@ -385,9 +390,9 @@ export function applySnapshot(ctx, data) {
     if (ctx.ui) ctx.ui.renderInventory(inv);
   }
 
-  // улов (для коллекции пород) и флаги
-  if (ctx.caught && data.caught) Object.assign(ctx.caught, data.caught);
-  if (ctx.flags && data.flags) Object.assign(ctx.flags, data.flags);
+  // улов (для коллекции пород) и флаги — только из настоящих объектов
+  if (ctx.caught && isPlain(data.caught)) Object.assign(ctx.caught, data.caught);
+  if (ctx.flags && isPlain(data.flags)) Object.assign(ctx.flags, data.flags);
 
   // факел: топливо, горение и то, взят ли он в руку
   if (data.torch) {
@@ -425,18 +430,46 @@ export function applySnapshot(ctx, data) {
     }
   }
   if (ctx.player && data.pos) {
-    ctx.player.teleport(data.pos.x, data.pos.z, data.pos.yaw ?? 0);
-    // высота: в подземелье два яруса, и игрок мог стоять на нижнем
-    if (typeof data.pos.y === 'number') ctx.player.y = data.pos.y;
-    ctx.player.vy = 0;
-    ctx.player.camY = null;
-    // пол под ногами — тот, на котором игрок стоял при сохранении
-    if (typeof ctx.player.groundAt === 'function') {
-      ctx.player.groundY = ctx.player.groundAt(data.pos.x, data.pos.z, ctx.player.y, 0.6);
+    const px = finite(data.pos.x);
+    const pz = finite(data.pos.z);
+    // координаты из битого сохранения игнорируем: иначе игрок окажется
+    // в NaN-координатах и провалится сквозь мир
+    if (px !== null && pz !== null) {
+      const yaw = finite(data.pos.yaw);
+      ctx.player.teleport(px, pz, yaw === null ? 0 : yaw);
+      // высота: в подземелье два яруса, и игрок мог стоять на нижнем
+      const py = finite(data.pos.y);
+      if (py !== null) ctx.player.y = py;
+      ctx.player.vy = 0;
+      ctx.player.camY = null;
+      // пол под ногами — тот, на котором игрок стоял при сохранении
+      if (typeof ctx.player.groundAt === 'function') {
+        ctx.player.groundY = ctx.player.groundAt(px, pz, ctx.player.y, 0.6);
+      }
     }
   }
 
   return true;
+}
+
+/**
+ * Конечное число или null.
+ *
+ * @param {*} v значение из сохранения
+ * @returns {number|null}
+ */
+function finite(v) {
+  return typeof v === 'number' && Number.isFinite(v) ? v : null;
+}
+
+/**
+ * Обычный объект (не массив, не null).
+ *
+ * @param {*} v значение из сохранения
+ * @returns {boolean}
+ */
+function isPlain(v) {
+  return !!v && typeof v === 'object' && !Array.isArray(v);
 }
 
 /**

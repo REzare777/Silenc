@@ -378,6 +378,9 @@ export function createCombat(ctx) {
       return;
     }
 
+    // близость ближайшей тени — по ней музыка понимает, что пора нервничать
+    state.threat = nearestThreat();
+
     // разжигание
     if (state.lighting > 0) {
       state.lighting -= dt;
@@ -433,6 +436,30 @@ export function createCombat(ctx) {
 
     // огонь рядом: пополнение топлива и лечение
     updateFire(dt, ctx.player.pos);
+  }
+
+  /**
+   * Насколько близко подобралась тень: 0 — тихо, 1 — рядом.
+   *
+   * Это значение смотрит музыка: когда тень подходит, музыка густеет
+   * и добавляет низкий пульс тревоги.
+   *
+   * @returns {number} 0…1
+   */
+  function nearestThreat() {
+    const shadows = ctx.systems && ctx.systems.shadows;
+    if (!shadows || !shadows.list || !ctx.player) return 0;
+    const px = ctx.player.pos.x;
+    const pz = ctx.player.pos.z;
+    let threat = 0;
+    for (const s of shadows.list) {
+      if (s.veil <= 0) continue;
+      const d = Math.hypot(s.x - px, s.z - pz);
+      if (d > 16) continue;
+      const t = 1 - d / 16;
+      if (t > threat) threat = t;
+    }
+    return threat;
   }
 
   /**

@@ -94,7 +94,8 @@ import { createInteractions } from './game/interactions.js';
 import { createBag } from './game/bag.js';
 import { PlayerStats } from './game/stats.js';
 import { ViewModel } from './game/viewmodel.js';
-import { bindSettings, loadVolume } from './game/settings.js';
+import { bindSettings, loadVolume, loadMusicVolume } from './game/settings.js';
+import { Music } from './music.js';
 import { createColliderDebug } from './game/debug.js';
 
 /* ================================================================== *
@@ -166,6 +167,8 @@ camera.position.set(0, 3, 26);
 
 const ui = new UI();
 const ambience = new Ambience();
+// Музыка — генератор: своя шина, свой уровень, общий тумблер звука
+const music = new Music();
 
 /* --------------------- пост-обработка --------------------- */
 
@@ -236,6 +239,8 @@ const env = new Environment(scene, renderer);
  * ================================================================== */
 
 const ctx = createContext();
+// музыка живёт в контексте: настройки и проверки видят её отсюда
+ctx.music = music;
 ctx.scene = scene;
 ctx.camera = camera;
 ctx.renderer = renderer;
@@ -389,7 +394,45 @@ const death = ctx.systems.death;
  */
 ctx.onLocationChanged = () => {
   if (started && !death.isDead && !ctx.loading) autosave();
+  updateMusicMood();
 };
+
+/* ------------------------------------------------------------------ *
+ *  Музыка
+ *
+ *  У каждого места свой характер: в деревне — тёплая деревенская тема,
+ *  у мельницы — бойкая, в лесу — просторная и редкая, в таверне —
+ *  живая, в храме — колокол и орган, в подземелье — тревожный гул.
+ *  Ночь, сезон и близость тени меняют звук сами.
+ * ------------------------------------------------------------------ */
+
+/**
+ * Настроение музыки по текущему месту.
+ *
+ * @returns {string} ключ настроения
+ */
+function currentMusicMood() {
+  const loc = ctx.loc || 'village';
+  if (loc === 'barn') return 'barn';
+  if (loc === 'tavern') return 'tavern';
+  if (loc === 'dungeon') return 'dungeon';
+  if (loc === 'church') return 'church';
+  if (loc.startsWith('home')) return 'home';
+  // деревня: у мельницы — свой характер, дальше на восток — поля и лес
+  const x = player.pos.x;
+  const z = player.pos.z;
+  if (Math.hypot(x - 34, z + 33) < 14) return 'mill';
+  if (x > 68) return 'fields';
+  if (x > 38 || z < -40 || z > 52) return 'forest';
+  return 'village';
+}
+
+/** Обновить настроение музыки под текущее место. */
+function updateMusicMood() {
+  if (!music.ctx) return;
+  music.setMood(currentMusicMood());
+  music.setSeason(ctx.calendar ? ctx.calendar.season : 'spring');
+}
 
 // Огонь — единственный источник света, топлива и лечения.
 // Жаровни в пещере, костёр за селом, очаг в таверне.
@@ -445,6 +488,13 @@ ctx.snow = snow;
 ctx.calendar = createCalendar(ctx);
 // календарь должен знать о снеге раньше, чем первый applyLook
 ctx.calendar.applyLook();
+// смена сезона меняет и музыку: зимой она реже и выше, осенью — ниже
+ctx.calendar.onNewSeason(() => {
+  if (music.ctx) {
+    music.setSeason(ctx.calendar.season);
+    updateMusicMood();
+  }
+});
 
 /* --------------------- пул огней --------------------- */
 // внутренние источники (окна домов) — светят изнутри, когда игрок рядом
@@ -680,6 +730,13 @@ function enterGame(message) {
   ambience.start();
   ambience.setVolume(loadVolume(ctx));
   ambience.setMuted(!ui.el.tSound.classList.contains('on'));
+  // музыка живёт в том же звуковом контексте, но у неё своя шина
+  if (!music.ctx) {
+    music.attach(ambience);
+    loadMusicVolume(ctx);
+  }
+  music.setMuted(ambience.muted);
+  updateMusicMood();
   cine.active = false;
   player.enabled = true;
   player.acceptInput = true;
@@ -1219,6 +1276,12 @@ function loop() {
 
   if (started) {
     ambience.update(dt, nightAmt, player.pos.distanceTo(forgePos), player.pos.distanceTo(firePos));
+    // музыка: планируем ноты, ловим ночь и близость тени
+    music.update();
+    music.setNight(nightAmt);
+    music.setDanger(combat.state.threat);
+    // место могло смениться без смены локации (мельница, лес, поля)
+    if (Math.random() < 0.02) updateMusicMood();
     if (ctx.mode === 'play') fishing.updateFishing(dt);   // в инвентаре и паузе ловля замирает
     stats.update(dt, { sprinting: player.sprinting });
     viewmodel.update(dt, camera, player);
@@ -1303,7 +1366,7 @@ window.__dbg = {
   updateAnimals: animals.update, doInteract: interactions.doInteract,
   nearestInteractable: interactions.nearest, ui, ambience,
   inventory: bag.inventory, fishing: fishing.session,
-  stats, viewmodel,
+  stats, viewmodel, music,
   /** Взять рыбу в руки (для проверок и отладки). */
   holdFish: (i = 0, opts = {}) => {
     const spec = FISH[((i % FISH.length) + FISH.length) % FISH.length];

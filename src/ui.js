@@ -62,6 +62,8 @@ export class UI {
       tSound: document.getElementById('tSound'),
       vol: document.getElementById('vol'),
       volVal: document.getElementById('volVal'),
+      mus: document.getElementById('mus'),
+      musVal: document.getElementById('musVal'),
       sens: document.getElementById('sens'),
       res: document.getElementById('res'),
       bob: document.getElementById('bob'),
@@ -138,6 +140,7 @@ export class UI {
     this.onBloom = null;
     this.onSound = null;
     this.onVol = null;
+    this.onMus = null;
     this.onSens = null;
     this.onRes = null;
     this.onBob = null;
@@ -280,6 +283,14 @@ export class UI {
         // ползунок в ноль — это «звук выключен»; вверх — включаем звук обратно
         this.syncSoundToggle();
         if (this.onVol) this.onVol(v);
+      });
+    }
+    if (this.el.mus) {
+      this.el.mus.addEventListener('input', (e) => {
+        e.stopPropagation();
+        const v = Math.max(0, Math.min(100, +e.target.value)) / 100;
+        this.setMusicVolume(v);
+        if (this.onMus) this.onMus(v);
       });
     }
     this.el.resume.addEventListener('click', (e) => {
@@ -748,6 +759,13 @@ export class UI {
     const pct = Math.round(Math.max(0, Math.min(1, v)) * 100);
     if (this.el.vol) this.el.vol.value = String(pct);
     if (this.el.volVal) this.el.volVal.textContent = `${pct}%`;
+  }
+
+  /** Громкость музыки 0…1: обновляем ползунок и подпись. */
+  setMusicVolume(v) {
+    const pct = Math.round(Math.max(0, Math.min(1, v)) * 100);
+    if (this.el.mus) this.el.mus.value = String(pct);
+    if (this.el.musVal) this.el.musVal.textContent = `${pct}%`;
   }
 
   /** Тумблер «Звук» показывает mute-состояние: 0 % — выключен, иначе звук включён. */
