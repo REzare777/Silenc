@@ -81,8 +81,8 @@ export function createDeath(ctx) {
     if (ctx.systems && ctx.systems.combat) {
       ctx.systems.combat.pause();
     }
-    if (ctx.systems && ctx.systems.shadows) {
-      ctx.systems.shadows.pause();
+    if (ctx.systems && ctx.systems.monsters) {
+      ctx.systems.monsters.pause();
     }
     if (ctx.ui) {
       ctx.ui.setPrompt('');
@@ -102,8 +102,8 @@ export function createDeath(ctx) {
     if (ctx.systems && ctx.systems.combat && ctx.systems.combat.resume) {
       ctx.systems.combat.resume();
     }
-    if (ctx.systems && ctx.systems.shadows && ctx.systems.shadows.resume) {
-      ctx.systems.shadows.resume();
+    if (ctx.systems && ctx.systems.monsters && ctx.systems.monsters.resume) {
+      ctx.systems.monsters.resume();
     }
   }
 

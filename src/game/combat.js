@@ -165,7 +165,7 @@ export function createCombat(ctx) {
         state.lit = false;
         brand.setLit(false);
       }
-      if (ctx.systems.shadows) ctx.systems.shadows.spawn();
+      if (ctx.systems.monsters) ctx.systems.monsters.spawn();
     } else {
       state.threat = 0;
     }
@@ -207,12 +207,12 @@ export function createCombat(ctx) {
     state.strikeAnim = COMBAT.strikeAnim;
     // поза вытянутой руки
     ctx.viewmodel.setPose('right', 'reach');
-    const shadows = ctx.systems.shadows;
+    const monsters = ctx.systems.monsters;
     let hit = false;
-    if (shadows) {
+    if (monsters) {
       ctx.camera.getWorldPosition(_org);
       ctx.camera.getWorldDirection(_dir);
-      hit = shadows.strike(_org, _dir, COMBAT.strikeRange, COMBAT.strikeCone);
+      hit = monsters.strike(_org, _dir, COMBAT.strikeRange, COMBAT.strikeCone);
     }
     if (ctx.ambience) {
       if (hit) ctx.ambience.hitBrand();
@@ -261,10 +261,10 @@ export function createCombat(ctx) {
     ctx.camera.getWorldPosition(_org);
     ctx.camera.getWorldDirection(_dir);
 
-    const shadows = ctx.systems.shadows;
+    const monsters = ctx.systems.monsters;
     let hit = false;
-    if (shadows) {
-      const res = shadows.hit(_org, _dir, spec.reach, cone, dmg);
+    if (monsters) {
+      const res = monsters.hit(_org, _dir, spec.reach, cone, dmg);
       hit = res.hit;
       if (res.hit && ctx.ambience) {
         if (spec.subclass === 'bow') ctx.ambience.twang();
@@ -301,10 +301,10 @@ export function createCombat(ctx) {
     state.flashCd = COMBAT.flashCooldown;
     state.flashTime = COMBAT.flashTime;
     if (ctx.ambience) ctx.ambience.flare();
-    const shadows = ctx.systems.shadows;
-    if (shadows) {
+    const monsters = ctx.systems.monsters;
+    if (monsters) {
       ctx.camera.getWorldPosition(_org);
-      shadows.flare(_org, 6, 2.5, 0.7, 16);
+      monsters.flare(_org, 6, 2.5, 0.7, 16);
     }
     return true;
   }
@@ -316,11 +316,11 @@ export function createCombat(ctx) {
    */
   function aimTarget() {
     if (!state.active || !state.lit) return null;
-    const shadows = ctx.systems.shadows;
-    if (!shadows) return null;
+    const monsters = ctx.systems.monsters;
+    if (!monsters) return null;
     ctx.camera.getWorldPosition(_org);
     ctx.camera.getWorldDirection(_dir);
-    return shadows.aimTarget(_org, _dir, COMBAT.strikeRange * 1.7, COMBAT.strikeCone * 1.4);
+    return monsters.aimTarget(_org, _dir, COMBAT.strikeRange * 1.7, COMBAT.strikeCone * 1.4);
   }
 
   /**
@@ -447,13 +447,13 @@ export function createCombat(ctx) {
    * @returns {number} 0…1
    */
   function nearestThreat() {
-    const shadows = ctx.systems && ctx.systems.shadows;
-    if (!shadows || !shadows.list || !ctx.player) return 0;
+    const monsters = ctx.systems && ctx.systems.monsters;
+    if (!monsters || !monsters.list || !ctx.player) return 0;
     const px = ctx.player.pos.x;
     const pz = ctx.player.pos.z;
     let threat = 0;
-    for (const s of shadows.list) {
-      if (s.veil <= 0) continue;
+    for (const s of monsters.list) {
+      if (s.dying > 0 || s.hp <= 0) continue;
       const d = Math.hypot(s.x - px, s.z - pz);
       if (d > 16) continue;
       const t = 1 - d / 16;

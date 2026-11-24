@@ -197,12 +197,12 @@ await step('бой', () => {
 
   /* --- 7. бой: урон оружием --- */
   d.setLocation('dungeon');
-  const shadows = d.shadows;
-  shadows.spawn();
-  shadows.update(0.016, 1);
-  const list = shadows.list;
+  const monsters = d.monsters;
+  monsters.spawn();
+  monsters.update(0.016, 1);
+  const list = monsters.list;
   info.shadowCount = list.length;
-  ok('shadowsSpawned', list.length > 0, list.length);
+  ok('monstersSpawned', list.length > 0, list.length);
   if (list.length) {
     const s = list[0];
     // ставим тень прямо перед игроком

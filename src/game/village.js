@@ -76,9 +76,9 @@ const HENYARD = {
   x: -16, z: 22, w: 6, d: 8,
   fence: [
     [[-19, 18], [-13, 18]],
-    [[-13, 18], [-13, 26]],
-    [[-13, 26], [-19, 26]],
-    [[-19, 26], [-19, 18]],
+    [[-13, 18], [-13, 25]],
+    [[-13, 25], [-19, 25]],
+    [[-19, 25], [-19, 18]],
   ],
   gate: { x: -13, z: 21.4, ang: Math.PI / 2 },
   coops: [[-17.4, 20.2], [-17.4, 23.6]],
@@ -562,8 +562,13 @@ export function createVillage(ctx) {
      * проходу (низкие, без препятствий).
      */
     for (const h of ctx.homes || []) {
-      const off = Math.sign(h.x) * (h.w / 2 + 1.5);
-      for (const dz of [-2, 2]) {
+      // отступ считаем от настоящего угла дома: дома повёрнуты фасадом к
+      // площади, и их дальний угол выступает дальше, чем w/2. Раньше грядки
+      // ставились по w/2 + 1.5 — и у домов у улицы они упирались в стену.
+      const c = Math.cos(h.ry || 0), s = Math.sin(h.ry || 0);
+      const ext = Math.abs((h.w / 2) * c) + Math.abs((h.d / 2) * s);
+      const off = Math.sign(h.x) * (ext + 2.4);
+      for (const dz of [-2.2, 2.2]) {
         const bed = gardenBed(ctx.M, { w: 1.2, d: 2.6 });
         bed.position.set(h.x + off, 0, h.z + dz);
         bed.rotation.y = Math.PI / 2;
@@ -1015,7 +1020,29 @@ export function createVillage(ctx) {
       }
     });
     gates.push({ x: PASTURE.gate.x, z: PASTURE.gate.z, ang: PASTURE.gate.ang });
-    fenceSegs.push([[-13, -6], [-13, 1]], [[13, -6], [13, 1]]);
+    /* --- заборы огородов у четырёх домов у улицы ---
+     *
+     * Раньше на этом месте стояли два обрубка забора (x = ±13, z = −6…1):
+     * западный проходил сквозь стену трактира, восточный — сквозь кузню.
+     * Теперь на их месте — настоящие заборы огородов: огород у каждого
+     * дома отгорожен, грядки внутри, дорога к дому идёт мимо.
+     */
+    for (const h of (ctx.homes || []).slice(0, 4)) {
+      const sgn = Math.sign(h.x);
+      const c = Math.cos(h.ry || 0), s = Math.sin(h.ry || 0);
+      const ext = Math.abs((h.w / 2) * c) + Math.abs((h.d / 2) * s);
+      const gx = h.x + sgn * (ext + 2.4);         // центр грядок
+      const far = gx + sgn * 2.0;                 // дальняя от дома сторона
+      const near = gx - sgn * 2.0;                // сторона к дому — открыта
+      const z0 = h.z - 4.4, z1 = h.z + 4.4;
+      // три стороны: дальняя и две торцевые. Четвёртую (у дома) не ставим —
+      // огород открыт к крыльцу, и забор не упирается в повёрнутый угол.
+      fenceSegs.push(
+        [[far, z0], [far, z1]],
+        [[near, z0], [far, z0]],
+        [[near, z1], [far, z1]],
+      );
+    }
     ctx.scene.add(fence(ctx.M, fenceSegs));
     for (const g of gates) ctx.scene.add(gate(ctx.M, g));
     // заборы — реальные препятствия

@@ -82,7 +82,7 @@ import { createAnimalsSystem } from './game/animals.js';
 import { createFishingSystem } from './game/fishing.js';
 import { createLocations } from './game/locations.js';
 import { createCombat, COMBAT } from './game/combat.js';
-import { createShadows } from './game/shadows.js';
+import { createMonsters } from './game/monsters.js';
 import { createDeath } from './game/death.js';
 import { createDialog } from './game/dialog.js';
 import { createTrade } from './game/trade.js';
@@ -94,7 +94,7 @@ import { createInteractions } from './game/interactions.js';
 import { createBag } from './game/bag.js';
 import { PlayerStats } from './game/stats.js';
 import { ViewModel } from './game/viewmodel.js';
-import { bindSettings, loadVolume, loadMusicVolume } from './game/settings.js';
+import { bindSettings, loadVolume, loadMusicVolume, loadDifficulty } from './game/settings.js';
 import { Music } from './music.js';
 import { createColliderDebug } from './game/debug.js';
 
@@ -369,7 +369,7 @@ ctx.systems.locations = createLocations(ctx);
 
 // боёвка: факел в руке и тени в подземелье
 ctx.systems.combat = createCombat(ctx);
-ctx.systems.shadows = createShadows(ctx);
+ctx.systems.monsters = createMonsters(ctx);
 // заклинания: мана, откаты и вспышки
 ctx.systems.spells = createSpells(ctx);
 // смерть: падение и экран «Погиб». Появилась вместе с сохранениями —
@@ -380,7 +380,7 @@ ctx.systems.death = createDeath(ctx);
 ctx.readSave = readSave;
 ctx.systems.saveToSlot = saveToSlot;
 const combat = ctx.systems.combat;
-const shadows = ctx.systems.shadows;
+const monsters = ctx.systems.monsters;
 const death = ctx.systems.death;
 
 /* Автосохранение по событиям
@@ -734,6 +734,7 @@ function enterGame(message) {
   if (!music.ctx) {
     music.attach(ambience);
     loadMusicVolume(ctx);
+    loadDifficulty(ctx);
   }
   music.setMuted(ambience.muted);
   updateMusicMood();
@@ -806,7 +807,7 @@ ui.onDeathTitle = () => {
   player.enabled = false;
   player.acceptInput = false;
   if (combat.pause) combat.pause();
-  if (shadows.pause) shadows.pause();
+  if (monsters.pause) monsters.pause();
   ui.showStart();
   ui.setContinue(hasSave(), readSave() ? readSave().day : 1);
 };
@@ -1158,7 +1159,7 @@ function loop() {
 
   // бой: факел горит, тратит топливо, светит; тени в подземелье
   if (ctx.loc === 'dungeon') {
-    shadows.update(dt, t);
+    monsters.update(dt, t);
     combat.update(dt, t);
   } else {
     combat.update(dt, t);
@@ -1377,7 +1378,7 @@ window.__dbg = {
   },
   // слоты и смерть — для проверок и отладки
   listSlots, loadSlot, saveToSlot,
-  death, combat, shadows,
+  death, combat, monsters,
   trade: ctx.systems.trade, loadout: ctx.systems.loadout, spells: ctx.systems.spells,
   npcs: Object.assign({}, locations.npcs || {}, ctx.npcs || {}),
   items: { ITEMS, GOODS, MATERIALS, itemIcon, itemBadge, itemDesc, sellPrice, buyPrice, getItem, GEAR, SPELLS },

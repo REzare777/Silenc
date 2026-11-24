@@ -32,6 +32,7 @@ export class Player {
     this.onStep = null;
     this.speedWalk = 3.1;
     this.speedRun = 6.0;
+    this.slow = 0;           // замедление (споры гриба): остаётся в секундах
     this.boxes = [];
     this.circles = [];
     this.dynamicCircles = [];
@@ -385,6 +386,7 @@ export class Player {
 
   update(dt) {
     if (!this.enabled) return;
+    if (this.slow > 0) this.slow = Math.max(0, this.slow - dt);
     const k = this.keys;
     let fwd = 0, strafe = 0;
     if (this.acceptInput) {
@@ -430,7 +432,9 @@ export class Player {
       return;
     }
 
-    const speed = run ? this.speedRun : this.speedWalk;
+    let speed = run ? this.speedRun : this.speedWalk;
+    // споры гриба и ядовитая слизь замедляют игрока
+    if (this.slow > 0) speed *= 0.55;
     const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
     const dirX = (-sin * fwd) + (cos * strafe);
     const dirZ = (-cos * fwd) + (-sin * strafe);

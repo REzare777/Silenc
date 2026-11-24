@@ -1,3 +1,5 @@
+import { DIFFICULTIES } from './monsters.js';
+
 /**
  * ============================================================================
  *  Настройки: качество, свечение, звук, чувствительность
@@ -15,6 +17,45 @@
  *
  *  @module game/settings
  */
+
+/**
+ * Прочитать сохранённую сложность и отметить её в настройках.
+ *
+ * Сложность влияет на монстров подземелья: их здоровье, урон, скорость и
+ * количество. Хранится в `localStorage['wv.difficulty']`.
+ *
+ * @param {object} ctx контекст игры
+ * @returns {string} идентификатор сложности
+ */
+export function loadDifficulty(ctx) {
+  let id = 'normal';
+  try {
+    const v = localStorage.getItem('wv.difficulty');
+    if (v && DIFFICULTIES.some((d) => d.id === v)) id = v;
+  } catch (e) { /* без localStorage — «Обычно» */ }
+  if (ctx.ui) ctx.ui.setDifficulty(id);
+  return id;
+}
+
+/**
+ * Сохранить сложность и пересобрать монстров (если игрок в пещере).
+ *
+ * @param {object} ctx контекст игры
+ * @param {string} id идентификатор сложности
+ */
+export function setDifficulty(ctx, id) {
+  if (!DIFFICULTIES.some((d) => d.id === id)) return;
+  try {
+    localStorage.setItem('wv.difficulty', id);
+  } catch (e) { /* localStorage недоступен — работаем без сохранения */ }
+  if (ctx.ui) ctx.ui.setDifficulty(id);
+  const d = DIFFICULTIES.find((x) => x.id === id);
+  if (ctx.ui) ctx.ui.toast(`Сложность: ${d.name}`, 2200);
+  // монстры пересобираются, чтобы новая сложность применилась сразу
+  if (ctx.systems && ctx.systems.monsters && ctx.loc === 'dungeon') {
+    ctx.systems.monsters.respawn();
+  }
+}
 
 /**
  * Прочитать сохранённую громкость и применить её.
@@ -108,6 +149,7 @@ export function bindSettings(ctx) {
     if (ctx.music) ctx.music.setVolume(v);
     try { localStorage.setItem('wv.music', String(v)); } catch (e) { /* без localStorage */ }
   };
+  ctx.ui.onDifficulty = (id) => setDifficulty(ctx, id);
   ctx.ui.onSens = (v) => { ctx.player.sensitivity = v; };
   ctx.ui.onBob = (v) => { ctx.player.bobScale = v; };
   ctx.ui.onRes = (v) => {

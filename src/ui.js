@@ -57,6 +57,10 @@ export class UI {
       compass: document.getElementById('compass'),
       strip: document.getElementById('strip'),
       segQ: document.getElementById('segQ'),
+      segDiff: document.getElementById('segDiff'),
+      bossBar: document.getElementById('bossBar'),
+      bossName: document.getElementById('bossName'),
+      bossFill: document.getElementById('bossFill'),
       segT: document.getElementById('segT'),
       tBloom: document.getElementById('tBloom'),
       tSound: document.getElementById('tSound'),
@@ -265,6 +269,16 @@ export class UI {
         if (this.onQuality) this.onQuality(b.dataset.q);
       });
     });
+    if (this.el.segDiff) {
+      this.el.segDiff.querySelectorAll('button').forEach((b) => {
+        b.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.el.segDiff.querySelectorAll('button').forEach((x) => x.classList.remove('on'));
+          b.classList.add('on');
+          if (this.onDifficulty) this.onDifficulty(b.dataset.diff);
+        });
+      });
+    }
     this.el.tBloom.addEventListener('click', (e) => {
       e.stopPropagation();
       const on = !this.el.tBloom.classList.contains('on');
@@ -727,6 +741,36 @@ export class UI {
    *
    * @param {number} v уровень угрозы
    */
+  /**
+   * Полоска здоровья босса.
+   *
+   * @param {string|null} name имя босса (null — убрать полоску)
+   * @param {number} ratio 0…1
+   */
+  setBoss(name, ratio) {
+    const bar = this.el.bossBar;
+    if (!bar) return;
+    if (!name) {
+      bar.classList.remove('on');
+      return;
+    }
+    bar.classList.add('on');
+    this.el.bossName.textContent = name;
+    this.el.bossFill.style.transform = `scaleX(${Math.max(0, Math.min(1, ratio))})`;
+  }
+
+  /**
+   * Подсветить выбранную сложность.
+   *
+   * @param {string} id идентификатор сложности
+   */
+  setDifficulty(id) {
+    if (!this.el.segDiff) return;
+    this.el.segDiff.querySelectorAll('button').forEach((x) => {
+      x.classList.toggle('on', x.dataset.diff === id);
+    });
+  }
+
   setThreat(v) {
     if (!this.el.threat) return;
     const on = v > 0.02;

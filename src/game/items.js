@@ -215,6 +215,177 @@ export const SPELLS = [
 ];
 
 /* ------------------------------------------------------------------
+ *  Добыча из подземелья
+ * ------------------------------------------------------------------ */
+
+/**
+ * Редкость добычи — от серой до золотой.
+ *
+ * `color` — цвет иконки и подписи, `rank` — порядок (чем выше, тем ценнее).
+ */
+export const RARITY = {
+  common: { id: 'common', name: 'обычное', rank: 0, color: '#c3c8cc' },
+  uncommon: { id: 'uncommon', name: 'необычное', rank: 1, color: '#7fc776' },
+  rare: { id: 'rare', name: 'редкое', rank: 2, color: '#5aa9e6' },
+  epic: { id: 'epic', name: 'эпическое', rank: 3, color: '#b072e0' },
+  legendary: { id: 'legendary', name: 'легендарное', rank: 4, color: '#e0a63a' },
+};
+
+/**
+ * Добыча: то, что выпадает из монстров.
+ *
+ * Сейчас лут только продаётся — но у каждого предмета есть поле `craft`
+ * с тегами-подсказками, что из него можно сварить или сковать потом.
+ * `value` — «честная» цена, `sell` — сколько даст торговец (вдвое меньше).
+ */
+export const LOOT = [
+  {
+    id: 'goblin_ear',
+    name: 'Гоблинское ухо',
+    kind: 'loot',
+    rarity: 'common',
+    value: 4,
+    sell: 2,
+    weight: 0.05,
+    stackable: true,
+    craft: { tags: ['trophy', 'alchemy'], hint: 'Крошить в зелье — что-то сварится' },
+    desc: 'Отрезанное по самой складке ухо. Кто-то из деревни за это платил; кому-то оно сдалось ещё теплым.',
+  },
+  {
+    id: 'goblin_tooth',
+    name: 'Гоблийский клык',
+    kind: 'loot',
+    rarity: 'common',
+    value: 5,
+    sell: 2,
+    weight: 0.05,
+    stackable: true,
+    craft: { tags: ['trophy', 'tool'], hint: 'Точится в клинок или грызёт что-то' },
+    desc: 'Жёлтый клык с трещиной. Малые goblinы иногда носят такие на шее.',
+  },
+  {
+    id: 'slime_jelly',
+    name: 'Слизь',
+    kind: 'loot',
+    rarity: 'common',
+    value: 6,
+    sell: 3,
+    weight: 0.2,
+    stackable: true,
+    craft: { tags: ['alchemy', 'glue'], hint: 'Клей, или основа для зелья' },
+    desc: 'Холодная тягучая капля. Пахнет кислым молоком и подземельем.',
+  },
+  {
+    id: 'spider_web',
+    name: 'Паутина',
+    kind: 'loot',
+    rarity: 'common',
+    value: 7,
+    sell: 3,
+    weight: 0.1,
+    stackable: true,
+    craft: { tags: ['alchemy', 'tool'], hint: 'Склеивает что угодно' },
+    desc: 'Прядь, которая не рвётся, если её не резать ножом.',
+  },
+  {
+    id: 'shroom_cap',
+    name: 'Шляпка гриба',
+    kind: 'loot',
+    rarity: 'common',
+    value: 8,
+    sell: 4,
+    weight: 0.15,
+    stackable: true,
+    craft: { tags: ['food', 'alchemy'], hint: 'В суп или в зелье' },
+    desc: 'Шляпка с белыми крапинками. Пахнет так, что хочется есть её прямо в пещере.',
+  },
+  {
+    id: 'ghost_dust',
+    name: 'Призрачная пыль',
+    kind: 'loot',
+    rarity: 'uncommon',
+    value: 18,
+    sell: 9,
+    weight: 0.1,
+    stackable: true,
+    craft: { tags: ['alchemy', 'ritual'], hint: 'Рассыпается в воздухе, если потрясти' },
+    desc: 'Серебристый порошок, который не оседает на ладонь. Холодный и тихий.',
+  },
+  {
+    id: 'snake_fang',
+    name: 'Змеиный яд',
+    kind: 'loot',
+    rarity: 'uncommon',
+    value: 22,
+    sell: 11,
+    weight: 0.1,
+    stackable: true,
+    craft: { tags: ['alchemy', 'poison'], hint: 'То, чем мажут клинок' },
+    desc: 'Мутная капля в желудке змеи. Кузнец от такой отвернулся бы, но и выбросить жалко.',
+  },
+  {
+    id: 'golem_core',
+    name: 'Ядро голема',
+    kind: 'loot',
+    rarity: 'rare',
+    value: 45,
+    sell: 22,
+    weight: 0.8,
+    stackable: false,
+    craft: { tags: ['magic', 'material'], hint: 'Вставляется в оружие — будет светиться' },
+    desc: 'Тёплый камень, в котором ещё дышит огонь. Торн такие покупает, только молча.',
+  },
+  {
+    id: 'guard_badge',
+    name: 'Жетон стража',
+    kind: 'loot',
+    rarity: 'uncommon',
+    value: 26,
+    sell: 13,
+    weight: 0.2,
+    stackable: false,
+    craft: { tags: ['trophy', 'quest'], hint: 'Кто-то из деревни его узнает' },
+    desc: 'Кованый кругляш с грубой насечкой. Чей-то долг, который так и не вернули.',
+  },
+  {
+    id: 'warden_seal',
+    name: 'Печать надзирателя',
+    kind: 'loot',
+    rarity: 'epic',
+    value: 90,
+    sell: 45,
+    weight: 0.4,
+    stackable: false,
+    craft: { tags: ['quest', 'magic'], hint: 'Печать мёртвого надзирателя' },
+    desc: 'Сургучная печать с чужой подписью. Тот, кого она заменила, больше не выходит сюда.',
+  },
+  {
+    id: 'orc_tusk',
+    name: 'Клык орка',
+    kind: 'loot',
+    rarity: 'rare',
+    value: 60,
+    sell: 30,
+    weight: 0.6,
+    stackable: false,
+    craft: { tags: ['trophy', 'material'], hint: 'Охотничий трофей' },
+    desc: 'Жёлтый клык с печатью скола. Такие носят на шее, чтобы враги не смеялись.',
+  },
+  {
+    id: 'grim_crown',
+    name: 'Венец Гримма',
+    kind: 'loot',
+    rarity: 'legendary',
+    value: 220,
+    sell: 110,
+    weight: 1.2,
+    stackable: false,
+    craft: { tags: ['trophy', 'legendary'], hint: 'Настоящая реликвия' },
+    desc: 'Обруч из тёмного металла с семью зубцами. Тот, кто наденет его, узнает, зачем.',
+  },
+];
+
+/* ------------------------------------------------------------------
  *  Реестр
  * ------------------------------------------------------------------ */
 
@@ -237,6 +408,7 @@ export const ITEMS = (() => {
   for (const m of MATERIALS) map.set(m.id, { ...m });
   for (const g of GEAR) map.set(g.id, { ...g });
   for (const s of SPELLS) map.set(s.id, { ...s });
+  for (const l of LOOT) map.set(l.id, { ...l });
   return map;
 })();
 
@@ -269,7 +441,8 @@ export function isWeapon(spec) {
 export function isStackable(spec) {
   if (!spec) return false;
   if (spec.stackable !== undefined) return !!spec.stackable;
-  return spec.kind === 'fish' || spec.kind === 'goods' || spec.kind === 'material';
+  return spec.kind === 'fish' || spec.kind === 'goods'
+    || spec.kind === 'material' || spec.kind === 'loot';
 }
 
 /* ------------------------------------------------------------------
@@ -286,6 +459,7 @@ export function sellPrice(spec) {
   if (!spec) return 0;
   if (spec.kind === 'fish') return spec.value || 0;      // улов продаётся за полную цену
   if (spec.kind === 'weapon') return Math.round((spec.price || 0) * 0.45);  // кузнец берёт оружие за полсотни
+  if (spec.kind === 'loot') return spec.sell ?? Math.max(1, Math.round((spec.value || 0) * 0.5));
   return spec.sell ?? Math.max(1, Math.round((spec.value || 0) * 0.4));
 }
 
@@ -379,6 +553,7 @@ export function itemIcon(spec, size = 96) {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = px;
   if (spec.kind === 'gear') drawTorchIcon(canvas.getContext('2d'), spec, px);
+  else if (spec.kind === 'loot') drawLootIcon(canvas.getContext('2d'), spec, px);
   else if (spec.kind === 'spell') drawSpellIcon(canvas.getContext('2d'), spec, px);
   else drawGoodsIcon(canvas.getContext('2d'), spec, px);
   iconCache.set(key, canvas);
@@ -498,6 +673,214 @@ function drawSpellIcon(ctx, spec, px) {
  * @param {object} spec предмет
  * @param {number} px сторона
  */
+/**
+ * Иконка добычи: у каждой редкости свой цвет рамки, у каждого предмета —
+ * своя нарисованная форма.
+ *
+ * @param {CanvasRenderingContext2D} ctx контекст
+ * @param {object} spec предмет
+ * @param {number} px сторона квадрата
+ */
+function drawLootIcon(ctx, spec, px) {
+  const g = ctx.createLinearGradient(0, 0, px, px);
+  g.addColorStop(0, '#241f1c');
+  g.addColorStop(1, '#14110f');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, px, px);
+  const c = px / 2;
+  const rar = RARITY[spec.rarity] || RARITY.common;
+
+  // рамка редкости
+  ctx.strokeStyle = rar.color;
+  ctx.globalAlpha = 0.55;
+  ctx.lineWidth = Math.max(1, px * 0.022);
+  ctx.strokeRect(px * 0.05, px * 0.05, px * 0.9, px * 0.9);
+  ctx.globalAlpha = 1;
+
+  switch (spec.id) {
+    case 'goblin_ear': {
+      ctx.fillStyle = '#6b8442';
+      ctx.beginPath();
+      ctx.ellipse(c, c, px * 0.2, px * 0.28, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#4a5c2e';
+      ctx.lineWidth = px * 0.03;
+      ctx.beginPath();
+      ctx.moveTo(c + px * 0.06, c + px * 0.2);
+      ctx.quadraticCurveTo(c + px * 0.16, c, c + px * 0.04, c - px * 0.2);
+      ctx.stroke();
+      break;
+    }
+    case 'goblin_tooth': {
+      ctx.fillStyle = '#e4dcc2';
+      ctx.beginPath();
+      ctx.moveTo(c - px * 0.1, c - px * 0.28);
+      ctx.quadraticCurveTo(c + px * 0.16, c + px * 0.04, c, c + px * 0.3);
+      ctx.quadraticCurveTo(c - px * 0.2, c + px * 0.02, c - px * 0.1, c - px * 0.28);
+      ctx.fill();
+      break;
+    }
+    case 'slime_jelly': {
+      ctx.fillStyle = 'rgba(120,200,110,0.85)';
+      ctx.beginPath();
+      ctx.moveTo(c - px * 0.24, c + px * 0.24);
+      ctx.quadraticCurveTo(c - px * 0.2, c - px * 0.12, c, c - px * 0.1);
+      ctx.quadraticCurveTo(c + px * 0.22, c - px * 0.12, c + px * 0.24, c + px * 0.24);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.beginPath();
+      ctx.ellipse(c - px * 0.07, c + px * 0.08, px * 0.05, px * 0.08, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'spider_web': {
+      ctx.strokeStyle = '#d8dde2';
+      ctx.lineWidth = px * 0.02;
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(c, c);
+        ctx.lineTo(c + Math.cos(a) * px * 0.3, c + Math.sin(a) * px * 0.3);
+        ctx.stroke();
+      }
+      for (let r = 0.12; r < 0.32; r += 0.1) {
+        ctx.beginPath();
+        for (let i = 0; i <= 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          const x = c + Math.cos(a) * px * r;
+          const y = c + Math.sin(a) * px * r;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+      break;
+    }
+    case 'shroom_cap': {
+      ctx.fillStyle = '#c04a34';
+      ctx.beginPath();
+      ctx.ellipse(c, c + px * 0.04, px * 0.3, px * 0.2, 0, Math.PI, 0);
+      ctx.fill();
+      ctx.fillRect(c - px * 0.07, c + px * 0.02, px * 0.14, px * 0.22);
+      ctx.fillStyle = '#f0e6d4';
+      for (const [dx, dy] of [[-0.14, 0.1], [0.08, 0.06], [0.16, 0.12]]) {
+        ctx.beginPath();
+        ctx.arc(c + px * dx, c + px * dy, px * 0.045, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    }
+    case 'ghost_dust': {
+      for (let i = 0; i < 26; i++) {
+        const a = (i / 26) * Math.PI * 2;
+        const r = px * (0.1 + 0.2 * ((i * 37) % 10) / 10);
+        ctx.fillStyle = `rgba(200,220,255,${0.25 + ((i * 13) % 7) / 12})`;
+        ctx.beginPath();
+        ctx.arc(c + Math.cos(a) * r, c + Math.sin(a) * r, px * 0.022, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    }
+    case 'snake_fang': {
+      ctx.fillStyle = 'rgba(140,190,90,0.9)';
+      ctx.beginPath();
+      ctx.ellipse(c, c + px * 0.02, px * 0.16, px * 0.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#e8e2c8';
+      ctx.beginPath();
+      ctx.moveTo(c - px * 0.05, c - px * 0.08);
+      ctx.lineTo(c, c - px * 0.3);
+      ctx.lineTo(c + px * 0.05, c - px * 0.08);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'golem_core': {
+      ctx.fillStyle = '#6d6a63';
+      ctx.beginPath();
+      ctx.moveTo(c - px * 0.22, c + px * 0.22);
+      ctx.lineTo(c - px * 0.16, c - px * 0.12);
+      ctx.lineTo(c, c - px * 0.26);
+      ctx.lineTo(c + px * 0.18, c - px * 0.1);
+      ctx.lineTo(c + px * 0.22, c + px * 0.22);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#ff9a3c';
+      ctx.beginPath();
+      ctx.arc(c, c + px * 0.04, px * 0.09, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'guard_badge': {
+      ctx.fillStyle = '#8f98a4';
+      ctx.beginPath();
+      ctx.arc(c, c, px * 0.24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#3a3f47';
+      ctx.beginPath();
+      ctx.arc(c, c, px * 0.14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#c9d0d8';
+      ctx.lineWidth = px * 0.03;
+      ctx.beginPath();
+      ctx.arc(c, c, px * 0.19, 0, Math.PI * 2);
+      ctx.stroke();
+      break;
+    }
+    case 'warden_seal': {
+      ctx.fillStyle = '#8a2f2a';
+      ctx.beginPath();
+      ctx.arc(c, c, px * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.beginPath();
+      ctx.arc(c - px * 0.06, c - px * 0.06, px * 0.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#d8c49a';
+      ctx.lineWidth = px * 0.025;
+      ctx.beginPath();
+      ctx.arc(c, c, px * 0.14, 0, Math.PI * 2);
+      ctx.stroke();
+      break;
+    }
+    case 'orc_tusk': {
+      ctx.fillStyle = '#e8e0c4';
+      ctx.beginPath();
+      ctx.moveTo(c - px * 0.12, c + px * 0.26);
+      ctx.quadraticCurveTo(c - px * 0.18, c - px * 0.1, c + px * 0.02, c - px * 0.28);
+      ctx.quadraticCurveTo(c + px * 0.1, c - px * 0.02, c + px * 0.06, c + px * 0.26);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'grim_crown': {
+      ctx.strokeStyle = '#e0a63a';
+      ctx.lineWidth = px * 0.06;
+      ctx.beginPath();
+      ctx.arc(c, c + px * 0.06, px * 0.24, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#e0a63a';
+      for (let i = 0; i < 5; i++) {
+        const a = Math.PI + (i / 4) * Math.PI;
+        ctx.beginPath();
+        ctx.moveTo(c + Math.cos(a) * px * 0.24, c + px * 0.06 + Math.sin(a) * px * 0.24);
+        ctx.lineTo(c + Math.cos(a) * px * 0.3, c + px * 0.06 + Math.sin(a) * px * 0.3 - px * 0.1);
+        ctx.lineTo(c + Math.cos(a) * px * 0.18, c + px * 0.06 + Math.sin(a) * px * 0.18);
+        ctx.closePath();
+        ctx.fill();
+      }
+      break;
+    }
+    default: {
+      ctx.fillStyle = rar.color;
+      ctx.beginPath();
+      ctx.arc(c, c, px * 0.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
 function drawGoodsIcon(ctx, spec, px) {
   const g = ctx.createLinearGradient(0, 0, px, px);
   g.addColorStop(0, '#2b2620');

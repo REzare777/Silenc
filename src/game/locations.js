@@ -185,10 +185,10 @@ export function createLocations(ctx) {
     if (ctx.systems.combat) {
       if (inDungeon) {
         ctx.systems.combat.setActive(true);
-        if (ctx.systems.shadows) ctx.systems.shadows.spawn();
+        if (ctx.systems.monsters) ctx.systems.monsters.spawn();
       } else {
         ctx.systems.combat.setActive(false);
-        if (ctx.systems.shadows) ctx.systems.shadows.clear();
+        if (ctx.systems.monsters) ctx.systems.monsters.clear();
       }
     }
 
@@ -413,8 +413,8 @@ export function createLocations(ctx) {
   // прикосновение к Вратам — самый мрачный момент локации
   add(new THREE.Vector3(dungeonLoc.gateHall.x, dungeonLoc.gateHall.y + 1.6, dungeonLoc.gateHall.z - 3.2), 3.0,
     'Прикоснуться к Вратам', () => {
-      const shadows = ctx.systems.shadows;
-      const cleared = shadows ? shadows.guardsCleared() : false;
+      const monsters = ctx.systems.monsters;
+      const cleared = monsters ? monsters.guardsCleared() : false;
       if (ctx.ambience) ctx.ambience.deepBoom();
       if (cleared) {
         // стражи рассеяны — Врата отвечают

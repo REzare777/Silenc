@@ -44,7 +44,7 @@ export const TRADERS = {
     id: 'barkeep',
     name: 'Хорт',
     title: 'трактирщик «Уставшего вепря»',
-    buys: ['fish', 'goods', 'spell'],
+    buys: ['fish', 'goods', 'spell', 'loot'],
     // Хорт торгует съестным и «старыми словами»: заклинания он знает
     // от прежней хозяйки, а продаёт их от её имени
     sells: GOODS.concat(SPELLS),
@@ -56,7 +56,7 @@ export const TRADERS = {
     id: 'blacksmith',
     name: 'Торн',
     title: 'кузнец',
-    buys: ['weapon', 'gear'],
+    buys: ['weapon', 'gear', 'loot'],
     // оружие, снаряжение и материалы кузнеца: «смола и фитиль» — то же,
     // чем он набивает факел, поэтому её можно и купить, и сразу заправить
     sells: WEAPONS.concat(MATERIALS).concat(GEAR),

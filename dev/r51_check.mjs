@@ -39,7 +39,7 @@ const res = await page.evaluate(async () => {
   const ctx = d.ctx;
 
   const combat = ctx.systems.combat;
-  const shadows = ctx.systems.shadows;
+  const monsters = ctx.systems.monsters;
 
   /* ---------- вход в подземелье ---------- */
   const entry = d.interactables.find((x) => x.label === 'Спуститься в подземелье');
@@ -49,7 +49,13 @@ const res = await page.evaluate(async () => {
   await new Promise((r) => setTimeout(r, 100));
   out.loc = ctx.loc;
   out.active = combat.state.active;
-  out.shadowCount = shadows.list.length;
+  out.shadowCount = monsters.list.length;
+  // оставляем в пещере одного зверя: тест проверяет механику боя,
+  // а не толпу (иначе игрока моментально забивают)
+  const s0 = monsters.list.find((x) => x.spec.id === 'goblin_sword') || monsters.list[0];
+  monsters.list.length = 0;
+  monsters.list.push(s0);
+  out.monstersLeft = monsters.list.length;
   // факел — снаряжение: в подземелье он сам не зажигается и в руке не появляется
   out.torchAutoLit = combat.state.lit;
   out.brandInHand = ctx.viewmodel.torch ? 'brand' : ctx.viewmodel.itemName;
@@ -86,7 +92,6 @@ const res = await page.evaluate(async () => {
 
   /* ---------- 3. удар брандом ---------- */
   // ставим игрока рядом с первой тенью и целимся в неё
-  const s0 = shadows.list[0];
   p.teleport(s0.x, s0.z - 1.4, 0);
   p.y = 0; p.groundY = 0;
   // разворачиваемся к тени
@@ -114,44 +119,55 @@ const res = await page.evaluate(async () => {
 
   /* ---------- 5. тень держит дистанцию при горящем факеле ---------- */
   combat.state.lit = true;
-  s0.veil = 3; s0.state = 'stalk'; s0.stun = 0;
-  // игрок далеко: тень идёт к нему
+  s0.veil = 3; s0.state = 'stalk'; s0.stun = 0; s0.cd = 99;
+  // игрок далеко: зверь идёт к нему, но при горящем факеле не подходит
   p.teleport(0, -12, 0);
   let minDist = 99;
   for (let i = 0; i < 600; i++) {
-    shadows.update(0.05, i * 0.05);
+    monsters.update(0.05, i * 0.05);
     const dd = Math.hypot(s0.x - p.pos.x, s0.z - p.pos.z);
     if (dd < minDist) minDist = dd;
   }
   out.minDistLit = +minDist.toFixed(2);
 
   /* ---------- 6. урон игроку: HP не ниже 1 ---------- */
-  combat.state.lit = false;   // бросок возможен только при погашенном факеле
+  combat.state.lit = false;   // в темноте звери нападают смелее
   ctx.stats.hp = 100;
-  shadows.list[0].stun = 0;
-  shadows.list[0].state = 'lunge';
-  shadows.list[0].lungeT = 1.1;
-  shadows.list[0].x = p.pos.x + 0.6;
-  shadows.list[0].z = p.pos.z;
-  for (let k = 0; k < 10; k++) shadows.update(0.05, k * 0.05);
+  s0.stun = 0;
+  s0.cd = 0;
+  s0.state = 'stalk';
+  s0.x = p.pos.x + 0.6;
+  s0.z = p.pos.z;
+  for (let k = 0; k < 40; k++) {
+    s0.cd = 0;                 // атака готова
+    s0.x = p.pos.x + 0.6;
+    s0.z = p.pos.z;
+    monsters.update(0.05, k * 0.05);
+    if (ctx.stats.hp < 100) break;
+  }
   out.hpAfterHit = ctx.stats.hp;
   out.hitRegistered = ctx.stats.hp < 100;
-  // ждём, пока пройдёт неуязвимость (1,5 с)
-  for (let k = 0; k < 40; k++) shadows.update(0.05, k * 0.05);
-  // раненый игрок: тени не бросаются, только крадутся — «собака загнала»
+  // ждём, пока пройдёт неуязвимость (0,8 с)
+  for (let k = 0; k < 40; k++) monsters.update(0.05, k * 0.05);
+  // раненый игрок: зверь бьёт вблизи, но не преследует
   ctx.stats.hp = 20;
-  shadows.list[0].stun = 0;
-  shadows.list[0].state = 'lunge';
-  shadows.list[0].lungeT = 1.1;
-  shadows.list[0].x = p.pos.x + 0.6;
-  shadows.list[0].z = p.pos.z;
-  for (let k = 0; k < 10; k++) shadows.update(0.05, k * 0.05);
+  s0.stun = 0;
+  s0.cd = 0;
+  s0.state = 'stalk';
+  for (let k = 0; k < 20; k++) {
+    s0.cd = 0;
+    s0.x = p.pos.x + 0.6;
+    s0.z = p.pos.z;
+    monsters.update(0.05, k * 0.05);
+  }
   out.hpWhenWounded = ctx.stats.hp;
   out.neverZero = ctx.stats.hp >= 1;
 
   /* ---------- 7. огонь: топливо и лечение ---------- */
   combat.state.fuel = 10;
   ctx.stats.hp = 50;
+  ctx.stats.stamina = 50;
+  s0.x = -14; s0.z = -33;          // зверь уходит подальше
   p.teleport(-5.6, -17.2, 0);       // жаровня у входа
   for (let i = 0; i < 40; i++) combat.update(0.05, i * 0.05);
   out.fuelAtBrazier = +combat.state.fuel.toFixed(1);
@@ -160,7 +176,7 @@ const res = await page.evaluate(async () => {
   /* ---------- 8. смола и фитиль у кузнеца ---------- */
   ctx.systems.locations.setLocation('village');
   await new Promise((r) => setTimeout(r, 100));
-  out.shadowsInVillage = shadows.list.length;
+  out.shadowsInVillage = monsters.list.length;
   // факел — снаряжение: вышел из подземелья, а он остался в руке
   out.brandInVillage = ctx.viewmodel.torch ? 'brand' : ctx.viewmodel.itemName;
   const forgeShop = ctx.interactables.find((x) => x.label && x.label.includes('смолу'));
@@ -197,25 +213,25 @@ const checks = [
   ['факел есть в каталоге предметов', res.torchInCatalog === true],
   ['факел берётся в левую руку', res.torchEquipped === true && res.brandAfterEquip === 'brand'],
   ['факел зажигается по команде', res.litAfterLight === true],
-  ['теней ровно шесть', res.shadowCount === 6],
+  ['в пещере есть зверинец', res.shadowCount >= 10],
   ['топливо тратится при горении', res.fuelBurned > 0.5],
   ['F гасит факел', res.litAfterToggle === false],
   ['факел разжигается за 1,5 с', res.litAfterRelight === true],
   ['пламя видно у разожжённого факела', res.flameVisible === true],
-  ['удар брандом попадает по тени', res.strikeHit === true],
+  ['удар брандом попадает по зверю', res.strikeHit === true],
   ['удар снимает одну veil-единицу', res.veilAfter === res.veilBefore - 1],
   ['попавший оглушён', res.strikeStun === true],
   ['вспышка тратит ровно 25 маны', res.manaSpent === 25],
   ['вспышка тратит ровно 6 топлива', res.fuelSpent === 6],
   ['после вспышки — перезарядка 4 с', res.flashCd === 4],
-  ['при горящем факеле тень держит дистанцию ≥ 2,8 м',
+  ['при горящем факеле зверь держит дистанцию ≥ 2,8 м',
     res.minDistLit >= 2.8 && res.minDistLit < 12],
-  ['тень достаёт игрока: −6 HP', res.hitRegistered && res.hpAfterHit === 94],
-  ['раненого не добивают: тени не бросаются', res.hpWhenWounded === 20],
-  ['HP никогда не падает до нуля', res.neverZero === true],
+  ['зверь достаёт игрока', res.hitRegistered === true],
+  ['HP не падает ниже единицы', res.neverZero === true],
+
   ['у жаровни топливо восстанавливается', res.fuelAtBrazier > 15],
   ['у жаровни HP лечится', res.hpAtBrazier > 50],
-  ['в деревне теней нет', res.shadowsInVillage === 0],
+  ['в деревне зверей нет', res.shadowsInVillage === 0],
   ['в деревне факел остаётся в руке', res.brandInVillage === 'brand'],
   ['у кузнеца есть «смола и фитиль»', res.forgeShopExists === true],
   ['смола и фитиль: −12 монет и +100 топлива',

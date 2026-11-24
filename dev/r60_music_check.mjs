@@ -171,7 +171,7 @@ const frameBefore = await page.evaluate(() => window.__frames || 0);
 await page.evaluate(() => {
   const D = window.__dbg;
   D.setLocation('dungeon');
-  const list = D.shadows.list || [];
+  const list = D.monsters.list || [];
   if (list.length) D.player.teleport(list[0].x + 1.5, list[0].z + 1.5, 0);
 });
 await page.waitForFunction((t) => (window.__frames || 0) > t, frameBefore, { timeout: 240000 });

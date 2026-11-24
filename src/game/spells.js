@@ -145,12 +145,12 @@ export function createSpells(ctx) {
    * Вспышка света: разом отбрасывает тени и на миг освещает подземелье.
    */
   function effectFlash() {
-    const shadows = ctx.systems && ctx.systems.shadows;
+    const monsters = ctx.systems && ctx.systems.monsters;
     if (ctx.camera) {
       ctx.camera.getWorldPosition(_org);
       ctx.camera.getWorldDirection(_dir);
     }
-    if (shadows) shadows.flare(_org, 7.5, 3.2, 0.85, 18);
+    if (monsters) monsters.flare(_org, 7.5, 3.2, 0.85, 18);
     if (ctx.viewmodel) ctx.viewmodel.flash(0xffb066, 10);
     if (ctx.ambience) ctx.ambience.spell('flash');
     // свет в мире: короткий круг света вокруг игрока
