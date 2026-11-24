@@ -82,23 +82,28 @@ const res = await page.evaluate(async () => {
   const nearTower = d.ctx.systems.interactions.nearest();
   out.bellOnTower = !!nearTower && nearTower.label === 'Ударить в колокол';
 
-  // проход из нефа в башню открыт (раунд 46): дверь распахнута,
-  // из молитвенной можно дойти до винтовой лестницы
+  // дверь в башню (раунд 62): проёма больше нет, сквозь стену не пройти,
+  // а по двери игрок переходит в звонарную
   {
     const p2 = d.player;
-    p2.teleport(-3.95, 8.0, 0);
+    p2.teleport(-3.0, 7.6, 0);
     p2.y = 0; p2.groundY = 0; p2.vy = 0; p2.keys.clear();
-    p2.yaw = Math.PI;                       // на север, к проёму
-    let got = false;
+    p2.yaw = Math.PI;                       // на север, к двери
     for (let i = 0; i < 500; i++) {
       p2.keys.add('KeyW');
       p2.update(1 / 60);
-      if (p2.pos.z > 12.5) { got = true; break; }
+      if (p2.pos.z > 9.6) break;
     }
     p2.keys.clear();
-    out.passageToTower = got;
-    out.passageOpen = got;
+    out.passageToTower = p2.pos.z > 9.6;     // сквозь стену не прошёл
+    out.passageOpen = false;
     out.naveZ = +p2.pos.z.toFixed(2);
+    const doorAct = d.ctx.interactables.find((x) => x.label === 'Открыть дверь в башню');
+    out.towerDoorAct = !!doorAct;
+    if (doorAct) {
+      doorAct.act();
+      out.towerDoorWorks = d.player.pos.z > 10.0;
+    }
   }
 
   // удар: колокол должен качнуться
@@ -172,7 +177,8 @@ const checks = [
   ['лестница в башне: винтовая спираль', res.spiral === true],
   ['игрок поднимается по лестнице', res.climbed],
   ['наверху есть интеракт удара в колокол', res.bellOnTower],
-  ['проход из нефа в башню открыт', res.passageOpen],
+  ['сквозь стену в башню не пройти', res.passageToTower === false],
+  ['дверь в башню переводит в звонарную', res.towerDoorAct === true && res.towerDoorWorks === true],
   ['вход сзади ведёт в звонарную', res.backEnterExists && res.backEnterLoc === 'church'
     && res.backSpawn && res.backSpawn.z > 12],
   ['задняя дверь нефа открыта на выход', res.backDoorExists && res.backToVillage],

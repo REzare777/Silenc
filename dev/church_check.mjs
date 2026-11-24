@@ -55,13 +55,26 @@ const res = await page.evaluate(() => {
   out.reachedAltar = p.pos.z > 6.1;
   out.altarZ = +p.pos.z.toFixed(2);
 
-  // 2. дверь в башню (раунд 46): распахнута — из молитвенной можно
-  //    дойти до винтовой лестницы
-  reset(-3.95, 8.0);                       // прямо к двери в углу нефа
-  walk(Math.PI, 600, () => p.pos.z > 10.3);
+  // 2. дверь в башню (раунд 62): проёма больше нет — дверь на стене,
+  //    и по ней игрок переходит в звонарную
+  reset(-3.0, 7.6);                        // прямо к двери у западной стены
+  walk(Math.PI, 600, () => p.pos.z > 9.6);
   out.sideX = +p.pos.x.toFixed(2);
-  out.reachedTower = p.pos.z > 10.3;
-  out.towerZ = +p.pos.z.toFixed(2);
+  out.stoppedAtDoor = p.pos.z < 9.8;
+  out.doorZ = +p.pos.z.toFixed(2);
+  const toTower = d.ctx.interactables.find((x) => x.label === 'Открыть дверь в башню');
+  out.doorAct = !!toTower;
+  if (toTower) {
+    toTower.act();
+    out.inTower = p.pos.z > 10.0;
+    out.towerZ = +p.pos.z.toFixed(2);
+    const back = d.ctx.interactables.find((x) => x.label === 'Вернуться в неф');
+    out.backAct = !!back;
+    if (back) {
+      back.act();
+      out.backInNave = p.pos.z < 9.5;
+    }
+  }
 
   // 3. вход с заднего двора ведёт в звонарную
   const ch = d.ctx.systems.locations.churchLoc;
@@ -92,8 +105,10 @@ const checks = [
   ['интеракт входа есть', res.doorExists],
   ['вход в локацию храма', res.inChurch],
   ['проход по нефу до алтаря', res.reachedAltar],
-  ['подход к двери в башню', res.sideX !== undefined && res.sideX < -3.4],
-  ['проход из нефа в башню открыт', res.reachedTower === true],
+  ['подход к двери в башню', res.sideX !== undefined && res.sideX < -2.4],
+  ['сквозь стену в башню не пройти', res.stoppedAtDoor === true],
+  ['дверь в башню — интеракт-переход', res.doorAct === true && res.inTower === true],
+  ['обратный переход в неф работает', res.backAct === true && res.backInNave === true],
   ['вход с заднего двора ведёт в звонарную', res.inBelfry],
   ['сквозь портал наружу не пройти', res.noPortalLeak],
   ['сквозь заднюю дверь не пройти', res.noDoorLeak],

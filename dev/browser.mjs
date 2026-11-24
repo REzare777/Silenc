@@ -44,7 +44,9 @@ export function findChrome() {
     for (const d of dirs) {
       for (const rel of [
         ['chrome-linux', 'chrome'],
+        ['chrome-linux64', 'chrome'],
         ['chrome-linux', 'headless_shell'],
+        ['chrome-linux64', 'headless_shell'],
         ['chrome-mac', 'Chromium.app', 'Contents', 'MacOS', 'Chromium'],
         ['chrome-win', 'chrome.exe'],
       ]) {

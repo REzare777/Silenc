@@ -134,7 +134,9 @@ export function createLocations(ctx) {
    * @param {string} next 'village' | 'barn' | 'tavern'
    */
   function setLocation(next, where = null) {
-    if (current === next && !(next === 'church' && where === 'back')) return;
+    // внутри храма есть переходы между нефом и звонарной: это одна сцена,
+    // но игрок переносится в другой её конец
+    if (current === next && !(next === 'church' && where)) return;
     const prev = current;
     current = next;
     ctx.loc = current;
@@ -193,8 +195,14 @@ export function createLocations(ctx) {
     }
 
     if (L) {
-      // в храм можно войти с юга (через башню) и с севера (через заднюю дверь)
-      const sp = (inChurch && where === 'back' && L.spawnBack) ? L.spawnBack : L.spawn;
+      // в храм можно войти с юга (через крыльцо) и с севера (через заднюю
+      // дверь); между нефом и звонарной дверь переносит по локации
+      const sp = inChurch
+        ? (where === 'back' ? (L.spawnBack || L.spawn)
+          : where === 'tower' ? (L.spawnTower || L.spawn)
+            : where === 'nave' ? (L.spawnNave || L.spawn)
+              : L.spawn)
+        : L.spawn;
       ctx.player.teleport(sp.x, sp.z, sp.yaw);
       ctx.player.y = 0; ctx.player.vy = 0; ctx.player.camY = null;
       ctx.ui.toast(inDungeon
@@ -353,6 +361,17 @@ export function createLocations(ctx) {
   }, 'church');
   bellAct.y = 9.2;          // галерея башни: на каком уровне ног срабатывает интеракт
   bellAct.yTol = 1.6;
+  // Дверь из нефа в звонарную: переход между двумя половинами храма.
+  // Сцена одна и та же, но игрок переносится к другой двери.
+  if (churchLoc.naveDoor) {
+    add(new THREE.Vector3(churchLoc.naveDoor.x, 1.4, churchLoc.naveDoor.z - 0.9), 2.4,
+      'Открыть дверь в башню', () => {
+        ctx.ui.toast('За дверью — винтовая лестница. Наверху, под перекладиной, висит колокол.', 3200);
+        setLocation('church', 'tower');
+      }, 'church');
+    add(new THREE.Vector3(churchLoc.naveDoor.x, 1.4, churchLoc.naveDoor.z + 0.9), 2.4,
+      'Вернуться в неф', () => setLocation('church', 'nave'), 'church');
+  }
   churchLoc.spots.forEach((spot, k) => {
     add(spot[0], 2.3, spot[1], () => {
       ctx.ui.toast(churchLoc.lines[k % churchLoc.lines.length], 3600);

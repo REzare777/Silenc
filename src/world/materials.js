@@ -111,5 +111,10 @@ export function buildMaterials(T) {
     flowerYellow: new THREE.MeshStandardMaterial({ color: 0xf3c743, roughness: 0.9, side: THREE.DoubleSide }),
     flowerViolet: new THREE.MeshStandardMaterial({ color: 0xa482c9, roughness: 0.9, side: THREE.DoubleSide }),
   };
+  // имя материала — по ключу: так его видно в отладчике и в автотестах
+  // («какой это кирпич?» — по названию, а не по цвету)
+  for (const key of Object.keys(M)) {
+    if (M[key] && !M[key].name) M[key].name = key;
+  }
   return M;
 }
