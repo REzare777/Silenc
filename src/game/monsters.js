@@ -92,63 +92,63 @@ export const MONSTERS = [
   },
   {
     id: 'goblin_bow', name: 'Гоблин-лучник', tier: 'trash',
-    hp: 26, dmg: 8, speed: 1.8, aggro: 20, reach: 13, cd: 2.4,
+    hp: 26, dmg: 9, speed: 1.8, aggro: 20, reach: 13, cd: 2.4,
     attack: 'ranged', windup: 0.75, active: 0.2, radius: 0.4, height: 1.45,
     sp: 3, scale: 1, exp: 7,
   },
   {
     id: 'goblin_guard', name: 'Гоблин-страж', tier: 'elite',
-    hp: 78, dmg: 13, speed: 1.5, aggro: 15, reach: 1.8, cd: 1.9,
+    hp: 78, dmg: 13, speed: 1.45, aggro: 15, reach: 1.8, cd: 1.9,
     attack: 'melee', windup: 0.6, active: 0.2, radius: 0.5, height: 1.75,
     sp: 2, scale: 1, exp: 18, guard: 0.35,
   },
   {
     id: 'ghost', name: 'Призрак', tier: 'normal',
-    hp: 46, dmg: 11, speed: 1.7, aggro: 19, reach: 1.7, cd: 2.1,
+    hp: 46, dmg: 12, speed: 1.75, aggro: 19, reach: 1.7, cd: 2.1,
     attack: 'melee', windup: 0.7, active: 0.22, radius: 0.55, height: 2.7,
     sp: 3, scale: 1, exp: 12, ghost: true,
   },
   {
     id: 'spider', name: 'Паук', tier: 'trash',
-    hp: 24, dmg: 9, speed: 3.0, aggro: 18, reach: 1.5, cd: 1.4,
+    hp: 24, dmg: 8, speed: 3.0, aggro: 18, reach: 1.5, cd: 1.4,
     attack: 'leap', windup: 0.45, active: 0.25, radius: 0.45, height: 0.9,
     sp: 3, scale: 1, exp: 8,
   },
   {
     id: 'slime_green', name: 'Зелёный слизень', tier: 'trash',
-    hp: 30, dmg: 8, speed: 1.5, aggro: 14, reach: 1.6, cd: 2.0,
+    hp: 30, dmg: 5, speed: 1.55, aggro: 14, reach: 1.6, cd: 2.0,
     attack: 'splash', windup: 0.6, active: 0.2, radius: 0.5, height: 0.9,
     sp: 3, scale: 1, exp: 7, color: 0x6fbf4a,
   },
   {
     id: 'slime_blue', name: 'Синий слизень', tier: 'trash',
-    hp: 38, dmg: 10, speed: 1.4, aggro: 14, reach: 1.6, cd: 2.2,
+    hp: 38, dmg: 6, speed: 1.35, aggro: 14, reach: 1.6, cd: 2.2,
     attack: 'splash', windup: 0.65, active: 0.2, radius: 0.55, height: 1.0,
     sp: 2, scale: 1, exp: 9, color: 0x4a9fbf,
   },
   {
     id: 'slime_red', name: 'Красный слизень', tier: 'normal',
-    hp: 52, dmg: 14, speed: 1.6, aggro: 15, reach: 1.6, cd: 2.0,
+    hp: 52, dmg: 11, speed: 1.65, aggro: 15, reach: 1.6, cd: 2.0,
     attack: 'splash', windup: 0.55, active: 0.2, radius: 0.55, height: 1.05,
     sp: 2, scale: 1, exp: 13, color: 0xc25a4a,
   },
   {
     id: 'shroom', name: 'Живой гриб', tier: 'trash',
-    hp: 28, dmg: 7, speed: 1.2, aggro: 15, reach: 10, cd: 2.8,
+    hp: 28, dmg: 4, speed: 1.1, aggro: 15, reach: 10, cd: 2.8,
     attack: 'spore', windup: 0.8, active: 0.2, radius: 0.45, height: 1.25,
     sp: 3, scale: 1, exp: 7,
   },
   {
     id: 'snake', name: 'Змея', tier: 'trash',
-    hp: 22, dmg: 11, speed: 2.4, aggro: 15, reach: 1.4, cd: 1.6,
+    hp: 22, dmg: 10, speed: 2.4, aggro: 15, reach: 1.4, cd: 1.6,
     attack: 'bite', windup: 0.38, active: 0.16, radius: 0.35, height: 0.5,
     sp: 3, scale: 1, exp: 8,
   },
   {
     id: 'golem_small', name: 'Каменный голем', tier: 'normal',
-    hp: 96, dmg: 16, speed: 1.15, aggro: 14, reach: 1.9, cd: 2.3,
-    attack: 'slam', windup: 0.85, active: 0.24, radius: 0.6, height: 1.7,
-    sp: 2, scale: 1, exp: 16,
+    hp: 96, dmg: 16, speed: 1.2, aggro: 14, reach: 1.9, cd: 2.3,
+    attack: 'slam', windup: 0.85, active: 0.24, radius: 0.6, height: 1.25,
+    sp: 2, scale: 0.72, exp: 16,
   },
   {
     id: 'orc_boss', name: 'Орк-владыка Гримм', tier: 'boss',
@@ -253,13 +253,28 @@ export function createMonsters(ctx) {
   /**
    * Свободна ли точка (по коллайдерам пещеры).
    *
+   * Высота коллайдера важна: у стен пещеры есть надземные части (`y0`/`y1`),
+   * под которыми игрок спокойно проходит. Если высоту не учитывать, звери
+   * упираются в стену, которой на их пути нет, и половина пещеры остаётся
+   * для них отрезанной.
+   *
    * @param {number} x координата X
    * @param {number} z координата Z
    * @param {number} r радиус
+   * @param {number} y высота пола под точкой
+   * @param {number} h рост зверя
    * @returns {boolean} свободно ли
    */
-  function freeSpot(x, z, r = 0.45) {
+  function freeSpot(x, z, r = 0.45, y = 0, h = 1.6) {
+    const feet = y;
+    const head = y + h;
     for (const b of dungeonBoxes()) {
+      // та же логика, что у игрока (`player.blocksAt`): стена выше головы
+      // или ниже ног — не помеха
+      if (b.y0 !== undefined || b.y1 !== undefined) {
+        const blocks = (b.y1 === undefined || feet < b.y1) && (b.y0 === undefined || head > b.y0);
+        if (!blocks) continue;
+      }
       const c = Math.cos(b.ang || 0), sn = Math.sin(b.ang || 0);
       const dx = x - b.cx, dz = z - b.cz;
       const lx = c * dx - sn * dz, lz = sn * dx + c * dz;
@@ -268,6 +283,16 @@ export function createMonsters(ctx) {
       if (Math.hypot(lx - qx, lz - qz) < r + 0.15) return false;
     }
     return true;
+  }
+
+  /**
+   * Высота зверя с учётом масштаба породы.
+   *
+   * @param {object} m монстр
+   * @returns {number} рост в метрах
+   */
+  function beastHeight(m) {
+    return (m.spec.height || 1.6) * (m.baseScale || 1);
   }
 
   /**
@@ -284,7 +309,7 @@ export function createMonsters(ctx) {
       const a = dir + o;
       const nx = m.x + Math.cos(a) * ahead;
       const nz = m.z + Math.sin(a) * ahead;
-      if (freeSpot(nx, nz, m.spec.radius)) return a;
+      if (freeSpot(nx, nz, m.spec.radius, m.y, beastHeight(m))) return a;
     }
     return dir + Math.PI;
   }
@@ -332,12 +357,15 @@ export function createMonsters(ctx) {
       boss: !!spec.boss,
       slow: 0,
     };
+    // базовый масштаб породы (мелкие звери — меньше)
+    m.baseScale = spec.scale || 1;
+    m.group.scale.setScalar(m.baseScale);
     m.group.position.set(x, y, z);
     if (root) root.add(m.group);
     list.push(m);
     if (m.boss) {
       boss = m;
-      if (ctx.ui && ctx.ui.setBoss) ctx.ui.setBoss(spec.name, 1);
+      // полосу босса показываем, когда он проснётся (в update), а не сразу при спавне
     }
     return m;
   }
@@ -353,7 +381,7 @@ export function createMonsters(ctx) {
     for (let i = 0; i < 60; i++) {
       const x = zone.x0 + Math.random() * (zone.x1 - zone.x0);
       const z = zone.z0 + Math.random() * (zone.z1 - zone.z0);
-      if (!freeSpot(x, z, r)) continue;
+      if (!freeSpot(x, z, r, zone.y, 1.6)) continue;
       return { x, y: zone.y, z };
     }
     return null;
@@ -377,6 +405,8 @@ export function createMonsters(ctx) {
     difficulty = currentDifficulty();
     const loc = ctx.systems.locations;
     if (!loc || !loc.dungeonLoc) return;
+    // старая группа могла остаться в сцене — убираем, чтобы не копить мусор
+    if (root && root.parent) root.parent.remove(root);
     root = new THREE.Group();
     root.name = 'monsters';
     loc.sceneDungeon.add(root);
@@ -449,6 +479,9 @@ export function createMonsters(ctx) {
       }
     }
     bags.length = 0;
+    for (const p of puddles) {
+      if (p.mesh && p.mesh.parent) p.mesh.parent.remove(p.mesh);
+    }
     puddles.length = 0;
     boss = null;
     if (ctx.ui && ctx.ui.setBoss) ctx.ui.setBoss(null, 0);
@@ -561,15 +594,28 @@ export function createMonsters(ctx) {
     const inv = ctx.inventory;
     if (!inv) return false;
     const names = [];
+    const left = [];
     for (const e of bag.items) {
       const spec = ctx.itemById ? ctx.itemById(e.id) : null;
       if (!spec) continue;
       const ok = inv.add(makeStack(spec));
       if (ok && ok.ok) names.push(spec.name);
+      else left.push(e);      // не влезло — остаётся в мешке
     }
     if (!names.length) {
       if (ctx.ui) ctx.ui.toast('Сумка полна — некуда положить добычу.', 2600);
       return false;
+    }
+    // если что-то не влезло — мешок остаётся на полу с остатком (раньше
+    // добыча пропадала молча)
+    if (left.length) {
+      bag.items = left;
+      if (bag.interact) bag.interact.label = `Подобрать добычу (${left.length})`;
+      if (ctx.ui) {
+        ctx.ui.toast(`Добыча: ${names.join(', ')}. Осталось в мешке: ${left.length}.`, 3200);
+        ctx.ui.renderInventory(ctx.inventory);
+      }
+      return true;
     }
     const i = ctx.interactables.indexOf(bag.interact);
     if (i >= 0) ctx.interactables.splice(i, 1);
@@ -851,45 +897,47 @@ export function createMonsters(ctx) {
    */
   function applyAttack(m) {
     const spec = m.spec;
+    // важно: ветвиться по выбранной атаке (`m.attackName`), а не по `spec.attack`:
+    // у босса spec.attack === 'boss', а конкретную атаку он выбирает в момент
+    // замаха (swing / slam / roar / charge)
+    const kind = m.attackName || spec.attack;
     const px = ctx.player.pos.x, pz = ctx.player.pos.z;
     const dx = px - m.x, dz = pz - m.z;
     const dist = Math.hypot(dx, dz);
 
-    if (spec.attack === 'ranged') {
+    if (kind === 'ranged') {
       shoot(m, 'arrow');
       return;
     }
-    if (spec.attack === 'spore') {
+    if (kind === 'spore') {
       shoot(m, 'spore');
       return;
     }
-    if (spec.attack === 'splash') {
+    if (kind === 'splash') {
       if (dist <= spec.reach) hitPlayer(m);
-      // ядовитая лужа под монстром
-      puddles.push({
-        x: m.x, z: m.z, r: 2.2, life: 9, dmg: Math.max(1, Math.round(m.dmg * 0.35)),
-      });
+      // ядовитая лужа под монстром — её должно быть видно на полу
+      spawnPuddle(m, 2.2, 9, Math.max(1, Math.round(m.dmg * 0.35)));
       return;
     }
-    if (spec.attack === 'charge') {
-      // наскок: урон по пути
-      if (dist <= spec.reach + 1.4) hitPlayer(m, Math.round(m.dmg * 1.2));
+    if (kind === 'charge') {
+      // наскок: урон наносится на пути (в ветке 'attack'), здесь — волна
+      spawnShock(m, 0x9fd8ff);
       return;
     }
-    if (spec.attack === 'slam') {
+    if (kind === 'slam') {
       // удар оземь: радиус вокруг монстра
       if (dist <= spec.reach + 0.9) hitPlayer(m, Math.round(m.dmg * 1.15));
       spawnShock(m);
       return;
     }
-    if (spec.attack === 'roar') {
+    if (kind === 'roar') {
       // рёв: призывает подмогу и отталкивает
       const dxp = px - m.x, dzp = pz - m.z;
       const d = Math.hypot(dxp, dzp) || 1;
       ctx.player.pos.x += (dxp / d) * 1.4;
       ctx.player.pos.z += (dzp / d) * 1.4;
       summon(m, 2);
-      if (ctx.ui) ctx.ui.toast('Орк ревёт — из темноты лезут goblinы!', 2600);
+      if (ctx.ui) ctx.ui.toast('Орк ревёт — из темноты лезут гоблины!', 2600);
       return;
     }
     // обычная ближняя атака (в том числе прыжок паука и укус змеи)
@@ -897,16 +945,39 @@ export function createMonsters(ctx) {
   }
 
   /**
+   * Ядовитая лужа на полу: зелёное пятно, видимое и в темноте.
+   *
+   * @param {object} m монстр-источник
+   * @param {number} r радиус
+   * @param {number} life сколько живёт
+   * @param {number} dmg урон в тик
+   */
+  function spawnPuddle(m, r, life, dmg) {
+    const mesh = new THREE.Mesh(
+      new THREE.CircleGeometry(r, 20),
+      new THREE.MeshBasicMaterial({
+        color: 0x74d94f, transparent: true, opacity: 0.42,
+        depthWrite: false, blending: THREE.AdditiveBlending,
+      }),
+    );
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.set(m.x, m.y + 0.06, m.z);
+    if (root) root.add(mesh);
+    puddles.push({ x: m.x, z: m.z, r, life, dmg, mesh, dmgT: 0 });
+  }
+
+  /**
    * Кольцо ударной волны (для « slam » и « charge »).
    *
    * @param {object} m монстр
+   * @param {number} color цвет кольца
    */
-  function spawnShock(m) {
+  function spawnShock(m, color = 0xffd08a) {
     const g = new THREE.Group();
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(0.5, 0.72, 24),
       new THREE.MeshBasicMaterial({
-        color: 0xffd08a, transparent: true, opacity: 0.8,
+        color, transparent: true, opacity: 0.8,
         side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending,
       }),
     );
@@ -930,7 +1001,7 @@ export function createMonsters(ctx) {
       const a = Math.random() * Math.PI * 2;
       const x = m.x + Math.cos(a) * 4.5;
       const z = m.z + Math.sin(a) * 4.5;
-      if (!freeSpot(x, z, spec.radius + 0.2)) continue;
+      if (!freeSpot(x, z, spec.radius + 0.2, m.y, 1.6)) continue;
       const s = makeMonster(spec, x, m.y, z);
       s.state = 'stalk';
     }
@@ -961,13 +1032,13 @@ export function createMonsters(ctx) {
       m.dying -= dt;
       m.dyingT += dt;
       const k = Math.max(0, m.dying / 0.75);
-      m.group.scale.set(1, Math.max(0.05, k), 1);
+      m.group.scale.set(m.baseScale, Math.max(0.05, k) * m.baseScale, m.baseScale);
       m.group.rotation.z = (1 - k) * 1.4;
       m.group.position.set(m.x, m.y - (1 - k) * 0.4, m.z);
       m.model.update(t, dt, m);
       if (m.dying <= 0) {
         m.group.visible = false;
-        m.group.scale.set(1, 1, 1);
+        m.group.scale.setScalar(m.baseScale);
         m.group.rotation.z = 0;
       }
       return;
@@ -988,7 +1059,7 @@ export function createMonsters(ctx) {
       const nz = m.z + m.vz * dt;
       // отброс не должен втолкнуть монстра в стену: если там глухо,
       // гасим скорость и останавливаемся
-      if (m.spec.ghost || freeSpot(nx, nz, m.spec.radius)) {
+      if (m.spec.ghost || freeSpot(nx, nz, m.spec.radius, m.y, beastHeight(m))) {
         m.x = nx;
         m.z = nz;
       } else {
@@ -1017,7 +1088,7 @@ export function createMonsters(ctx) {
           // дрейф тоже проверяем: раньше спящие звери уползали в стены
           const nx = m.x + Math.cos(m.dir) * 0.25 * dt;
           const nz = m.z + Math.sin(m.dir) * 0.25 * dt;
-          if (m.spec.ghost || freeSpot(nx, nz, m.spec.radius)) {
+          if (m.spec.ghost || freeSpot(nx, nz, m.spec.radius, m.y, beastHeight(m))) {
             m.x = nx;
             m.z = nz;
           } else {
@@ -1034,6 +1105,10 @@ export function createMonsters(ctx) {
           ? reach * 0.75
           : reach * 0.9;
       const sp = spec.speed * difficulty.speed * (m.slow > 0 ? 0.45 : 1) * (wounded ? 0.8 : 1);
+      // горящий факел отпугивает: зверь не подходит ближе, чем на 3 м
+      // (призраки и стрелки факела не боятся)
+      const standoff = (lit && !spec.ghost && spec.attack !== 'ranged' && spec.attack !== 'spore')
+        ? 3.0 : 0;
 
       if (spec.attack === 'ranged' || spec.attack === 'spore') {
         // держать дистанцию
@@ -1046,16 +1121,14 @@ export function createMonsters(ctx) {
         } else {
           m.moveSpeed = 0;
         }
-      } else if (dist > wantRange) {
+      } else if (dist > wantRange && dist > standoff) {
         moveToward(m, px, pz, sp * dt);
       } else {
         m.moveSpeed = 0;
       }
 
       // не подходим вплотную при горящем факеле (кроме призраков — они идут)
-      if (lit && !spec.ghost && spec.attack !== 'ranged' && spec.attack !== 'spore') {
-        if (dist < 2.6) m.moveSpeed = 0;
-      }
+      if (standoff && dist < standoff) m.moveSpeed = 0;
 
       // с какого расстояния зверь решается атаковать. У босса это больше:
       // его «наскок» и «рёв» бьют издалека
@@ -1089,18 +1162,31 @@ export function createMonsters(ctx) {
     } else if (m.state === 'attack') {
       const sp = spec.speed * difficulty.speed;
       if (m.attackName === 'charge') {
-        // наскок: орк несётся вперёд
+        // наскок: орк несётся вперёд и ранит на пути
         const ang = Math.atan2(pz - m.z, px - m.x);
-        const nx = m.x + Math.cos(ang) * sp * 2.6 * dt;
-        const nz = m.z + Math.sin(ang) * sp * 2.6 * dt;
-        if (freeSpot(nx, nz, spec.radius)) { m.x = nx; m.z = nz; }
+        const step = sp * 2.6 * dt;
+        const nx = m.x + Math.cos(ang) * step;
+        const nz = m.z + Math.sin(ang) * step;
+        // орк тяжёлый: мелкие камни его не остановят
+        if (freeSpot(nx, nz, spec.radius * 0.6, m.y, beastHeight(m))) {
+          m.x = nx;
+          m.z = nz;
+        } else {
+          const sx = m.x + Math.cos(ang + Math.PI / 2) * step;
+          const sz = m.z + Math.sin(ang + Math.PI / 2) * step;
+          if (freeSpot(sx, sz, spec.radius * 0.6, m.y, beastHeight(m))) { m.x = sx; m.z = sz; }
+        }
         m.moveSpeed = sp * 2.6;
+        // наскок ранит того, кого задевает
+        if (Math.hypot(px - m.x, pz - m.z) <= spec.reach + 0.8) {
+          hitPlayer(m, Math.round(m.dmg * 1.2));
+        }
       } else if (m.attackName === 'leap') {
         // паук прыгает к игроку
         const ang = Math.atan2(pz - m.z, px - m.x);
         const nx = m.x + Math.cos(ang) * sp * 2.2 * dt;
         const nz = m.z + Math.sin(ang) * sp * 2.2 * dt;
-        if (freeSpot(nx, nz, spec.radius)) { m.x = nx; m.z = nz; }
+        if (freeSpot(nx, nz, spec.radius, m.y, beastHeight(m))) { m.x = nx; m.z = nz; }
         m.moveSpeed = sp * 2.2;
       } else {
         m.moveSpeed = 0;
@@ -1164,11 +1250,19 @@ export function createMonsters(ctx) {
    * @param {number} step шаг
    */
   function moveToward(m, tx, tz, step) {
+    // призрак идёт сквозь стены — ему стены не помеха
+    if (m.spec.ghost) {
+      const ang = Math.atan2(tz - m.z, tx - m.x);
+      m.x += Math.cos(ang) * step;
+      m.z += Math.sin(ang) * step;
+      m.moveSpeed = m.spec.speed * difficulty.speed;
+      return;
+    }
     const ang = Math.atan2(tz - m.z, tx - m.x);
     const dir = pickDir(m, ang, 0.9);
     const nx = m.x + Math.cos(dir) * step;
     const nz = m.z + Math.sin(dir) * step;
-    if (freeSpot(nx, nz, m.spec.radius)) {
+    if (freeSpot(nx, nz, m.spec.radius, m.y, beastHeight(m))) {
       m.x = nx;
       m.z = nz;
       m.moveSpeed = m.spec.speed * difficulty.speed;
@@ -1176,7 +1270,7 @@ export function createMonsters(ctx) {
       const slide = pickDir(m, ang + Math.PI / 2, 0.9);
       const sx = m.x + Math.cos(slide) * step;
       const sz = m.z + Math.sin(slide) * step;
-      if (freeSpot(sx, sz, m.spec.radius)) {
+      if (freeSpot(sx, sz, m.spec.radius, m.y, beastHeight(m))) {
         m.x = sx;
         m.z = sz;
         m.moveSpeed = m.spec.speed * difficulty.speed;
@@ -1219,9 +1313,12 @@ export function createMonsters(ctx) {
       }
     }
 
-    // полоса босса
-    if (boss && boss.dying <= 0 && ctx.ui && ctx.ui.setBoss) {
-      ctx.ui.setBoss(boss.spec.name, Math.max(0, boss.hp / boss.maxHp));
+    // полоса босса: только пока босс жив и проснулся (спойлером она тоже не должна быть)
+    if (boss && ctx.ui && ctx.ui.setBoss) {
+      const alive = boss.hp > 0 && boss.dying <= 0;
+      const awake = boss.state !== 'sleep' && boss.state !== 'dead';
+      if (alive && awake) ctx.ui.setBoss(boss.spec.name, Math.max(0, boss.hp / boss.maxHp));
+      else ctx.ui.setBoss(null, 0);
     }
 
     // снаряды
@@ -1258,7 +1355,10 @@ export function createMonsters(ctx) {
           hitPlayer({ spec: { name: 'Слизь' }, dmg: p.dmg, x: p.x, z: p.z, boss: false }, p.dmg);
         }
       }
-      if (p.life <= 0) puddles.splice(i, 1);
+      if (p.life <= 0) {
+        if (p.mesh && p.mesh.parent) p.mesh.parent.remove(p.mesh);
+        puddles.splice(i, 1);
+      }
     }
 
     // мешки
@@ -1294,7 +1394,7 @@ export function createMonsters(ctx) {
    * @returns {object|null} босс
    */
   function getBoss() {
-    return boss && boss.dying <= 0 ? boss : null;
+    return boss && boss.dying <= 0 && boss.hp > 0 ? boss : null;
   }
 
   return {

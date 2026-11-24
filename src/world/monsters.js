@@ -845,21 +845,31 @@ function orcBoss() {
   const head = joint(body, 0, 1.08, 0.02);
   mesh(head, sphere(0.44, 14, 11), skinM, [0, 0.16, 0]);
   mesh(head, box(0.52, 0.2, 0.42), skinM, [0, -0.1, 0.12]);     // челюсть
-  // клыки
-  mesh(head, cone(0.06, 0.2, 5), glow(0xe6dfc8), [-0.13, -0.12, 0.3], [Math.PI, 0, 0]);
-  mesh(head, cone(0.06, 0.2, 5), glow(0xe6dfc8), [0.13, -0.12, 0.3], [Math.PI, 0, 0]);
+  // клыки — торчат из нижней челюсти
+  mesh(head, cone(0.085, 0.34, 5), glow(0xe6dfc8), [-0.15, -0.16, 0.3], [Math.PI, 0, 0]);
+  mesh(head, cone(0.085, 0.34, 5), glow(0xe6dfc8), [0.15, -0.16, 0.3], [Math.PI, 0, 0]);
+  mesh(head, cone(0.05, 0.18, 5), glow(0xe6dfc8), [-0.29, -0.15, 0.22], [Math.PI, 0, 0]);
+  mesh(head, cone(0.05, 0.18, 5), glow(0xe6dfc8), [0.29, -0.15, 0.22], [Math.PI, 0, 0]);
   // глаза
   const eyeM = glow(0xffb03a);
-  mesh(head, sphere(0.07, 7, 6), eyeM, [-0.15, 0.2, 0.34]);
-  mesh(head, sphere(0.07, 7, 6), eyeM, [0.15, 0.2, 0.34]);
-  // рожки
-  mesh(head, cone(0.09, 0.38, 6), darkM, [-0.3, 0.38, -0.02], [0, 0, 0.7]);
-  mesh(head, cone(0.09, 0.38, 6), darkM, [0.3, 0.38, -0.02], [0, 0, -0.7]);
-  // грива — что-то, что отличает босса от обычного гоблина
-  for (let i = 0; i < 5; i++) {
-    const a = -0.9 + i * 0.45;
-    mesh(head, cone(0.07, 0.3, 5), darkM, [Math.sin(a) * 0.34, 0.3, -Math.cos(a) * 0.24 - 0.1], [-0.5, a, 0]);
+  mesh(head, sphere(0.075, 7, 6), eyeM, [-0.15, 0.2, 0.34]);
+  mesh(head, sphere(0.075, 7, 6), eyeM, [0.15, 0.2, 0.34]);
+  // рожки — крупные, загнутые наружу
+  const hornM = std(0x3b2f26, { roughness: 0.85 });
+  for (const sx of [-1, 1]) {
+    const horn = mesh(head, cone(0.14, 0.72, 7), hornM,
+      [sx * 0.34, 0.46, -0.04], [0, 0, sx * 0.85]);
+    horn.scale.set(1, 1, 0.85);
+    mesh(head, cone(0.06, 0.26, 5), hornM, [sx * 0.56, 0.74, -0.06], [0, 0, sx * 1.25]);
   }
+  // грива — то, что отличает босса от обычного гоблина
+  const maneM = std(0x2e2018, { roughness: 0.95 });
+  for (let i = 0; i < 7; i++) {
+    const a = -1.15 + i * 0.38;
+    mesh(head, cone(0.11, 0.46, 5), maneM,
+      [Math.sin(a) * 0.36, 0.34, -Math.cos(a) * 0.3 - 0.12], [-0.62, a, 0]);
+  }
+  mesh(head, box(0.5, 0.34, 0.12), maneM, [0, 0.3, -0.34]);    // загривок
 
   const armL = joint(body, -0.78, 0.76, 0);
   const armR = joint(body, 0.78, 0.76, 0);
@@ -870,12 +880,21 @@ function orcBoss() {
 
   // двуручная секира — за плечом, как у настоящего босса
   const axe = new THREE.Group();
-  mesh(axe, cyl(0.06, 0.06, 1.7, 8), std(0x4e3524), [0, 0.55, 0]);
-  mesh(axe, box(0.12, 0.72, 0.06), std(0x9aa3ad, { roughness: 0.35, metalness: 0.25 }), [0.16, 1.28, 0]);
-  mesh(axe, box(0.42, 0.5, 0.06), std(0xaeb7c1, { roughness: 0.3, metalness: 0.25 }), [0.4, 1.46, 0], [0, 0, 0.25]);
-  mesh(axe, box(0.08, 0.24, 0.08), std(0x2f2a26), [0.03, 1.46, 0]);
-  axe.position.set(0.02, -0.84, 0.08);
-  axe.rotation.set(0.25, 0, 0.15);
+  const woodM = std(0x4e3524, { roughness: 0.9 });
+  const steelM = std(0xaeb7c1, { roughness: 0.3, metalness: 0.25 });
+  const edgeM = std(0xdfe6ee, { roughness: 0.22, metalness: 0.3 });
+  mesh(axe, cyl(0.07, 0.07, 2.1, 8), woodM, [0, 0.7, 0]);
+  // лезвие — ступенчато расширяется наружу, чтобы читалось полумесяцем
+  mesh(axe, box(0.16, 1.0, 0.08), steelM, [0.17, 1.62, 0]);
+  mesh(axe, box(0.26, 0.52, 0.07), steelM, [0.34, 1.42, 0]);
+  mesh(axe, box(0.26, 0.44, 0.07), steelM, [0.56, 1.6, 0]);
+  mesh(axe, box(0.24, 0.32, 0.07), steelM, [0.74, 1.78, 0]);
+  mesh(axe, box(0.07, 0.3, 0.08), edgeM, [0.84, 1.86, 0]);
+  mesh(axe, cone(0.09, 0.34, 5), steelM, [0.1, 1.18, 0], [0, 0, -1.9]);   // обратный клык
+  mesh(axe, box(0.1, 0.3, 0.1), std(0x2f2a26), [0.03, 1.78, 0]);
+  mesh(axe, box(0.1, 0.1, 0.1), std(0xb08a3c, { metalness: 0.3 }), [0.03, 1.78, 0.08]);
+  axe.position.set(0.06, -0.62, 0.1);
+  axe.rotation.set(0.22, 0.34, 0.2);
   armR.add(axe);
 
   return {

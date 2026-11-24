@@ -130,7 +130,8 @@
   #vitals .purse .vLbl{font-size:10px;color:var(--ink-dim);opacity:.75}
   #vitals .purse .vNum{color:var(--gold);font-weight:600}
   /* ---------- босс: полоса здоровья сверху ---------- */
-  #bossBar{position:absolute;left:50%;top:18px;transform:translateX(-50%);width:min(520px,72vw);
+  /* ниже компаса и панели времени — иначе полоса ложилась поверх них */
+  #bossBar{position:absolute;left:50%;top:62px;transform:translateX(-50%);width:min(520px,72vw);
     display:none;flex-direction:column;align-items:center;gap:6px;pointer-events:none;z-index:6}
   #bossBar.on{display:flex}
   #bossBar .bossName{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:#e8c9a0;

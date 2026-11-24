@@ -251,12 +251,15 @@ const porch = await page.evaluate(() => {
   const wz = -13 + lz * Math.cos(a);
   p.teleport(wx, wz, 0);
   p.y = 0; p.groundY = 0;
-  const g0 = p.groundAt(wx, wz);
-  // пробуем подняться: шаг вперёд (к двери)
-  const inx = -17 + (-18 / 2 - 0.6) * Math.sin(a);
-  const inz = -13 + (-18 / 2 - 0.6) * Math.cos(a);
-  const g1 = p.groundAt(inx, inz);
-  const g2 = p.groundAt(-17 + (-18 / 2 - 0.2) * Math.sin(a), -13 + (-18 / 2 - 0.2) * Math.cos(a));
+  const at = (lz) => [
+    -17 + lz * Math.sin(a),
+    -13 + lz * Math.cos(a),
+  ];
+  const g0 = p.groundAt(...at(-18 / 2 - 2.2), 0);            // улица
+  const lower = at(-18 / 2 - 1.4);                            // нижняя ступень
+  const g1 = p.groundAt(lower[0], lower[1], 0);                // с улицы
+  const upper = at(-18 / 2 - 0.55);                           // верхняя ступень
+  const g2 = p.groundAt(upper[0], upper[1], 0.31);             // с нижней ступени
   return { g0: +g0.toFixed(2), g1: +g1.toFixed(2), g2: +g2.toFixed(2) };
 });
 console.log(`  земля у улицы: ${porch.g0} м; нижняя ступень: ${porch.g1} м; верхняя: ${porch.g2} м`);

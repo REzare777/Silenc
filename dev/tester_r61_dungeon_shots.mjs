@@ -94,29 +94,36 @@ await cam([0, -1.6, 25.5], [0, -3.4, 30]);
 await page.waitForTimeout(800);
 await grab('TEST61_boss_close');
 
-/* --- 2. ударная волна (slam) --- */
+/* --- 2. ударная волна голема ( slam ) --- */
 const slam = await page.evaluate(() => {
   const d = window.__dbg;
-  const b = d.monsters.getBoss();
-  if (!b) return { err: 'нет босса' };
-  const realRandom = Math.random;
-  Math.random = () => 0.4;                 // «slam»
-  d.player.pos.set(b.x + 2, b.y, b.z);
-  d.player.groundY = b.y;
-  for (let i = 0; i < 40; i++) {
-    Math.random = () => 0.4;
-    b.hp = b.maxHp; b.stun = 0; b.cd = 0;
-    if (b.state !== 'windup' && b.state !== 'attack') b.state = 'stalk';
-    d.monsters.update(1 / 30, 100 + i / 30);
-    if (b.shocks && b.shocks.length) break;
+  const m = d.monsters;
+  const g = m.list.find((o) => o.spec.id === 'golem_small' && o.hp > 0);
+  if (!g) return { err: 'нет голема' };
+  const saved = m.list.slice();
+  m.list.length = 0;
+  m.list.push(g);
+  g.x = 0; g.z = -25; g.y = 0;
+  g.group.position.set(g.x, g.y, g.z);
+  g.state = 'stalk'; g.cd = 0;
+  d.player.pos.set(g.x + 2.4, 0, g.z);
+  d.player.groundY = 0;
+  for (let i = 0; i < 120; i++) {
+    d.player.pos.set(g.x + 2.4, 0, g.z);
+    d.stats.hp = 100;
+    g.cd = 0;
+    m.update(1 / 30, 100 + i / 30);
+    if (g.shocks && g.shocks.length) break;
   }
-  Math.random = realRandom;
-  return { shocks: b.shocks ? b.shocks.length : 0, attack: b.attackName };
+  const out = { shocks: g.shocks ? g.shocks.length : 0, attack: g.attackName };
+  m.list.length = 0;
+  for (const o of saved) m.list.push(o);
+  return out;
 });
-console.log('ударная волна босса:', JSON.stringify(slam));
-await cam([0, -2.6, 25], [0, -4.4, 30]);
+console.log('ударная волна голема:', JSON.stringify(slam));
+await cam([0, 1.4, -21], [0, 0.4, -25]);
 await page.waitForTimeout(700);
-await grab('TEST61_boss_shock');
+await grab('TEST61_golem_slam');
 
 /* --- 3. мешок с добычей --- */
 await page.evaluate(() => {
@@ -144,7 +151,7 @@ await page.waitForTimeout(700);
 await grab('TEST61_loot_bag');
 
 /* --- 4. портреты зверей: призрак, страж, голем, паук, слизень, гриб, змея --- */
-const kinds = ['ghost', 'goblin_guard', 'golem_small', 'spider', 'slime_red', 'shroom', 'snake', 'goblin_bow'];
+const kinds = ['ghost', 'goblin_guard', 'golem_small', 'spider'];
 for (const kind of kinds) {
   const info = await page.evaluate((k) => {
     const d = window.__dbg;

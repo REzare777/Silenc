@@ -33,7 +33,7 @@ await page.waitForTimeout(2000);
  */
 async function grab(name) {
   await page.evaluate(() => { window.__grab = { resolve: () => {} }; });
-  await page.waitForFunction(() => window.__frame && window.__frame.length > 100, null, { timeout: 120000 });
+  await page.waitForFunction(() => window.__frame && window.__frame.length > 100, null, { timeout: 300000 });
   const frame = await page.evaluate(() => { const f = window.__frame; window.__frame = ''; return f; });
   fs.writeFileSync(`${OUT}/R61_${name}.jpg`, Buffer.from(frame.split(',')[1], 'base64'));
   console.log('снимок:', name);
@@ -64,9 +64,14 @@ for (const [name, pos, look] of shots) {
     if (name.includes('top')) {
       // туман съедает всё, а env.apply() каждый кадр ставит его заново —
       // поэтому на время съёмки отключаем применение окружения
+      // env.apply() каждый кадр возвращает туман — отключаем его на время
+      // съёмки (но сам объект тумана не трогаем: apply() к нему обращается)
       if (!d.__envApply) d.__envApply = d.env.apply.bind(d.env);
       d.env.apply = () => {};
-      d.scene.fog = null;
+      if (d.scene.fog) {
+        d.scene.fog.near = 260;
+        d.scene.fog.far = 900;
+      }
     } else if (d.__envApply) {
       d.env.apply = d.__envApply;
     }

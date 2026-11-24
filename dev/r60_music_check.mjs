@@ -125,17 +125,25 @@ check('М: в таверне быстрее, чем в храме', tempo.fast >
 
 /* ---------- ночь меняет музыку ---------- */
 // громкости и частоты меняются через setTargetAtTime — им нужно время,
-// чтобы сойтись к новому значению
+// чтобы сойтись к новому значению.
+// Плотность же пересчитывается мгновенно, поэтому читаем её сразу: иначе
+// игровой цикл успевает вернуть «день» (время суток в игре — источник истины),
+// и проверка срабатывает через раз.
 const night = await page.evaluate(async () => {
   const D = window.__dbg;
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   D.music.setMood('village');
+  // время суток в игре — источник истины: выставляем его, чтобы игровой цикл
+  // не возвращал «день» поверх ручного setNight
+  D.env.setTimeOfDay('day', true);
   D.music.setNight(0);
   await wait(1600);
   const day = { density: D.music.density, bright: D.music.padFilter.frequency.value };
+  D.env.setTimeOfDay('night', true);
   D.music.setNight(1);
   await wait(1600);
   const nightM = { density: D.music.density, bright: D.music.padFilter.frequency.value };
+  D.env.setTimeOfDay('day', true);
   D.music.setNight(0);
   return { day, nightM };
 });

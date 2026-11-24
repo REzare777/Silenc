@@ -316,7 +316,14 @@ const inside = await page.evaluate(() => {
   const total = [];
   for (const s of d.monsters.list) {
     if (s.spec.ghost) continue;         // призраки проходят сквозь стены
+    const feet = s.y;
+    const head = s.y + (s.spec.height || 1.6) * (s.baseScale || 1);
     for (const b of boxes) {
+      // надземные части стен (y0/y1) не мешают, если зверь под ними проходит
+      if (b.y0 !== undefined || b.y1 !== undefined) {
+        const blocks = (b.y1 === undefined || feet < b.y1) && (b.y0 === undefined || head > b.y0);
+        if (!blocks) continue;
+      }
       const c = Math.cos(b.ang || 0), sn = Math.sin(b.ang || 0);
       const dx = s.x - b.cx, dz = s.z - b.cz;
       const lx = c * dx - sn * dz, lz = sn * dx + c * dz;

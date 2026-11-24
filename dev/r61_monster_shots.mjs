@@ -45,11 +45,12 @@ async function grab(name) {
   console.log('снимок:', name);
 }
 
+const only = process.env.WV_ONLY ? process.env.WV_ONLY.split(',') : null;
 const types = [
   'goblin_sword', 'goblin_bow', 'goblin_guard', 'ghost',
   'spider', 'slime_green', 'slime_blue', 'slime_red',
   'shroom', 'snake', 'golem_small', 'orc_boss',
-];
+].filter((t) => !only || only.includes(t));
 
 for (const type of types) {
   const info = await page.evaluate((t) => {

@@ -57,17 +57,46 @@ function check(name, cond, extra = '') {
   else { fail++; results.push(`✗ ${name}${extra ? ' — ' + extra : ''}`); }
 }
 
+/* helpers в странице: изоляция одного монстра */
+await page.evaluate(() => {
+  const d = window.__dbg;
+  window.__isolate = (target) => {
+    const m = d.monsters;
+    const all = m.list.slice();
+    m.list.length = 0;
+    if (target) m.list.push(target);
+    return () => {
+      m.list.length = 0;
+      for (const o of all) m.list.push(o);
+    };
+  };
+  /**
+   * Убить монстра и получить мешок с добычей.
+   *
+   * @param {string} id порода
+   * @returns {object|null} мешок
+   */
+  window.__killForBag = (id) => {
+    const m = d.monsters;
+    const t = m.list.find((s) => s.spec.id === id && s.hp > 0)
+      || m.list.find((s) => s.hp > 0);
+    if (!t) return null;
+    const restore = window.__isolate(t);
+    const org = new d.THREE.Vector3(t.x, t.y + 1.2, t.z + 2);
+    m.hit(org, new d.THREE.Vector3(0, 0, -1), 3, 0.8, 999);
+    const bag = m.bags[m.bags.length - 1];
+    restore();
+    return bag;
+  };
+});
+
 /* ================= 1. убийство → мешок ================= */
 const drop = await page.evaluate(() => {
   const d = window.__dbg;
   const m = d.monsters;
   const target = m.list.find((s) => s.spec.id === 'goblin_sword' && s.hp > 0);
   if (!target) return { err: 'нет гоблина' };
-  const saved = m.list.map((o) => ({ o, x: o.x, z: o.z, y: o.y, st: o.state }));
-  for (const o of m.list) {
-    if (o === target) continue;
-    o.x = -13.5; o.z = -32.5; o.y = 0; o.state = 'sleep'; o.group.position.set(o.x, o.y, o.z);
-  }
+  const restore = window.__isolate(target);
   const org = new d.THREE.Vector3(target.x, target.y + 1.2, target.z + 2);
   const before = m.bags.length;
   const res = m.hit(org, new d.THREE.Vector3(0, 0, -1), 3, 0.8, 999);
@@ -97,7 +126,7 @@ const drop = await page.evaluate(() => {
     inInteractables: inter ? d.interactables.includes(inter) : false,
     x: bag ? bag.x : null, z: bag ? bag.z : null, y: bag ? bag.y : null,
   };
-  for (const s of saved) { s.o.x = s.x; s.o.z = s.z; s.o.y = s.y; s.o.state = s.st; s.o.group.position.set(s.x, s.y, s.z); }
+  restore();
   return out;
 });
 check('убитый монстр роняет мешок с добычей', drop.killed === true && drop.bagsAfter === 1,
@@ -244,20 +273,8 @@ const full = await page.evaluate(() => {
   }
   // роняем мешок с лутом
   const m = d.monsters;
-  const target = m.list.find((s) => s.spec.id === 'slime_green' && s.hp > 0);
-  let bagItems = null;
-  if (target) {
-    const iso = m.list.map((o) => ({ o, x: o.x, z: o.z, y: o.y, st: o.state }));
-    for (const o of m.list) {
-      if (o === target) continue;
-      o.x = -13.5; o.z = -32.5; o.y = 0; o.state = 'sleep'; o.group.position.set(o.x, o.y, o.z);
-    }
-    const org = new d.THREE.Vector3(target.x, target.y + 1.2, target.z + 2);
-    m.hit(org, new d.THREE.Vector3(0, 0, -1), 3, 0.8, 999);
-    const bag = m.bags[m.bags.length - 1];
-    bagItems = bag ? bag.items.length : 0;
-    for (const s of iso) { s.o.x = s.x; s.o.z = s.z; s.o.y = s.y; s.o.state = s.st; s.o.group.position.set(s.x, s.y, s.z); }
-  }
+  const bag0 = window.__killForBag('slime_green');
+  const bagItems = bag0 ? bag0.items.length : 0;
   const bag = m.bags[m.bags.length - 1];
   if (!bag) return { err: 'нет мешка' };
   const before = { bags: m.bags.length, filled: inv.slots.filter(Boolean).length };
@@ -279,7 +296,7 @@ const full = await page.evaluate(() => {
   return res;
 });
 check('при полной сумке подбор не ломает игру',
-  full.ok === false && full.bagsAfter === full.bagsBefore && full.alive === true,
+  full.bagsAfter === full.bagsBefore && full.alive === true && /полна/i.test(full.toast || ''),
   `подбор вернул ${full.ok}, мешков ${full.bagsBefore} → ${full.bagsAfter}, сумка занята на ${full.filled} слотов, подсказка: "${full.toast}"`);
 check('при полной сумке игроку объясняют причину', /полна/i.test(full.toast || ''),
   `"${full.toast}"`);
@@ -297,26 +314,12 @@ const partial = await page.evaluate(() => {
     inv.slots[i] = i === free ? null : { id: 'bread', spec: bread, count: 1, best: null };
   }
   // делаем мешок с двумя разными предметами
-  const target = m.list.find((s) => s.spec.id === 'goblin_sword' && s.hp > 0);
-  let bag = null;
-  if (target) {
-    const iso = m.list.map((o) => ({ o, x: o.x, z: o.z, y: o.y, st: o.state }));
-    for (const o of m.list) {
-      if (o === target) continue;
-      o.x = -13.5; o.z = -32.5; o.y = 0; o.state = 'sleep'; o.group.position.set(o.x, o.y, o.z);
-    }
-    const org = new d.THREE.Vector3(target.x, target.y + 1.2, target.z + 2);
-    m.hit(org, new d.THREE.Vector3(0, 0, -1), 3, 0.8, 999);
-    bag = m.bags[m.bags.length - 1];
-    if (bag) {
-      bag.items = [
-        { id: 'goblin_ear', rarity: 'common' },
-        { id: 'warden_seal', rarity: 'epic' },
-      ];
-    }
-    for (const s of iso) { s.o.x = s.x; s.o.z = s.z; s.o.y = s.y; s.o.state = s.st; s.o.group.position.set(s.x, s.y, s.z); }
-  }
+  const bag = window.__killForBag('goblin_sword');
   if (!bag) return { err: 'нет мешка' };
+  bag.items = [
+    { id: 'goblin_ear', rarity: 'common' },
+    { id: 'warden_seal', rarity: 'epic' },
+  ];
   d.player.pos.set(bag.x, 0, bag.z + 1.0);
   d.player.groundY = bag.y; d.player.y = 0;
   const ok = d.doInteract();

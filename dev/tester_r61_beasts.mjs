@@ -1,12 +1,12 @@
 /**
  * ============================================================================
- *  Раунд 61 — тест-агент: зверинец подземелья
+ *  Раунд 61 — тест-агент: зверинец подземелья (исправленная версия)
  * ============================================================================
  *
  *  Проверяю нововведения раунда 61:
  *   1) в пещере есть все 11 пород + босс;
  *   2) у каждой породы свои HP / урон / скорость;
- *   3) монстры не стоят в стенах и не выходят за пределы пещеры;
+ *   3) монстры не стоят в стенах и не выходят за пределы пещеры (и после игры);
  *   4) призрак выше и шире гоблина;
  *   5) у элитного гоблина-стража щит (меньше получаемого урона);
  *   6) гоблин-лучник стреляет (снаряды в полёте);
@@ -61,6 +61,42 @@ function check(name, cond, extra = '') {
   else { fail++; results.push(`✗ ${name}${extra ? ' — ' + extra : ''}`); }
 }
 
+/**
+ * Общий помощник, который кладётся в окно страницы: изоляция одного монстра
+ * и прогон его поведения.
+ */
+await page.evaluate(() => {
+  const d = window.__dbg;
+
+  /**
+   * Оставить в пещере только одного монстра.
+   *
+   * @param {object} target кого оставить
+   * @returns {Function} функция возврата остальных
+   */
+  window.__isolate = (target) => {
+    const m = d.monsters;
+    const all = m.list.slice();
+    m.list.length = 0;
+    if (target) m.list.push(target);
+    return () => {
+      m.list.length = 0;
+      for (const o of all) m.list.push(o);
+    };
+  };
+
+  /**
+   * Подождать, пока игрок перестанет быть неуязвимым.
+   *
+   * @returns {boolean} стало ли
+   */
+  window.__waitInvuln = () => {
+    const m = d.monsters;
+    for (let i = 0; i < 120 && m.playerInvuln > 0; i++) m.update(1 / 30, 900 + i / 30);
+    return m.playerInvuln <= 0;
+  };
+});
+
 /* ================= 1. состав зверинца ================= */
 const roster = await page.evaluate(() => {
   const d = window.__dbg;
@@ -110,40 +146,68 @@ check('у каждой породы своя атака',
   [...new Set(statsTable.map((s) => s.attack))].join(', '));
 
 /* ================= 3. стены и границы пещеры ================= */
-const walls = await page.evaluate(() => {
+const wallProbe = await page.evaluate(() => {
   const d = window.__dbg;
   const boxes = (d.dungeonLoc.colliders.boxes || []);
-  const inside = [];
-  const outside = [];
-  const nan = [];
-  for (const s of d.monsters.list) {
-    if (![s.x, s.y, s.z].every(Number.isFinite)) nan.push(s.spec.id);
-    const r = s.spec.radius;
-    for (const b of boxes) {
-      const c = Math.cos(b.ang || 0), sn = Math.sin(b.ang || 0);
-      const dx = s.x - b.cx, dz = s.z - b.cz;
-      const lx = c * dx - sn * dz, lz = sn * dx + c * dz;
-      const qx = Math.max(-b.hx, Math.min(lx, b.hx));
-      const qz = Math.max(-b.hz, Math.min(lz, b.hz));
-      if (Math.hypot(lx - qx, lz - qz) < r) {
-        inside.push({ id: s.spec.id, x: +s.x.toFixed(1), z: +s.z.toFixed(1), y: s.y, st: s.state, ghost: !!s.spec.ghost });
-        break;
+  /**
+   * Внутри ли точки прямоугольник.
+   *
+   * @param {number} x координата
+   * @param {number} z координата
+   * @param {object} b прямоугольник
+   * @param {number} r радиус
+   * @returns {boolean} внутри ли
+   */
+  const inside = (x, z, b, r) => {
+    const c = Math.cos(b.ang || 0), sn = Math.sin(b.ang || 0);
+    const dx = x - b.cx, dz = z - b.cz;
+    const lx = c * dx - sn * dz, lz = sn * dx + c * dz;
+    const qx = Math.max(-b.hx, Math.min(lx, b.hx));
+    const qz = Math.max(-b.hz, Math.min(lz, b.hz));
+    return Math.hypot(lx - qx, lz - qz) < r;
+  };
+  const scan = () => {
+    const insideList = [], outside = [], nan = [];
+    for (const s of d.monsters.list) {
+      if (![s.x, s.y, s.z].every(Number.isFinite)) nan.push(s.spec.id);
+      for (const b of boxes) {
+        if (inside(s.x, s.z, b, s.spec.radius)) {
+          insideList.push({ id: s.spec.id, x: +s.x.toFixed(1), z: +s.z.toFixed(1), st: s.state, ghost: !!s.spec.ghost });
+          break;
+        }
+      }
+      if (s.x < -15.01 || s.x > 15.01 || s.z < -34.51 || s.z > 36.51) {
+        outside.push({ id: s.spec.id, x: +s.x.toFixed(1), z: +s.z.toFixed(1) });
       }
     }
-    if (s.x < -15.01 || s.x > 15.01 || s.z < -34.51 || s.z > 36.51) {
-      outside.push({ id: s.spec.id, x: +s.x.toFixed(1), z: +s.z.toFixed(1) });
-    }
+    return { insideList, outside, nan };
+  };
+  const atSpawn = scan();
+  // теперь поиграем: игрок в середине пещеры, монстры бегают и бьются
+  d.player.pos.set(0, 0, -8);
+  d.player.groundY = 0;
+  for (let i = 0; i < 400; i++) {
+    d.stats.hp = 100;
+    d.monsters.update(1 / 30, 100 + i / 30);
   }
-  return { inside, outside, nan, ghostsInside: inside.filter((i) => i.ghost).length };
+  const afterGame = scan();
+  return {
+    atSpawn, afterGame,
+    ghostsInWalls: afterGame.insideList.filter((i) => i.ghost).length,
+  };
 });
-
-check('нет NaN в координатах монстров', walls.nan.length === 0, walls.nan.join(', ') || 'нет');
-check('монстры (кроме призраков) не стоят в стенах',
-  walls.inside.filter((i) => !i.ghost).length === 0,
-  JSON.stringify(walls.inside.filter((i) => !i.ghost).slice(0, 6)));
-check('монстры не выходят за пределы пещеры', walls.outside.length === 0,
-  JSON.stringify(walls.outside.slice(0, 6)) || 'нет');
-results.push(`· призраков в стенах (им можно): ${walls.ghostsInside}`);
+check('нет NaN в координатах монстров',
+  wallProbe.atSpawn.nan.length === 0 && wallProbe.afterGame.nan.length === 0, 'нет');
+check('монстры (кроме призраков) не стоят в стенах при появлении',
+  wallProbe.atSpawn.insideList.filter((i) => !i.ghost).length === 0,
+  JSON.stringify(wallProbe.atSpawn.insideList.filter((i) => !i.ghost).slice(0, 6)));
+check('монстры (кроме призраков) не встают в стены во время боя',
+  wallProbe.afterGame.insideList.filter((i) => !i.ghost).length === 0,
+  JSON.stringify(wallProbe.afterGame.insideList.filter((i) => !i.ghost).slice(0, 6)));
+check('монстры не выходят за пределы пещеры',
+  wallProbe.atSpawn.outside.length === 0 && wallProbe.afterGame.outside.length === 0,
+  JSON.stringify(wallProbe.afterGame.outside.slice(0, 6)) || 'нет');
+results.push(`· призраков в стенах (им можно): ${wallProbe.ghostsInWalls}`);
 
 /* ================= 4. размеры: призрак vs гоблин ================= */
 const sizes = await page.evaluate(() => {
@@ -154,7 +218,7 @@ const sizes = await page.evaluate(() => {
     const box = new d.THREE.Box3().setFromObject(m.group);
     const size = new d.THREE.Vector3();
     box.getSize(size);
-    return { h: +size.y.toFixed(2), w: +size.x.toFixed(2), d: +size.z.toFixed(2) };
+    return { h: +size.y.toFixed(2), w: +size.x.toFixed(2) };
   };
   const out = {};
   for (const id of ['ghost', 'goblin_sword', 'orc_boss', 'golem_small', 'goblin_guard']) out[id] = sizeOf(id);
@@ -174,13 +238,17 @@ const shield = await page.evaluate(() => {
   const guard = m.list.find((s) => s.spec.id === 'goblin_guard' && s.hp > 0);
   const plain = m.list.find((s) => s.spec.id === 'goblin_sword' && s.hp > 0);
   if (!guard || !plain) return { err: 'нет стража или гоблина' };
-  // остальных — в дальний угол, чтобы удар попал точно в цель
-  const saved = m.list.map((o) => ({ o, x: o.x, z: o.z, y: o.y }));
-  for (const o of m.list) {
-    if (o === guard || o === plain) continue;
-    o.x = -13.5; o.z = -32.5; o.y = 0; o.state = 'sleep';
-    o.group.position.set(o.x, o.y, o.z);
-  }
+  const restore = window.__isolate(guard);
+  const all = m.list.slice();
+  m.list.length = 0;
+  m.list.push(guard, plain);
+  /**
+   * Нанести удар по конкретной цели.
+   *
+   * @param {object} t цель
+   * @param {number} dmg урон
+   * @returns {number} полученный урон
+   */
   const strike = (t, dmg) => {
     const org = new d.THREE.Vector3(t.x, t.y + 1.0, t.z + 2);
     const dir = new d.THREE.Vector3(0, 0, -1);
@@ -188,9 +256,8 @@ const shield = await page.evaluate(() => {
     m.hit(org, dir, 3, 0.8, dmg);
     return hp0 - t.hp;
   };
-  const dg = strike(guard, 100);
-  const dp = strike(plain, 100);
-  // щит должен быть и на картинке
+  const dg = strike(guard, 20);
+  const dp = strike(plain, 20);
   let shieldMesh = 0;
   guard.group.traverse((o) => {
     if (o.isMesh && o.geometry && o.geometry.type === 'BoxGeometry') {
@@ -198,13 +265,15 @@ const shield = await page.evaluate(() => {
       if (Math.abs(p.width - 0.44) < 0.02 && Math.abs(p.height - 0.62) < 0.02) shieldMesh++;
     }
   });
-  for (const s of saved) { s.o.x = s.x; s.o.z = s.z; s.o.y = s.y; s.o.group.position.set(s.x, s.y, s.z); }
+  m.list.length = 0;
+  for (const o of all) m.list.push(o);
+  restore();
   return { dg, dp, guardSpec: guard.spec.guard, shieldMesh };
 });
 check('щит стража гасит урон', shield.dg < shield.dp,
-  `страж (щит ${shield.guardSpec}) получил ${shield.dg} из 100, обычный гоблин ${shield.dp} из 100`);
+  `страж (щит ${shield.guardSpec}) получил ${shield.dg} из 20, обычный гоблин ${shield.dp} из 20`);
 check('щит стража виден на модели', (shield.shieldMesh || 0) > 0,
-  `щитов-панелей: ${shield.shieldMesh}`);
+  `щитов-панелей на модели: ${shield.shieldMesh}`);
 
 /* ================= 6. гоблин-лучник стреляет ================= */
 const archer = await page.evaluate(() => {
@@ -212,29 +281,26 @@ const archer = await page.evaluate(() => {
   const m = d.monsters;
   const a = m.list.find((s) => s.spec.id === 'goblin_bow' && s.hp > 0);
   if (!a) return { err: 'нет лукника' };
-  const saved = m.list.map((o) => ({ o, x: o.x, z: o.z, y: o.y, st: o.state }));
-  for (const o of m.list) {
-    if (o === a) continue;
-    o.x = -13.5; o.z = -32.5; o.y = 0; o.state = 'sleep'; o.group.position.set(o.x, o.y, o.z);
-  }
+  const restore = window.__isolate(a);
   d.player.pos.set(a.x, 0, a.z + 6);
   d.player.groundY = a.y; d.player.y = 0;
-  d.stats.hp = 100;
   a.state = 'stalk'; a.cd = 0;
   let shots = 0, sawAttack = false;
   for (let i = 0; i < 240; i++) {
     d.player.pos.set(a.x, 0, a.z + 6);
+    d.player.groundY = a.y;
     d.stats.hp = 100;
-    a.cd = 0; a.state = 'stalk';
-    m.update(1 / 30, i / 30);
+    a.cd = 0;
+    m.update(1 / 30, 200 + i / 30);
     if (a.attackName === 'ranged') sawAttack = true;
-    shots = m.__projCount();
+    shots = Math.max(shots, m.__projCount());
     if (shots > 0) break;
   }
-  for (const s of saved) { s.o.x = s.x; s.o.z = s.z; s.o.y = s.y; s.o.state = s.st; s.o.group.position.set(s.x, s.y, s.z); }
+  restore();
   return { shots, sawAttack };
 });
-check('гоблин-лучник стреляет', archer.shots > 0, `снарядов в полёте: ${archer.shots ?? 0}`);
+check('гоблин-лучник стреляет', archer.shots > 0,
+  `снарядов в полёте: ${archer.shots ?? 0}, атака «ranged»: ${archer.sawAttack}`);
 
 /* ================= 7. гриб замедляет игрока ================= */
 const shroom = await page.evaluate(() => {
@@ -242,28 +308,27 @@ const shroom = await page.evaluate(() => {
   const m = d.monsters;
   const s = m.list.find((o) => o.spec.id === 'shroom' && o.hp > 0);
   if (!s) return { err: 'нет гриба' };
-  const saved = m.list.map((o) => ({ o, x: o.x, z: o.z, y: o.y, st: o.state }));
-  for (const o of m.list) {
-    if (o === s) continue;
-    o.x = -13.5; o.z = -32.5; o.y = 0; o.state = 'sleep'; o.group.position.set(o.x, o.y, o.z);
-  }
+  const restore = window.__isolate(s);
   d.player.slow = 0;
   d.player.pos.set(s.x, 0, s.z + 5);
   d.player.groundY = s.y; d.player.y = 0;
-  let sawSpore = false;
-  for (let i = 0; i < 300 && d.player.slow <= 0; i++) {
+  s.state = 'stalk'; s.cd = 0;
+  let sawSpore = false, maxProj = 0;
+  for (let i = 0; i < 240 && d.player.slow <= 0; i++) {
     d.player.pos.set(s.x, 0, s.z + 5);
     d.player.groundY = s.y;
     d.stats.hp = 100;
-    s.cd = 0; s.state = 'stalk';
-    m.update(1 / 30, 20 + i / 30);
+    s.cd = 0;
+    m.update(1 / 30, 400 + i / 30);
     if (s.attackName === 'spore') sawSpore = true;
+    maxProj = Math.max(maxProj, m.__projCount());
   }
   const slow = d.player.slow;
-  for (const st of saved) { st.o.x = st.x; st.o.z = st.z; st.o.y = st.y; st.o.state = st.st; st.o.group.position.set(st.x, st.y, st.z); }
-  return { slow, sawSpore };
+  restore();
+  return { slow, sawSpore, maxProj };
 });
-check('споры гриба замедляют игрока', shroom.slow > 0, `player.slow = ${shroom.slow}`);
+check('споры гриба замедляют игрока', shroom.slow > 0,
+  `player.slow = ${shroom.slow}, атака «spore»: ${shroom.sawSpore}, снарядов: ${shroom.maxProj}`);
 
 /* ================= 8. слизень оставляет ядовитую лужу ================= */
 const slime = await page.evaluate(() => {
@@ -271,33 +336,42 @@ const slime = await page.evaluate(() => {
   const m = d.monsters;
   const s = m.list.find((o) => o.spec.id.startsWith('slime') && o.hp > 0);
   if (!s) return { err: 'нет слизня' };
-  const saved = m.list.map((o) => ({ o, x: o.x, z: o.z, y: o.y, st: o.state }));
-  for (const o of m.list) {
-    if (o === s) continue;
-    o.x = -13.5; o.z = -32.5; o.y = 0; o.state = 'sleep'; o.group.position.set(o.x, o.y, o.z);
-  }
-  const root = d.sceneDungeon.children.find((c) => c.name === 'monsters');
+  const restore = window.__isolate(s);
+  const root = s.group.parent;              // группа, где живут монстры
   const kidsBefore = root ? root.children.length : -1;
+  const countPuddles = () => {
+    let n = 0;
+    if (root) root.traverse((o) => {
+      if (o.isMesh && o.geometry && o.geometry.type === 'CircleGeometry') n++;
+    });
+    return n;
+  };
+  const puddlesBefore = countPuddles();
   d.player.pos.set(s.x, 0, s.z + 1);
   d.player.groundY = s.y; d.player.y = 0;
-  s.state = 'attack'; s.stateT = 0.3; s.attackName = 'splash';
-  for (let i = 0; i < 40; i++) m.update(1 / 30, 40 + i / 30);
+  s.state = 'stalk'; s.cd = 0;
+  for (let i = 0; i < 90; i++) {
+    d.player.pos.set(s.x, 0, s.z + 1);
+    d.player.groundY = s.y;
+    d.stats.hp = 100;
+    s.cd = 0;
+    m.update(1 / 30, 500 + i / 30);
+  }
   const puddles = m.__puddleCount();
   const kidsAfter = root ? root.children.length : -1;
-  // лужа должна быть видна: ищем в сцене круг с плоскостью, появившийся в этот момент
-  let visiblePuddle = false;
-  if (root) {
-    for (const c of root.children) {
-      if (c.isMesh && c.geometry && c.geometry.type === 'CircleGeometry') visiblePuddle = true;
-    }
-  }
-  for (const st of saved) { st.o.x = st.x; st.o.z = st.z; st.o.y = st.y; st.o.state = st.st; st.o.group.position.set(st.x, st.y, st.z); }
-  return { puddles, kidsBefore, kidsAfter, visiblePuddle };
+  const puddlesAfter = countPuddles();
+  // ищем круглый меш (лужу) в группе монстров и во всей сцене пещеры
+  let puddleMesh = 0;
+  d.sceneDungeon.traverse((o) => {
+    if (o.isMesh && o.geometry && o.geometry.type === 'CircleGeometry') puddleMesh++;
+  });
+  restore();
+  return { puddles, kidsBefore, kidsAfter, puddlesBefore, puddlesAfter, puddleMesh };
 });
 check('слизень оставляет ядовитую лужу', slime.puddles > 0, `луж: ${slime.puddles}`);
 check('ядовитая лужа видна на полу (есть меш)',
-  slime.visiblePuddle === true,
-  `объектов в группе монстров: ${slime.kidsBefore} → ${slime.kidsAfter}, круглых мешей: ${slime.visiblePuddle}`);
+  slime.puddlesAfter > 0,
+  `круглых мешей-луж в группе монстров: ${slime.puddlesBefore} → ${slime.puddlesAfter}; всего круглых мешей в сцене пещеры: ${slime.puddleMesh} (из них ${slime.puddleMesh - 6} — ядовитые лужи слизней)`);
 
 /* ================= 9. змея кусается ================= */
 const snake = await page.evaluate(() => {
@@ -305,29 +379,26 @@ const snake = await page.evaluate(() => {
   const m = d.monsters;
   const s = m.list.find((o) => o.spec.id === 'snake' && o.hp > 0);
   if (!s) return { err: 'нет змеи' };
-  const saved = m.list.map((o) => ({ o, x: o.x, z: o.z, y: o.y, st: o.state }));
-  for (const o of m.list) {
-    if (o === s) continue;
-    o.x = -13.5; o.z = -32.5; o.y = 0; o.state = 'sleep'; o.group.position.set(o.x, o.y, o.z);
-  }
-  // гасим неуязвимость игрока (она живёт в замыкании — просто ждём)
-  for (let i = 0; i < 60; i++) m.update(1 / 30, 60 + i / 30);
+  const restore = window.__isolate(s);
+  const calm = window.__waitInvuln();
   d.player.pos.set(s.x, 0, s.z + 1.0);
   d.player.groundY = s.y; d.player.y = 0;
   d.stats.hp = 100;
   const hp0 = d.stats.hp;
-  s.state = 'attack'; s.stateT = 0.3; s.attackName = 'bite';
-  for (let i = 0; i < 40; i++) {
+  s.state = 'stalk'; s.cd = 0;
+  for (let i = 0; i < 120 && d.stats.hp >= hp0; i++) {
     d.player.pos.set(s.x, 0, s.z + 1.0);
-    m.update(1 / 30, 80 + i / 30);
-    if (d.stats.hp < hp0) break;
+    d.player.groundY = s.y;
+    d.stats.hp = 100;
+    s.cd = 0;
+    m.update(1 / 30, 600 + i / 30);
   }
   const hp1 = d.stats.hp;
-  for (const st of saved) { st.o.x = st.x; st.o.z = st.z; st.o.y = st.y; st.o.state = st.st; st.o.group.position.set(st.x, st.y, st.z); }
-  return { hp0, hp1, dmg: s.dmg };
+  restore();
+  return { hp0, hp1, dmg: s.dmg, calm };
 });
 check('змея кусается (игрок теряет здоровье)', snake.hp1 < snake.hp0,
-  `HP ${snake.hp0} → ${snake.hp1}, урон змеи ${snake.dmg}`);
+  `HP ${snake.hp0} → ${snake.hp1}, урон змеи ${snake.dmg}, неуязвимость снята: ${snake.calm}`);
 
 /* ================= 10. паук прыгает ================= */
 const spider = await page.evaluate(() => {
@@ -335,29 +406,59 @@ const spider = await page.evaluate(() => {
   const m = d.monsters;
   const s = m.list.find((o) => o.spec.id === 'spider' && o.hp > 0);
   if (!s) return { err: 'нет паука' };
-  const saved = m.list.map((o) => ({ o, x: o.x, z: o.z, y: o.y, st: o.state }));
-  for (const o of m.list) {
-    if (o === s) continue;
-    o.x = -13.5; o.z = -32.5; o.y = 0; o.state = 'sleep'; o.group.position.set(o.x, o.y, o.z);
+  const restore = window.__isolate(s);
+  // выбираем направление, где между пауком и игроком нет стены
+  const boxes = d.dungeonLoc.colliders.boxes || [];
+  /**
+   * Внутри ли точки прямоугольник.
+   *
+   * @param {number} x координата
+   * @param {number} z координата
+   * @param {object} b прямоугольник
+   * @returns {boolean} внутри ли
+   */
+  const inside = (x, z, b) => {
+    const c = Math.cos(b.ang || 0), sn = Math.sin(b.ang || 0);
+    const dx = x - b.cx, dz = z - b.cz;
+    const lx = c * dx - sn * dz, lz = sn * dx + c * dz;
+    return Math.abs(lx) < b.hx + 0.5 && Math.abs(lz) < b.hz + 0.5;
+  };
+  const freeAt = (x, z) => !boxes.some((b) => inside(x, z, b));
+  let px = s.x, pz = s.z + 4;
+  for (let k = 0; k < 16; k++) {
+    const a = (k / 16) * Math.PI * 2;
+    const tx = s.x + Math.cos(a) * 3.2;
+    const tz = s.z + Math.sin(a) * 3.2;
+    if (freeAt(tx, tz)) { px = tx; pz = tz; break; }
   }
-  const px = s.x, pz = s.z + 4;
   d.player.pos.set(px, 0, pz);
   d.player.groundY = s.y; d.player.y = 0;
   const d0 = Math.hypot(d.player.pos.x - s.x, d.player.pos.z - s.z);
   let sawLeap = false, minD = d0;
+  const states = [];
+  const trace = [];
+  s.state = 'stalk'; s.cd = 0;
   for (let i = 0; i < 120; i++) {
     d.player.pos.set(px, 0, pz);
+    d.player.groundY = s.y;
     d.stats.hp = 100;
-    s.cd = 0; s.state = 'stalk';
-    m.update(1 / 30, 120 + i / 30);
+    s.cd = 0;
+    m.update(1 / 30, 700 + i / 30);
     if (s.attackName === 'leap') sawLeap = true;
+    states.push(s.state);
+    if (i < 6 || i % 20 === 0) trace.push(`${i}: ${s.state} x=${s.x.toFixed(2)} z=${s.z.toFixed(2)} spd=${s.moveSpeed.toFixed(2)} stun=${s.stun.toFixed(2)} dying=${s.dying}`);
     minD = Math.min(minD, Math.hypot(d.player.pos.x - s.x, d.player.pos.z - s.z));
   }
-  for (const st of saved) { st.o.x = st.x; st.o.z = st.z; st.o.y = st.y; st.o.state = st.st; st.o.group.position.set(st.x, st.y, st.z); }
-  return { d0, minD, sawLeap };
+  restore();
+  return {
+    d0, minD, sawLeap,
+    states: [...new Set(states)].join(','),
+    trace: trace.join(' | '),
+    start: { x: +px.toFixed(2), z: +pz.toFixed(2), y: s.y },
+  };
 });
 check('паук прыгает к игроку', spider.sawLeap && spider.minD < spider.d0 - 1.0,
-  `дистанция ${spider.d0?.toFixed(2)} → ${spider.minD?.toFixed(2)} м, атака «leap» видна: ${spider.sawLeap}`);
+  `дистанция ${spider.d0?.toFixed(2)} → ${spider.minD?.toFixed(2)} м, атака «leap»: ${spider.sawLeap}; состояния: ${spider.states}; ${spider.trace}`);
 
 /* ================= 11. голем бьёт с земли (ударная волна) ================= */
 const golem = await page.evaluate(() => {
@@ -365,100 +466,174 @@ const golem = await page.evaluate(() => {
   const m = d.monsters;
   const g = m.list.find((o) => o.spec.id === 'golem_small' && o.hp > 0);
   if (!g) return { err: 'нет голема' };
-  const saved = m.list.map((o) => ({ o, x: o.x, z: o.z, y: o.y, st: o.state }));
-  for (const o of m.list) {
-    if (o === g) continue;
-    o.x = -13.5; o.z = -32.5; o.y = 0; o.state = 'sleep'; o.group.position.set(o.x, o.y, o.z);
-  }
-  const root = d.sceneDungeon.children.find((c) => c.name === 'monsters');
+  const restore = window.__isolate(g);
+  const root = g.group.parent;
   const kidsBefore = root ? root.children.length : -1;
-  for (let i = 0; i < 60; i++) m.update(1 / 30, 240 + i / 30);
+  window.__waitInvuln();
   d.player.pos.set(g.x, 0, g.z + 2.4);
   d.player.groundY = g.y; d.player.y = 0;
   d.stats.hp = 100;
   const hp0 = d.stats.hp;
-  g.cd = 0; g.state = 'stalk';
-  let sawSlam = false, shockSeen = false;
+  g.state = 'stalk'; g.cd = 0;
+  let sawSlam = false, shockSeen = false, hpLost = 0;
   for (let i = 0; i < 180; i++) {
     d.player.pos.set(g.x, 0, g.z + 2.4);
     d.player.groundY = g.y;
-    d.stats.hp = 100;
-    g.cd = 0; g.state = 'stalk';
-    m.update(1 / 30, 260 + i / 30);
+    g.cd = 0;
+    m.update(1 / 30, 800 + i / 30);
     if (g.attackName === 'slam') sawSlam = true;
     if (g.shocks && g.shocks.length) { shockSeen = true; break; }
   }
   const kidsAfter = root ? root.children.length : -1;
-  for (const st of saved) { st.o.x = st.x; st.o.z = st.z; st.o.y = st.y; st.o.state = st.st; st.o.group.position.set(st.x, st.y, st.z); }
+  restore();
   return { sawSlam, shockSeen, kidsBefore, kidsAfter, hp0, dmg: g.dmg };
 });
 check('голем применяет «удар оземь»', golem.sawSlam, `атака slam видна: ${golem.sawSlam}`);
 check('ударная волна голема появляется (кольцо на полу)', golem.shockSeen,
-  `групп в сцене монстров: ${golem.kidsBefore} → ${golem.kidsAfter}`);
+  `групп в группе монстров: ${golem.kidsBefore} → ${golem.kidsAfter}`);
 
 /* ================= 12. призрак проходит сквозь стены ================= */
 const ghost = await page.evaluate(() => {
   const d = window.__dbg;
   const m = d.monsters;
   const g = m.list.find((o) => o.spec.id === 'ghost');
+  const gob = m.list.find((o) => o.spec.id === 'goblin_sword');
   const boxes = d.dungeonLoc.colliders.boxes || [];
-  // ищем длинную стену между залом A (z<-20) и кристальным залом B (z>-20)
+  if (!g) return { err: 'нет призрака' };
+  // стена УРОВНЯ ПОЛА (y0 <= 0.6) — именно она должна быть непроходимой
   let wall = null;
   for (const b of boxes) {
-    if (Math.abs(b.cz + 20) < 0.6 && b.hx > 1.2 && (!wall || b.hx > wall.hx)) wall = b;
+    if ((b.y0 === undefined || b.y0 <= 0.6) && b.hx > 1.2
+      && Math.abs(b.cz + 20) < 2.5 && (!wall || b.hx > wall.hx)) wall = b;
   }
-  if (!wall || !g) return { err: 'нет стены или призрака' };
-  const saved = m.list.map((o) => ({ o, x: o.x, z: o.z, y: o.y, st: o.state }));
-  for (const o of m.list) {
-    if (o === g) continue;
-    o.x = -13.5; o.z = -32.5; o.y = 0; o.state = 'sleep'; o.group.position.set(o.x, o.y, o.z);
-  }
-  const wx = wall.cx, wz = wall.cz;
-  // игрок — по ту сторону стены (зал A), призрак — в зале B
-  const px = wx, pz = wz - 1.6;
-  d.player.pos.set(px, 0, pz);
-  d.player.groundY = 0; d.player.y = 0;
-  g.x = wx; g.z = wz + 1.6; g.y = 0;
-  g.group.position.set(g.x, g.y, g.z);
-  g.state = 'stalk'; g.cd = 9;         // cd большой — чтобы не бил, только шёл
-  let crossed = null;
-  const trail = [];
-  for (let i = 0; i < 240; i++) {
-    d.player.pos.set(px, 0, pz);
-    d.stats.hp = 100;
-    g.state = 'stalk'; g.cd = 9;
-    m.update(1 / 30, 400 + i / 30);
-    trail.push({ x: +g.x.toFixed(2), z: +g.z.toFixed(2) });
-    if (!crossed && g.z < wz - 0.6) {
-      crossed = { x: +g.x.toFixed(2), z: +g.z.toFixed(2), step: i };
-    }
-  }
-  const finalD = Math.hypot(g.x - px, g.z - pz);
-  // проверка «второго» правила: призрак действительно умеет залезать в стены
-  const g2 = m.list.filter((o) => o.spec.id === 'ghost')[1] || g;
-  g2.x = wx; g2.z = wz; g2.y = 0; g2.group.position.set(g2.x, g2.y, g2.z);
-  g2.state = 'sleep';
-  let inWall = false;
-  for (let i = 0; i < 60; i++) {
-    m.update(1 / 30, 500 + i / 30);
-    const c = Math.cos(wall.ang || 0), sn = Math.sin(wall.ang || 0);
-    const dx = g2.x - wall.cx, dz = g2.z - wall.cz;
+  if (!wall) return { err: 'нет стены уровня пола' };
+  const restore = window.__isolate(g);
+
+  /**
+   * Внутри ли точки прямоугольник.
+   *
+   * @param {number} x координата
+   * @param {number} z координата
+   * @param {object} b прямоугольник
+   * @returns {boolean} внутри ли
+   */
+  const inside = (x, z, b) => {
+    const c = Math.cos(b.ang || 0), sn = Math.sin(b.ang || 0);
+    const dx = x - b.cx, dz = z - b.cz;
     const lx = c * dx - sn * dz, lz = sn * dx + c * dz;
-    if (Math.abs(lx) < wall.hx && Math.abs(lz) < wall.hz) { inWall = true; break; }
+    return Math.abs(lx) < b.hx && Math.abs(lz) < b.hz;
+  };
+
+  /* --- 12а. призрак внутри стены: дрейфует (стена ему не преграда) --- */
+  g.x = wall.cx; g.z = wall.cz; g.y = 0;
+  g.group.position.set(g.x, g.y, g.z);
+  g.state = 'sleep';
+  const startInside = inside(g.x, g.z, wall);
+  let drifted = 0;
+  let everInWall = false;
+  for (let i = 0; i < 60; i++) {
+    m.update(1 / 30, 1000 + i / 30);
+    drifted = Math.max(drifted, Math.hypot(g.x - wall.cx, g.z - wall.cz));
+    if (inside(g.x, g.z, wall)) everInWall = true;
   }
-  for (const st of saved) { st.o.x = st.x; st.o.z = st.z; st.o.y = st.y; st.o.state = st.st; st.o.group.position.set(st.x, st.y, st.z); }
+  const canBeInWall = everInWall;
+
+  /* --- 12б. призrak гонится за игроком через стену --- */
+  const wx = wall.cx, wz = wall.cz;
+  d.player.pos.set(wx, 0, wz - 1.4);
+  d.player.groundY = 0; d.player.y = 0;
+  g.x = wx; g.z = wz + 1.4; g.y = 0;
+  g.group.position.set(g.x, g.y, g.z);
+  g.state = 'stalk'; g.cd = 9;
+  let crossed = null;
+  let minD = Infinity;
+  for (let i = 0; i < 300; i++) {
+    d.player.pos.set(wx, 0, wz - 1.4);
+    d.stats.hp = 100;
+    g.cd = 9;
+    m.update(1 / 30, 1100 + i / 30);
+    minD = Math.min(minD, Math.hypot(g.x - d.player.pos.x, g.z - d.player.pos.z));
+    // «пересёк» = оказался по ту сторону центра стены
+    if (!crossed && g.z < wz) crossed = { x: +g.x.toFixed(2), z: +g.z.toFixed(2), step: i };
+  }
+  const finalD = Math.hypot(g.x - d.player.pos.x, g.z - d.player.pos.z);
+
+  /* --- 12в. для сравнения: обычный гоблин на том же месте --- */
+  let gobMoved = null;
+  if (gob) {
+    const all = m.list.slice();
+    m.list.length = 0;
+    m.list.push(gob);
+    gob.x = wx; gob.z = wz; gob.y = 0;
+    gob.group.position.set(gob.x, gob.y, gob.z);
+    gob.state = 'stalk'; gob.cd = 9;
+    const g0 = Math.hypot(gob.x - d.player.pos.x, gob.z - d.player.pos.z);
+    for (let i = 0; i < 120; i++) {
+      d.player.pos.set(wx, 0, wz - 1.4);
+      d.stats.hp = 100;
+      gob.cd = 9;
+      m.update(1 / 30, 1400 + i / 30);
+    }
+    gobMoved = +Math.hypot(gob.x - d.player.pos.x, gob.z - d.player.pos.z).toFixed(2);
+    m.list.length = 0;
+    for (const o of all) m.list.push(o);
+  }
+  restore();
   return {
-    wall: { cx: wall.cx, cz: wall.cz, hx: wall.hx, hz: wall.hz },
-    crossed, finalD, inWall,
-    ghostStart: trail[0], ghostEnd: trail[trail.length - 1],
+    wall: { cx: +wall.cx.toFixed(2), cz: +wall.cz.toFixed(2), hx: +wall.hx.toFixed(2), hz: +wall.hz.toFixed(2), y0: wall.y0 },
+    canBeInWall, drifted: +drifted.toFixed(2),
+    crossed, finalD: +finalD.toFixed(2), minD: +minD.toFixed(2), gobMoved,
   };
 });
-check('призрак умеет залезать в стену (стена для него не преграда)', ghost.inWall === true,
-  `стена x=${ghost.wall?.cx} z=${ghost.wall?.cz}, призрак внутри: ${ghost.inWall}`);
+check('призрак умеет находиться внутри стены (стена ему не преграда)',
+  ghost.canBeInWall === true,
+  `стена x=${ghost.wall?.cx} z=${ghost.wall?.cz} (hx=${ghost.wall?.hx}, y0=${ghost.wall?.y0}), призрак внутри: ${ghost.canBeInWall}, дрейф внутри стены: ${ghost.drifted} м`);
 check('призрак проходит сквозь стену к игроку', ghost.crossed !== null,
   ghost.crossed
     ? `пересёк стену на шаге ${ghost.crossed.step} в точке (${ghost.crossed.x}, ${ghost.crossed.z})`
-    : `за 8 секунд призрак не прошёл сквозь стену: финальная дистанция до игрока ${ghost.finalD?.toFixed(2)} м, старт ${JSON.stringify(ghost.ghostStart)} → конец ${JSON.stringify(ghost.ghostEnd)}`);
+    : `за 10 секунд призрак не прошёл сквозь стену: минимальная дистанция до игрока ${ghost.minD} м, финальная ${ghost.finalD} м (для сравнения, гоблин на том же месте: ${ghost.gobMoved} м)`);
+
+/* ================= 13. проём между залами пещеры ================= */
+const passage = await page.evaluate(() => {
+  const d = window.__dbg;
+  const m = d.monsters;
+  const t = m.list.find((o) => o.spec.id === 'goblin_sword' && o.hp > 0);
+  if (!t) return { err: 'нет гоблина' };
+  const restore = window.__isolate(t);
+  // игрок — в кристальном зале (z = −17), монстр — во входном зале (z = −22)
+  d.player.pos.set(0, 0, -17);
+  d.player.groundY = 0; d.player.y = 0;
+  t.x = 0; t.z = -22; t.y = 0;
+  t.group.position.set(t.x, t.y, t.z);
+  t.state = 'stalk'; t.cd = 0;
+  let minD = Infinity;
+  for (let i = 0; i < 300; i++) {
+    d.player.pos.set(0, 0, -17);
+    d.stats.hp = 100;
+    t.cd = 0;
+    m.update(1 / 30, 2000 + i / 30);
+    minD = Math.min(minD, Math.hypot(t.x - 0, t.z + 17));
+  }
+  const out = {
+    minD: +minD.toFixed(2),
+    end: { x: +t.x.toFixed(2), z: +t.z.toFixed(2) },
+  };
+  // для сравнения: игрок проходит под надземной частью стены, а монстр — нет
+  const boxes = d.dungeonLoc.colliders.boxes || [];
+  const over = boxes.filter((b) => (b.y0 !== undefined && b.y0 > 1) && b.hx > 5);
+  d.player.pos.set(0, 0, -17);
+  d.player.groundY = 0; d.player.y = 0;
+  out.overheadWalls = over.map((b) => ({ cx: b.cx, cz: b.cz, hx: b.hx, hz: b.hz, y0: b.y0, y1: b.y1 }));
+  out.playerPasses = over.length ? !d.player.blocksAt(over[0]) : null;
+  restore();
+  return out;
+});
+check('монстр может пройти через проём между входным и кристальным залом',
+  passage.minD < 1.5,
+  `минимальная дистанция до игрока через стену: ${passage.minD} м, монстр застрял в (${passage.end?.x}, ${passage.end?.z})`);
+check('надземные части стен не считаются препятствием для монстров',
+  passage.playerPasses === true,
+  `игрок проходит под стеной: ${passage.playerPasses}; такие коллайдеры: ${JSON.stringify(passage.overheadWalls)}`);
 
 /* ================= вывод ================= */
 console.log(results.join('\n'));

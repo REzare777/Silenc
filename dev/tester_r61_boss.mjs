@@ -58,6 +58,21 @@ function check(name, cond, extra = '') {
 }
 
 /* ================= 1. полоска босса ================= */
+// будим босса: полоска показывается только когда босс жив и не спит
+await page.evaluate(() => {
+  const d = window.__dbg;
+  const b = d.monsters.getBoss() || d.monsters.list.find((s) => s.spec.id === 'orc_boss');
+  if (!b) return;
+  d.player.pos.set(b.x + 6, b.y, b.z);
+  d.player.groundY = b.y;
+  d.player.y = 0;
+  b.state = 'stalk';
+  d.stats.hp = 100;
+});
+// ждём, пока игра отработает кадр (SwiftShader рисует медленно)
+await page.waitForFunction(() => (window.__frames || 0) > 0, null, { timeout: 120000 });
+await page.waitForTimeout(2500);
+
 const bar = await page.evaluate(() => {
   const d = window.__dbg;
   const bb = document.getElementById('bossBar');
@@ -89,7 +104,7 @@ const bar = await page.evaluate(() => {
   };
 });
 check('полоска босса показана (класс on)', bar.on === true, `display: ${bar.display}`);
-check('полоска босса сверху экрана', bar.barRect.y >= 0 && bar.barRect.y < 60,
+check('полоска босса сверху экрана', bar.barRect.y >= 0 && bar.barRect.y < 100,
   `rect: x=${bar.barRect.x} y=${bar.barRect.y} w=${bar.barRect.w} h=${bar.barRect.h}`);
 check('в полоске — имя босса', /гримм/i.test(bar.name), `"${bar.name}"`);
 check('заполнение полоски — transform scaleX', /scaleX\(/.test(bar.fill), `"${bar.fill}"`);
@@ -180,20 +195,18 @@ const effects = await page.evaluate(() => {
   const force = (roll, dist) => {
     const b = m.getBoss() || m.list.find((s) => s.spec.id === 'orc_boss');
     if (!b) return { err: 'нет босса' };
-    // остальных зверей убираем, чтобы они не мешали
-    const saved = m.list.map((o) => ({ o, x: o.x, z: o.z, y: o.y, st: o.state }));
-    for (const o of m.list) {
-      if (o === b) continue;
-      o.x = -13.5; o.z = -32.5; o.y = 0; o.state = 'sleep'; o.group.position.set(o.x, o.y, o.z);
-    }
+    // остальных зверей убираем из списка, чтобы они не мешали
+    const saved = m.list.slice();
+    m.list.length = 0;
+    m.list.push(b);
     const root = d.sceneDungeon.children.find((c) => c.name === 'monsters');
     const kidsBefore = root ? root.children.length : 0;
     const monstersBefore = m.list.length;
-    const d0 = Math.hypot(b.x - d.player.pos.x, b.z - d.player.pos.z);
     b.hp = b.maxHp; b.veil = 6; b.dying = 0; b.stun = 0; b.cd = 0;
     b.state = 'stalk';
     b.x = 0; b.z = 28; b.y = -4.6; b.group.position.set(b.x, b.y, b.z);
     d.player.pos.set(b.x + dist, b.y, b.z);
+    const d0 = Math.hypot(b.x - d.player.pos.x, b.z - d.player.pos.z);
     d.player.groundY = b.y;
     const toastEl = document.getElementById('toast');
     const toastBefore = toastEl.textContent;
@@ -214,11 +227,13 @@ const effects = await page.evaluate(() => {
     Math.random = realRandom;
     const kidsAfter = root ? root.children.length : 0;
     const toastAfter = toastEl.textContent;
-    for (const s of saved) { s.o.x = s.x; s.o.z = s.z; s.o.y = s.y; s.o.state = s.st; s.o.group.position.set(s.x, s.y, s.z); }
+    const monstersAfter = m.list.length;
+    m.list.length = 0;
+    for (const o of saved) m.list.push(o);
     return {
       name, d0: +d0.toFixed(2), minDist: +minDist.toFixed(2),
       hpDrop, kidsBefore, kidsAfter,
-      monstersBefore, monstersAfter: m.list.length,
+      monstersBefore, monstersAfter,
       shocks: b.shocks ? b.shocks.length : 0,
       toastChanged: toastAfter !== toastBefore,
       toast: toastAfter,
