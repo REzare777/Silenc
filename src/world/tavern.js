@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Builder, box, cyl, sphere, cone, torus, mat } from './geo.js';
 import { makeGlow, signMesh } from './props.js';
+import { TAVERN_WINDOWS } from './tavernPlan.js';
 
 /* ------------------------------------------------------------------
  *  «Уставший вепрь» — таверна: отдельная локация (интерьер)
@@ -97,16 +98,12 @@ export function buildTavernInterior(M, glowTex) {
   // ---- южная стена (-z): дверь, два окна зала и три окна галереи ----
   // Проёмы режут стену по сетке: сначала по X, потом по Y — так окна
   // второго этажа могут стоять над окнами первого и над дверью.
+  // Положение окон — из общего плана (world/tavernPlan.js), чтобы они
+  // совпадали с фасадом: одна и та же величина с обеих сторон.
   {
     const z = -hd + WALL / 2;
     const DW = 0.85, DH = 2.6;                     // половина ширины двери, высота двери
-    const wins = [
-      { x: -3.5, w: 1.3, h: 1.7, y: 1.5 },        // нижний ряд зала
-      { x: 3.5, w: 1.3, h: 1.7, y: 1.5 },
-      { x: -2.6, w: 0.95, h: 1.1, y: 5.09 },      // окна галереи (второй этаж)
-      { x: 0, w: 0.95, h: 1.1, y: 5.09 },
-      { x: 2.6, w: 0.95, h: 1.1, y: 5.09 },
-    ];
+    const wins = [...TAVERN_WINDOWS.southLow, ...TAVERN_WINDOWS.southHigh];
     // проёмы: дверь и все окна
     const holes = [
       { x0: -DW, x1: DW, y0: 0, y1: DH, door: true },
@@ -167,11 +164,7 @@ export function buildTavernInterior(M, glowTex) {
   // и стоят как раз над свободным проходом к стене.
   {
     const z = hd - WALL / 2;
-    const wins = [
-      { x: -1.15, w: 1.2, h: 1.5, y: 5.5 },
-      { x: 2.25, w: 1.2, h: 1.5, y: 5.5 },
-      { x: 5.5, w: 1.2, h: 1.5, y: 5.5 },
-    ];
+    const wins = TAVERN_WINDOWS.north;
     const seg = (x0, x1, y0, y1) => B.put(wallKey, x1 - x0, y1 - y0, WALL,
       (x0 + x1) / 2, (y0 + y1) / 2, z, 1.9);
     let cursor = -hw;
@@ -214,7 +207,7 @@ export function buildTavernInterior(M, glowTex) {
   // ---- восточная стена (+x): полка за баром, окно высоко, проём сеней ----
   {
     const x = hw - WALL / 2;
-    const w = { z: -3.6, w: 1.2, h: 1.5, y: 5.2 };
+    const w = TAVERN_WINDOWS.east;
     const seg = (z0, z1, y0, y1) => B.put(wallKey, WALL, y1 - y0, z1 - z0,
       x, (y0 + y1) / 2, (z0 + z1) / 2, 1.9);
     // проём хозяйственной двери (в сени) — настоящий passage
@@ -1680,19 +1673,23 @@ export function buildTavernInterior(M, glowTex) {
     const southZ = -hd + WALL + 0.09;      // внутренняя плоскость южной стены
     const northZ = hd - WALL - 0.09;
     const eastX = hw - WALL - 0.09;
-    // южные окна (стена -z)
-    curtain(-3.5, 1.5, southZ, 1.3, 1.7, 0, 'fabric', 'x');
-    curtain(3.5, 1.5, southZ, 1.3, 1.7, 0, 'fabric2', 'x');
-    // окна галереи — те же проёмы, что и на фасаде
-    curtain(-2.6, 5.09, southZ, 0.95, 1.1, 0, 'fabric2', 'x');
-    curtain(0, 5.09, southZ, 0.95, 1.1, 0, 'fabric', 'x');
-    curtain(2.6, 5.09, southZ, 0.95, 1.1, 0, 'fabric2', 'x');
+    // южные окна (стена -z) — шторы вешаются по плану окон, чтобы полотно
+    // всегда стояло точно в своём проёме
+    const southWin = [...TAVERN_WINDOWS.southLow, ...TAVERN_WINDOWS.southHigh];
+    ['fabric', 'fabric2', 'fabric2', 'fabric', 'fabric2'].forEach((key, i) => {
+      const win = southWin[i];
+      curtain(win.x, win.y, southZ, win.w, win.h, 0, key, 'x');
+    });
     // северные окна (стена +z) — по одному в каждой нише-комнате
-    curtain(-1.15, 5.5, northZ, 1.2, 1.5, Math.PI, 'fabric2', 'x');
-    curtain(2.25, 5.5, northZ, 1.2, 1.5, Math.PI, 'fabric', 'x');
-    curtain(5.5, 5.5, northZ, 1.2, 1.5, Math.PI, 'fabric2', 'x');
+    ['fabric2', 'fabric', 'fabric2'].forEach((key, i) => {
+      const win = TAVERN_WINDOWS.north[i];
+      curtain(win.x, win.y, northZ, win.w, win.h, Math.PI, key, 'x');
+    });
     // восточное окно (стена +x)
-    curtain(eastX, 5.2, -3.6, 1.2, 1.5, -Math.PI / 2, 'fabric', 'z');
+    {
+      const win = TAVERN_WINDOWS.east;
+      curtain(eastX, win.y, win.z, win.w, win.h, -Math.PI / 2, 'fabric', 'z');
+    }
   }
 
   /* ================================================================

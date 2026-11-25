@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Builder, box, cyl, sphere, cone, torus, gableEnds, hipRoof, roofShell, mat, plane } from './geo.js';
 import { signMesh } from './props.js';
+import { TAVERN_WINDOWS, TAVERN_FLOOR_Y } from './tavernPlan.js';
 
 /* ------------------------------------------------------------------ *
  *  Здания долины
@@ -554,7 +555,9 @@ export function tavern(M, opts = {}) {
   // «утопленным»: соседние дома стоят на цоколе 0.56 м, а трактир был ниже
   // их и будто тонул в земле. Теперь 0.62 м — он выше домов, и вход
   // разбит на две ступени (по 0.31 м), чтобы в него можно было войти.
-  const BASE = 0.62;
+  // Высота взята из плана окон: цоколь — это и есть разница между
+  // полом зала и землёй, на которую поднимаются все окна снаружи.
+  const BASE = TAVERN_FLOOR_Y;
   const STEP = BASE / 2;      // ступень у крыльца
 
   B.put('stone', w + 0.3, BASE, d + 0.3, 0, BASE / 2, 0, 1.1);
@@ -579,17 +582,26 @@ export function tavern(M, opts = {}) {
   B.put('stone', 2.8, BASE, 0.9, dx, BASE / 2, -d / 2 - 0.55);
   B.put('stone', 2.8, STEP, 0.8, dx, STEP / 2, -d / 2 - 1.4);
 
-  /* Окна фасада — те же места, что и окна внутри (см. world/tavern.js):
-     • юг (вход):  x = ±3.5,  y = 1.5   — нижний ряд зала;
-     • юг (галерея): x = -2.6 / 0 / 2.6, y = 5.09 — окна второго этажа;
-     • север:      x = -1.15 / 2.25 / 5.5, y = 5.5 — по одному на каждую нишу;
-     • восток:     z = -3.6, y = 5.2     — высокое окно над стойкой.
+  /* Окна фасада — по общему плану окон (world/tavernPlan.js).
+     Высота снаружи = высота проёма внутри + цоколь BASE: пол зала поднят
+     на цоколь, и если считать окно от земли, то снаружи и изнутри это
+     будут разные окна. Раньше так и вышло: нижние окна упирались в пол
+     крыльца, а северные и восточное были на полметра ниже своих проёмов.
      На западной стене вместо окон — труба очага и труба кухонной печи. */
-  const upY = BASE + wallH - 1.75;           // верхний ряд — под карнизом второго этажа
-  for (const fx of [-3.5, 3.5]) addWindow(B, fx, 1.5, -d / 2 - 0.02, 1.3, 1.7, 'z', true);
-  for (const fx of [-2.6, 0, 2.6]) addWindow(B, fx, upY, -d / 2 - 0.02, 0.95, 1.1, 'z', true);
-  for (const fx of [-1.15, 2.25, 5.5]) addWindow(B, fx, 5.5, d / 2 + 0.02, 1.2, 1.5, 'z', true);
-  addWindow(B, w / 2 + 0.02, 5.2, -3.6, 1.2, 1.5, 'x', true);
+  const fy = (win) => BASE + win.y;
+  for (const win of TAVERN_WINDOWS.southLow) {
+    addWindow(B, win.x, fy(win), -d / 2 - 0.02, win.w, win.h, 'z', true);
+  }
+  for (const win of TAVERN_WINDOWS.southHigh) {
+    addWindow(B, win.x, fy(win), -d / 2 - 0.02, win.w, win.h, 'z', true);
+  }
+  for (const win of TAVERN_WINDOWS.north) {
+    addWindow(B, win.x, fy(win), d / 2 + 0.02, win.w, win.h, 'z', true);
+  }
+  {
+    const win = TAVERN_WINDOWS.east;
+    addWindow(B, w / 2 + 0.02, fy(win), win.z, win.w, win.h, 'x', true);
+  }
 
   // труба очага (западная стена) и кухонной печи (северная) — как в интерьере
   B.put('stoneDark', 1.5, 2.2, 1.1, -w / 2 + 0.42, BASE + wallH - 1.1, 0, 1.3);

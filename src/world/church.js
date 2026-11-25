@@ -39,10 +39,12 @@ const STAIR_IN = 0.56;// внутренний радиус ступеней ви
 const STAIR_OUT = 2.5;// наружный радиус ступеней
 const TURNS = 3;      // полных витка лестницы
 const NAVE_DOOR_W = 1.7;  // ширина двери звонарной наружу (сзади храма)
-const ARK_W = 0.9;        // ширина служебной двери из нефа в звонарную
+const ARK_W = 1.2;        // ширина служебной двери из нефа в звонарную
 const ARK_X = -3.0;       // дверь в башню — у западной стены нефа, но не в самом
 //                          углу: там каменные косяки налезали бы на кладку
 //                          западной стены и на стыке снова мерцало
+//                          Дверь стала шире (0,9 → 1,2 м): в проёме было тесно,
+//                          косяки раздвинулись, полотно — тоже
 
 /** Название храма — показывается при входе. */
 export const CHURCH_NAME = 'Храм Святого Покрова';
@@ -126,12 +128,17 @@ export function buildChurchInterior(M, glowTex) {
       for (const sx of [-1, 1]) {
         B.put('stoneDark', 0.4, 3.2, JD, ARK_X + sx * (ARK_W / 2 + 0.2), 1.6, face + JD / 2, 1.2);
       }
-      B.put('stoneDark', ARK_W + 1.2, 0.36, JD, ARK_X, 3.38, face + JD / 2, 1.2);
+      // перемычка шириной ровно на проём + косяки: раньше она была шире
+      // косяков на 0,2 м с каждой стороны и налезала на угол нефа
+      B.put('stoneDark', ARK_W + 0.8, 0.36, JD, ARK_X, 3.38, face + JD / 2, 1.2);
       // дверь с башенной стороны: то же полотно, что и в неф
       const leafW = ARK_W + 0.06;
       const leafH = 3.0;
       const dz = face + 0.09;
-      const nb = 5, bw = leafW / nb;
+      const nb = Math.max(5, Math.round(leafW / 0.21)), bw = leafW / nb;
+      // подложка за полотном: между досками были щели в 1,8 см, и сквозь них
+      // проглядывала кладка стены — тонкие светлые полосы на тёмной двери
+      B.add(box(leafW, leafH, 0.04, 1), 'oakDoor', mat(ARK_X, leafH / 2, dz - 0.06));
       for (let i = 0; i < nb; i++) {
         const off = (i - (nb - 1) / 2) * bw;
         B.add(box(bw - 0.018, leafH, 0.1, 1), 'oakDoor', mat(ARK_X + off, leafH / 2, dz));
@@ -455,12 +462,13 @@ export function buildChurchInterior(M, glowTex) {
     for (const sx of [-1, 1]) {
       B.put('stoneDark', 0.4, 3.2, JD, ARK_X + sx * (ARK_W / 2 + 0.2), 1.6, face - JD / 2, 1.2);
     }
-    B.put('stoneDark', ARK_W + 1.2, 0.36, JD, ARK_X, 3.38, face - JD / 2, 1.2);
+    B.put('stoneDark', ARK_W + 0.8, 0.36, JD, ARK_X, 3.38, face - JD / 2, 1.2);
 
     // Свеча на стене рядом с дверью: без неё закрытая створка читалась
-    // чёрной щелью, а не дверью.
+    // чёрной щелью, а не дверью. Отступ отсчитывается от края косяка:
+    // при прежней, узкой двери свеча уезжала внутрь косяка.
     {
-      const cx2 = ARK_X + ARK_W / 2 + 0.38;
+      const cx2 = ARK_X + ARK_W / 2 + 0.62;
       const cz2 = nz(D / 2 - T - 0.07);
       B.put('iron', 0.11, 0.05, 0.16, cx2, 1.5, cz2, 1.1);
       B.add(cyl(0.045, 0.05, 0.26, 8), 'bone', mat(cx2, 1.69, cz2));
@@ -476,7 +484,10 @@ export function buildChurchInterior(M, glowTex) {
       const dz = face - 0.09;                 // полотно перед стеной, не в её толще
       const cx2 = ARK_X;
       // доски полотна
-      const nb = 5, bw = leafW / nb;
+      const nb = Math.max(5, Math.round(leafW / 0.21)), bw = leafW / nb;
+      // подложка за полотном: сквозь щели между досками не должна быть видна
+      // кладка стены
+      B.add(box(leafW, leafH, 0.04, 1), 'oakDoor', mat(cx2, leafH / 2, dz + 0.06));
       for (let i = 0; i < nb; i++) {
         const off = (i - (nb - 1) / 2) * bw;
         B.add(box(bw - 0.018, leafH, 0.1, 1), 'oakDoor',
