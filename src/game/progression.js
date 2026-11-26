@@ -99,6 +99,8 @@ export function createProgression(ctx) {
       gate: 'Стража пала. Печать Врат разбита — Гримм проснулся. '
         + 'Самоцвет горит так, что видно в обход.',
     };
+    // дела: открытая печать — засчитанная цель
+    if (ctx.systems && ctx.systems.quests) ctx.systems.quests.onSeal(seal.id);
     if (ctx.ui) ctx.ui.toast(lines[seal.id] || 'Печать пала. Путь открыт.', 5200);
     if (ctx.ambience) {
       ctx.ambience.deepBoom();

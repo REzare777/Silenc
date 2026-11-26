@@ -83,6 +83,12 @@ export class UI {
       dmg: document.getElementById('dmg'),
       sealBar: document.getElementById('sealBar'),
       sealText: document.getElementById('sealText'),
+      questTrack: document.getElementById('questTrack'),
+      qtTitle: document.getElementById('qtTitle'),
+      qtGoal: document.getElementById('qtGoal'),
+      questLog: document.getElementById('questLog'),
+      questList: document.getElementById('questList'),
+      questClose: document.getElementById('questClose'),
       numHp: document.getElementById('numHp'),
       numSt: document.getElementById('numSt'),
       numMp: document.getElementById('numMp'),
@@ -137,6 +143,7 @@ export class UI {
     this.onDeathLoad = null;     // «Загрузить» — открыть список слотов
     this.onDeathTitle = null;    // «В начало» — на титульный экран
     this.onSlotsClose = null;
+    this.onQuestClose = null;      // журнал дел закрыт (крестик или клик мимо)
     this.onTradeSell = null;      // игрок продаёт предмет
     this.onTradeBuy = null;       // игрок покупает предмет
     this.onTradeClose = null;
@@ -244,6 +251,22 @@ export class UI {
         if (this.onSlotsClose) this.onSlotsClose();
       }
     });
+    // журнал дел: крестик и клик мимо карточки
+    if (this.el.questClose) {
+      this.el.questClose.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.closeQuestLog();
+        if (this.onQuestClose) this.onQuestClose();
+      });
+    }
+    if (this.el.questLog) {
+      this.el.questLog.addEventListener('click', (e) => {
+        if (e.target === this.el.questLog) {
+          this.closeQuestLog();
+          if (this.onQuestClose) this.onQuestClose();
+        }
+      });
+    }
     this.el.timebar.querySelectorAll('button').forEach((b) => {
       b.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -705,13 +728,134 @@ export class UI {
     this.el.sealBar.classList.add('on');
   }
 
+  /* --------------------- дела: журнал и трекер --------------------- */
+
+  /**
+   * Перерисовать журнал дел и трекер в углу экрана.
+   *
+   * @param {Array<object>} list дела: { id, title, giver, giverName, status,
+   *   statusText, desc, objectives: [{label, text, done}], reward }
+   */
+  renderQuests(list) {
+    const rows = Array.isArray(list) ? list : [];
+    this._quests = rows;
+
+    // «готово к сдаче» считаем сами: цель выполнена, когда все её пункты закрыты
+    const readyOf = (q) => q.status === 'active'
+      && q.objectives.length > 0
+      && q.objectives.every((o) => o.done);
+
+    // --- трекер: первое дело в работе (или готовое к сдаче) ---
+    const track = rows.find(readyOf) || rows.find((q) => q.status === 'active');
+    if (this.el.questTrack) {
+      if (!track) {
+        this.el.questTrack.classList.remove('on');
+      } else {
+        this.el.questTrack.classList.add('on');
+        this.el.questTrack.classList.toggle('ready', readyOf(track));
+        if (this.el.qtTitle) this.el.qtTitle.textContent = track.title;
+        if (this.el.qtGoal) {
+          const first = track.objectives.find((o) => !o.done) || track.objectives[0];
+          this.el.qtGoal.innerHTML = first
+            ? `${first.label} — <b>${first.text}</b>`
+            : '';
+        }
+      }
+    }
+
+    // --- журнал: полный список ---
+    if (!this.el.questList) return;
+    this.el.questList.innerHTML = '';
+    if (!rows.length) {
+      const p = document.createElement('p');
+      p.className = 'qLogEmpty';
+      p.textContent = 'Пока никаких дел. Поговори с Хортом в трактире '
+        + 'или с Торном у кузни — там всегда есть работа.';
+      this.el.questList.appendChild(p);
+      return;
+    }
+    for (const q of rows) {
+      const item = document.createElement('div');
+      const ready = readyOf(q);
+      item.className = 'qItem'
+        + (q.status === 'done' ? ' done' : '')
+        + (ready ? ' ready' : '');
+
+      const top = document.createElement('div');
+      top.className = 'qTop';
+      const b = document.createElement('b');
+      b.textContent = q.title;
+      const who = document.createElement('i');
+      who.textContent = q.giverName || '';
+      const st = document.createElement('span');
+      st.className = 'qState';
+      st.textContent = ready ? 'Готово к сдаче' : q.statusText;
+      top.appendChild(b);
+      top.appendChild(who);
+      top.appendChild(st);
+      item.appendChild(top);
+
+      if (q.desc) {
+        const d = document.createElement('p');
+        d.className = 'qDesc';
+        d.textContent = q.desc;
+        item.appendChild(d);
+      }
+
+      const ul = document.createElement('ul');
+      ul.className = 'qGoals';
+      for (const o of q.objectives) {
+        const li = document.createElement('li');
+        if (o.done) li.classList.add('done');
+        li.appendChild(document.createTextNode(o.label));
+        const num = document.createElement('b');
+        num.textContent = o.text;
+        li.appendChild(num);
+        ul.appendChild(li);
+      }
+      item.appendChild(ul);
+
+      if (q.reward) {
+        const r = document.createElement('div');
+        r.className = 'qReward';
+        r.innerHTML = 'Награда: <b></b>';
+        r.querySelector('b').textContent = q.reward;
+        item.appendChild(r);
+      }
+
+      this.el.questList.appendChild(item);
+    }
+  }
+
+  /**
+   * Открыть журнал дел.
+   */
+  openQuestLog() {
+    if (!this.el.questLog) return;
+    this.el.questLog.classList.add('on');
+    document.body.classList.add('uiFocus');
+  }
+
+  /**
+   * Закрыть журнал дел.
+   */
+  closeQuestLog() {
+    if (!this.el.questLog) return;
+    this.el.questLog.classList.remove('on');
+    if (!this.deathOpen) document.body.classList.remove('uiFocus');
+  }
+
+  /** Открыт ли журнал дел. */
+  get questLogOpen() {
+    return !!(this.el.questLog && this.el.questLog.classList.contains('on'));
+  }
+
   /**
    * Факел в руках: показываем полоску топлива даже вне подземелья.
    *
    * @param {boolean} on взят ли факел в руку
    */
-  setTorch(on) {
-    document.body.classList.toggle('hasTorch', !!on);
+  setTorch(on) {    document.body.classList.toggle('hasTorch', !!on);
   }
 
   /**
@@ -1014,8 +1158,22 @@ export class UI {
     this.el.dlgPic.innerHTML = '';
     if (d.portrait) this.el.dlgPic.appendChild(d.portrait);
     // темы для разговора
+    this.setDialogTopics(d.topics);
+    this.el.dialog.classList.add('on');
+    document.body.classList.add('uiFocus');
+  }
+
+  /**
+   * Перерисовать темы разговора, не закрывая окно.
+   *
+   * Нужно, когда состояние изменилось прямо во время разговора: взял дело —
+   * и темы должны обновиться сразу, а не после закрытия и нового открытия.
+   *
+   * @param {Array<object>} topics темы: { label, text, trade, act }
+   */
+  setDialogTopics(topics) {
     this.el.dlgTopics.innerHTML = '';
-    for (const t of d.topics || []) {
+    for (const t of topics || []) {
       const b = document.createElement('button');
       b.textContent = t.label;
       b.addEventListener('click', () => this.onDialogTopic && this.onDialogTopic(t));
@@ -1026,8 +1184,6 @@ export class UI {
     bye.textContent = 'Покинуть';
     bye.addEventListener('click', () => this.onDialogClose && this.onDialogClose());
     this.el.dlgTopics.appendChild(bye);
-    this.el.dialog.classList.add('on');
-    document.body.classList.add('uiFocus');
   }
 
   /** Заменить реплику в открытом диалоге. */

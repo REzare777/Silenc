@@ -321,6 +321,8 @@ export function snapshot(ctx) {
     invSel: inv ? inv.sel : 0,
     caught: ctx.caught ? { ...ctx.caught } : {},
     flags: ctx.flags ? { ...ctx.flags } : {},
+    // дела: что взято, что сделано, что сдано
+    quests: ctx.systems && ctx.systems.quests ? ctx.systems.quests.snapshot() : null,
     // факел: сколько топлива осталось, горит ли он и взят ли в руку
     torch: combat ? {
       fuel: combat.state.fuel,
@@ -393,6 +395,11 @@ export function applySnapshot(ctx, data) {
   // улов (для коллекции пород) и флаги — только из настоящих объектов
   if (ctx.caught && isPlain(data.caught)) Object.assign(ctx.caught, data.caught);
   if (ctx.flags && isPlain(data.flags)) Object.assign(ctx.flags, data.flags);
+
+  // дела: восстанавливаем состояние заданий
+  if (data.quests && ctx.systems && ctx.systems.quests) {
+    ctx.systems.quests.restore(data.quests);
+  }
 
   // факел: топливо, горение и то, взят ли он в руку
   if (data.torch) {

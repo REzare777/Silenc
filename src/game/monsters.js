@@ -994,6 +994,8 @@ export function createMonsters(ctx) {
       if (ctx.ui && ctx.ui.setBoss) ctx.ui.setBoss(null, 0);
       if (ctx.ui) ctx.ui.toast('Орк-владыка Гримм падает. Пещера затихает.', 4200);
     }
+    // дела: убийство засчитывается в прогресс (гоблины, босс)
+    if (ctx.systems && ctx.systems.quests) ctx.systems.quests.onKill(m.spec);
     dropLoot(m);
     if (ctx.ambience) ctx.ambience.dissolve();
   }

@@ -84,6 +84,7 @@ import { createLocations } from './game/locations.js';
 import { createCombat, COMBAT } from './game/combat.js';
 import { createMonsters } from './game/monsters.js';
 import { createProgression } from './game/progression.js';
+import { createQuests } from './game/quests.js';
 import { createDeath } from './game/death.js';
 import { createDialog } from './game/dialog.js';
 import { createTrade } from './game/trade.js';
@@ -367,6 +368,9 @@ animals.build();
 ctx.systems.dialog = createDialog(ctx);
 ctx.systems.trade = createTrade(ctx);
 ctx.systems.locations = createLocations(ctx);
+// дела: Хорт и Торн дают задания. Система создаётся после локаций и деревни —
+// к этому моменту оба персонажа уже собраны и к ним можно привязать знаки.
+ctx.systems.quests = createQuests(ctx);
 
 // боёвка: факел в руке и тени в подземелье
 ctx.systems.combat = createCombat(ctx);
@@ -588,6 +592,37 @@ function loadGame() {
   return true;
 }
 
+/* ================================================================== *
+ *  Журнал дел
+ * ================================================================== */
+
+/**
+ * Открыть журнал дел.
+ *
+ * Игра не встаёт на паузу целиком: журнал — это справка, а не меню.
+ * Но управление игроком на время чтения отключается, чтобы случайно
+ * не пойти куда-нибудь, и захват мыши отпускается.
+ */
+function openQuestLog() {
+  ctx.mode = 'quest';
+  ui.renderQuests(ctx.systems.quests ? ctx.systems.quests.journal() : []);
+  ui.openQuestLog();
+  player.acceptInput = false;
+  player.keys.clear();
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+
+/**
+ * Закрыть журнал дел и вернуть управление.
+ */
+function closeQuestLog() {
+  ui.closeQuestLog();
+  if (ctx.mode === 'quest') ctx.mode = 'play';
+  player.acceptInput = true;
+  player.keys.clear();
+  player.requestLock();
+}
+
 /**
  * Начать новую игру с нуля.
  *
@@ -629,6 +664,8 @@ function newGame() {
   }
   ctx.caught = {};
   ctx.flags = {};
+  // дела — тоже с нуля: новый игрок начинает без журнала
+  if (ctx.systems && ctx.systems.quests) ctx.systems.quests.reset();
   if (ctx.ui) {
     ctx.ui.setDate(ctx.calendar ? ctx.calendar.label() : '');
     ctx.ui.renderInventory(ctx.systems.bag ? ctx.systems.bag.inventory : null);
@@ -729,6 +766,7 @@ function enterGame(message) {
   ctx.mode = 'play';
   ui.hideStart();
   ui.hideDeath();
+  ui.closeQuestLog();
   ui.renderInventory(bag.inventory);
   ambience.start();
   ambience.setVolume(loadVolume(ctx));
@@ -800,6 +838,14 @@ ui.onDeathLoad = () => {
   ui.showSlots(listSlots());
 };
 
+// Журнал дел закрыт крестиком или кликом мимо — возвращаем управление
+ui.onQuestClose = () => {
+  if (ctx.mode === 'quest') ctx.mode = 'play';
+  player.acceptInput = true;
+  player.keys.clear();
+  player.requestLock();
+};
+
 // Экран смерти: «В начало» — на титульный экран
 ui.onDeathTitle = () => {
   ui.hideDeath();
@@ -844,6 +890,12 @@ window.addEventListener('keydown', (e) => {
   if (ctx.mode === 'dialog') {
     // в диалоге работает только Esc — закрыть разговор
     if (e.code === 'Escape') { e.preventDefault(); ctx.systems.dialog.close(); }
+    return;
+  }
+
+  if (ctx.mode === 'quest') {
+    // в журнале дел: Esc или J — закрыть
+    if (e.code === 'Escape' || e.code === 'KeyJ') { e.preventDefault(); closeQuestLog(); }
     return;
   }
 
@@ -915,6 +967,11 @@ window.addEventListener('keydown', (e) => {
     }
   } else if (e.code === 'KeyI') {
     bag.toggle();
+  } else if (e.code === 'KeyJ') {
+    // журнал дел: открывается поверх игры, но управление остаётся в игре
+    if (ctx.mode === 'play') {
+      openQuestLog();
+    }
   } else if (e.code.startsWith('Digit')) {
     const n = +e.code.slice(5);
     if (n >= 1 && n <= 9) {
@@ -1169,6 +1226,8 @@ function loop() {
   } else {
     combat.update(dt, t);
   }
+  // дела: знаки над персонажами и счётчики целей
+  if (ctx.systems.quests) ctx.systems.quests.update(dt);
   // снаряжение: оружие в руках всегда соответствует выбранной ячейке пояса
   if (ctx.systems.loadout) ctx.systems.loadout.sync();
   // смерть: падение камеры и экран «Погиб»
@@ -1385,6 +1444,7 @@ window.__dbg = {
   listSlots, loadSlot, saveToSlot,
   death, combat, monsters,
   progression: ctx.systems.progression,
+  quests: ctx.systems.quests,
   trade: ctx.systems.trade, loadout: ctx.systems.loadout, spells: ctx.systems.spells,
   npcs: Object.assign({}, locations.npcs || {}, ctx.npcs || {}),
   items: { ITEMS, GOODS, MATERIALS, itemIcon, itemBadge, itemDesc, sellPrice, buyPrice, getItem, GEAR, SPELLS },

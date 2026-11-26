@@ -237,10 +237,13 @@ const puddle = await page.evaluate(() => {
   const m = d.monsters;
   const s = m.list.find((x) => x.spec.attack === 'splash');
   if (!s) return { err: 'нет слизня' };
-  s.state = 'attack'; s.stateT = 0.3; s.attackName = 'splash';
+  // слизень должен быть живым и бьющимся: в предыдущих проверках его могли
+  // «добить» (там всем зверям кроме босса выставляли dying) — тогда удара
+  // не выйдет и лужи не будет
+  s.dying = 0; s.hp = s.maxHp; s.state = 'attack'; s.stateT = 0.3; s.attackName = 'splash';
   d.player.pos.set(s.x + 20, s.y, s.z + 20);
   for (let i = 0; i < 20; i++) {
-    s.state = 'attack'; s.stateT = 0.3;
+    s.state = 'attack'; s.stateT = 0.3; s.attackName = 'splash';
     m.update(1 / 30, i / 30);
   }
   const count = m.__puddleCount();

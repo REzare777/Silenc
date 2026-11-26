@@ -110,6 +110,22 @@ export function createDialog(ctx) {
   const portraits = { barkeep: barkeepIcon(112), blacksmith: blacksmithIcon(112) };
 
   /**
+   * Собрать список тем разговора: обычные темы плюс темы дел.
+   *
+   * @param {string} id идентификатор персонажа
+   * @returns {Array<object>}
+   */
+  function buildTopics(id) {
+    const s = SCRIPTS[id];
+    const topics = s.topics.map((t) => ({ label: t.label, text: t.text, trade: !!t.trade }));
+    const questTopics = ctx.systems.quests ? ctx.systems.quests.topicsFor(id) : [];
+    for (const t of questTopics) {
+      topics.push({ label: t.label, text: t.text, act: t.act });
+    }
+    return topics;
+  }
+
+  /**
    * Открыть диалог с персонажем.
    *
    * @param {string} id идентификатор сценария
@@ -134,7 +150,7 @@ export function createDialog(ctx) {
       title: s.title,
       text: s.greet,
       portrait: portraits[id] || null,
-      topics: s.topics.map((t) => ({ label: t.label, text: t.text, trade: !!t.trade })),
+      topics: buildTopics(id),
     });
     return true;
   }
@@ -161,6 +177,14 @@ export function createDialog(ctx) {
       const who = openId;
       close();
       if (ctx.systems.trade) ctx.systems.trade.open(who);
+      return;
+    }
+    // тема сюжета: взять или сдать дело
+    if (topic.act) {
+      topic.act();
+      // состояние изменилось — темы перерисовываем на месте:
+      // взятое дело сразу становится «по делу», а следующее — «есть работа»
+      ctx.ui.setDialogTopics(buildTopics(openId));
     }
   };
   ctx.ui.onDialogClose = () => close();
