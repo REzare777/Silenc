@@ -505,7 +505,8 @@ function spider() {
   const belly = std(0x6d3a3a, { roughness: 0.7 });
   const eyeM = glow(0xff4a3a);
 
-  const body = joint(g, 0, 0.52, -0.12);
+  // корпус ниже: иначе ноги не достают до пола и паук висит в воздухе
+  const body = joint(g, 0, 0.34, -0.12);
   mesh(body, sphere(0.38, 12, 10), chitin, [0, 0, 0]);
   mesh(body, sphere(0.28, 10, 8), belly, [0, -0.08, -0.18]);
   // «паутина» на спине
@@ -542,7 +543,7 @@ function spider() {
         L.hip.rotation.z = L.side * (-1.05 + s * 0.32 * walk);
         L.knee.rotation.z = L.side * (0.35 + Math.cos(m.phase * 7 + L.phase) * 0.4 * walk);
       }
-      body.position.y = 0.52 + Math.abs(Math.sin(m.phase * 7)) * 0.05 * walk;
+      body.position.y = 0.34 + Math.abs(Math.sin(m.phase * 7)) * 0.05 * walk;
       body.rotation.z = shake(m);
       // перед атакой паук приседает, потом прыгает
       let crouch = 0;

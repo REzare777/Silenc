@@ -588,7 +588,13 @@ export function itemDesc(spec, stack) {
   } else if (spec.kind === 'weapon') {
     rows.push(['Урон', `${spec.dmg[0]}–${spec.dmg[1]}`]);
     rows.push(['Замах', `${spec.speed.toFixed(2)} с`]);
+    // урон в секунду: ради него и выбирают оружие — без него цифры
+    // урона сами по себе мало что говорят
+    const dps = Math.round(((spec.dmg[0] + spec.dmg[1]) / 2) / Math.max(0.05, spec.speed));
+    rows.push(['В секунду', `${dps}`]);
     rows.push(['Дальность', `${spec.reach} м`]);
+    rows.push(['Достаёт', `${spec.sweep ?? 1}`]);
+    rows.push(['Сил', `${spec.effort ?? 4}`]);
     rows.push(['Руки', spec.hands === 'two' ? 'две' : 'одна']);
     if (spec.mana) rows.push(['Мана', `${spec.mana} за удар`]);
   } else if (spec.kind === 'spell') {

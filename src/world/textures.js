@@ -365,39 +365,57 @@ function tileCanvas(size = 512, base = 0x8e4632) {
  */
 function caveRockCanvas(size = 256) {
   const c = makeCanvas(size), g = c.getContext('2d');
-  g.fillStyle = '#4a4d5e';
+  g.fillStyle = '#3f4250';
   g.fillRect(0, 0, size, size);
-  // крупные пятна породы разного оттенка
-  for (let i = 0; i < 140; i++) {
+
+  // ЩЕБЕНЬ: округлые камешки, обведённые тенью и подсвеченные сверху.
+  // Раньше пол был «пятнами породы» — на растянутом на весь зал растре
+  // это читалось как размытая грязь, а не как земля под ногами.
+  const stones = 210;
+  for (let i = 0; i < stones; i++) {
     const x = hash2(i, 211, 3) * size, y = hash2(i, 223, 5) * size;
-    const r = 10 + hash2(i, 227, 7) * 34;
-    const v = 58 + hash2(i, 229, 11) * 42;
-    g.fillStyle = `rgba(${v | 0},${(v * 1.02) | 0},${(v * 1.18) | 0},0.5)`;
+    const r = 4 + hash2(i, 227, 7) * 9;
+    const v = 62 + hash2(i, 229, 11) * 54;
+    const tint = hash2(i, 233, 13);
+    // тень под камнем
+    g.fillStyle = 'rgba(18,20,28,0.45)';
     g.beginPath();
-    g.ellipse(x, y, r, r * (0.6 + hash2(i, 233, 13) * 0.6), hash2(i, 239, 17) * 3, 0, 6.3);
+    g.ellipse(x + r * 0.16, y + r * 0.22, r * 1.04, r * 0.92, 0, 0, 6.3);
+    g.fill();
+    // сам камень
+    g.fillStyle = `rgb(${(v * 0.98) | 0},${(v * 0.99) | 0},${(v * (1.04 + tint * 0.1)) | 0})`;
+    g.beginPath();
+    g.ellipse(x, y, r, r * (0.72 + hash2(i, 239, 17) * 0.3), hash2(i, 241, 19) * 3, 0, 6.3);
+    g.fill();
+    // верхняя фаска — камешек блестит сверху
+    g.fillStyle = 'rgba(190,200,220,0.20)';
+    g.beginPath();
+    g.ellipse(x - r * 0.18, y - r * 0.24, r * 0.52, r * 0.34, 0, 0, 6.3);
     g.fill();
   }
-  // трещины
-  g.strokeStyle = 'rgba(18,20,30,0.55)';
-  for (let i = 0; i < 26; i++) {
-    g.lineWidth = 0.8 + hash2(i, 241, 19) * 1.8;
+
+  // пыль и мелкий сор между камешками
+  for (let i = 0; i < 700; i++) {
+    const x = hash2(i, 277, 43) * size, y = hash2(i, 281, 47) * size;
+    const v = hash2(i, 283, 53);
+    g.fillStyle = v > 0.55 ? 'rgba(150,146,132,0.16)' : 'rgba(24,26,34,0.22)';
+    g.fillRect(x, y, 1 + (v > 0.92 ? 1 : 0), 1 + (v > 0.88 ? 1 : 0));
+  }
+
+  // редкие трещины в сплошной породе
+  g.strokeStyle = 'rgba(16,18,26,0.42)';
+  for (let i = 0; i < 14; i++) {
+    g.lineWidth = 0.7 + hash2(i, 251, 23) * 1.4;
     g.beginPath();
-    let x = hash2(i, 251, 23) * size, y = hash2(i, 257, 29) * size;
+    let x = hash2(i, 257, 29) * size, y = hash2(i, 263, 31) * size;
     g.moveTo(x, y);
-    const steps = 4 + Math.floor(hash2(i, 263, 31) * 5);
+    const steps = 3 + Math.floor(hash2(i, 269, 37) * 4);
     for (let k = 0; k < steps; k++) {
-      x += (hash2(i + k, 269, 37) - 0.5) * 46;
-      y += (hash2(i + k, 271, 41) - 0.5) * 46;
+      x += (hash2(i + k, 271, 41) - 0.5) * 40;
+      y += (hash2(i + k, 277, 43) - 0.5) * 40;
       g.lineTo(x, y);
     }
     g.stroke();
-  }
-  // крапины — мелкие вкрапления
-  for (let i = 0; i < 900; i++) {
-    const x = hash2(i, 277, 43) * size, y = hash2(i, 281, 47) * size;
-    const v = hash2(i, 283, 53);
-    g.fillStyle = v > 0.6 ? 'rgba(120,126,150,0.28)' : 'rgba(30,32,44,0.30)';
-    g.fillRect(x, y, 1 + (v > 0.9 ? 1 : 0), 1 + (v > 0.85 ? 1 : 0));
   }
   return c;
 }
@@ -423,64 +441,84 @@ function boneCanvas(size = 64) {
 /**
  * Скала для СТЕН подземелья.
  *
- * Отдельная от пола: у пола крупные пятна породы смотрятся естественно,
- * а на стенах они превращались в повторяющиеся «обои». Здесь порода
- * разбита на мелкие сколы и грани — стена читается как камень, а не
- * как растр с рисунком.
+ * Стена должна читаться как стена, а не как растр с рисунком: поэтому
+ * порода собрана в крупные неровные камни, каждый обведён тенью в шов
+ * и подсвечен сверху. Раньше здесь были мелкие грани — на стене в
+ * семь метров высотой они сливались в шум, и зал читался как «синяя
+ * коробка». Теперь это кладка: видно, где камень, а где шов.
  *
  * @param {number} size размер текстуры в пикселях
  * @returns {HTMLCanvasElement} готовая текстура
  */
 function caveWallCanvas(size = 256) {
   const c = makeCanvas(size), g = c.getContext('2d');
-  g.fillStyle = '#3f4254';
+  // шов между камнями
+  g.fillStyle = '#232634';
   g.fillRect(0, 0, size, size);
 
-  // мелкие грани породы: много неправильных многоугольников
-  for (let i = 0; i < 520; i++) {
-    const x = hash2(i, 811, 3) * size, y = hash2(i, 823, 5) * size;
-    const r = 3 + hash2(i, 827, 7) * 13;
-    const v = 58 + hash2(i, 829, 11) * 46;
-    const tint = hash2(i, 833, 13);
-    g.fillStyle = `rgba(${(v * 0.96) | 0},${(v * 0.99) | 0},${(v * (1.06 + tint * 0.14)) | 0},0.55)`;
-    g.beginPath();
-    const n = 4 + Math.floor(hash2(i, 839, 17) * 3);
-    for (let k = 0; k < n; k++) {
-      const a = (k / n) * Math.PI * 2 + hash2(i + k, 853, 19) * 1.2;
-      const rr = r * (0.62 + hash2(i + k, 857, 23) * 0.55);
-      const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
-      if (k === 0) g.moveTo(px, py); else g.lineTo(px, py);
+  const cols = 4, rows = 3;
+  const cw = size / cols, ch = size / rows;
+  for (let r = -1; r <= rows; r++) {
+    // каждый ряд смещён — кладка вразбежку
+    const off = (r % 2 ? 0.5 : 0) * cw + (r < 0 ? cw : 0);
+    for (let i = -1; i <= cols; i++) {
+      const bx = i * cw + off, by = r * ch;
+      const jx = (hash2(i, r, 811) - 0.5) * cw * 0.1;
+      const jy = (hash2(i, r, 823) - 0.5) * ch * 0.12;
+      const pad = 2.2;
+      const x = bx + pad + jx, y = by + pad + jy;
+      const w = cw - pad * 2, h = ch - pad * 2;
+      const v = 66 + hash2(i, r, 827) * 52;
+      const cool = hash2(i, r, 829);
+      // тень под камнем — камень стоит на шве
+      g.fillStyle = 'rgba(10,11,17,0.5)';
+      g.fillRect(x + 2, y + 3, w, h);
+      // тело камня
+      g.fillStyle = `rgb(${(v * 0.95) | 0},${(v * 0.99) | 0},${(v * (1.05 + cool * 0.16)) | 0})`;
+      g.fillRect(x, y, w, h);
+      // верхняя фаска — свет падает сверху
+      g.fillStyle = 'rgba(196,208,232,0.16)';
+      g.fillRect(x, y, w, 2);
+      g.fillStyle = 'rgba(196,208,232,0.08)';
+      g.fillRect(x, y, 2, h);
+      // нижняя тень
+      g.fillStyle = 'rgba(6,7,12,0.26)';
+      g.fillRect(x, y + h - 2.5, w, 2.5);
+      // сколы на гранях
+      for (let k = 0; k < 7; k++) {
+        const px = x + hash2(i * 13 + k, r, 839) * w;
+        const py = y + hash2(i * 13 + k, r, 853) * h;
+        const s = 1 + hash2(i * 13 + k, r, 857) * 3.4;
+        g.fillStyle = hash2(i * 13 + k, r, 859) > 0.5
+          ? 'rgba(214,226,250,0.10)' : 'rgba(8,9,15,0.20)';
+        g.beginPath();
+        g.ellipse(px, py, s, s * 0.7, hash2(i, r, 863) * 3, 0, 6.3);
+        g.fill();
+      }
     }
-    g.closePath();
-    g.fill();
-    // тень по нижней кромке грани
-    g.strokeStyle = 'rgba(16,18,26,0.2)';
-    g.lineWidth = 0.8;
-    g.stroke();
   }
 
-  // тонкие трещины
-  g.strokeStyle = 'rgba(14,16,24,0.5)';
-  for (let i = 0; i < 34; i++) {
-    g.lineWidth = 0.6 + hash2(i, 863, 29) * 1.1;
+  // тонкие трещины по швам
+  g.strokeStyle = 'rgba(10,11,17,0.55)';
+  for (let i = 0; i < 26; i++) {
+    g.lineWidth = 0.6 + hash2(i, 877, 29) * 1.2;
     g.beginPath();
-    let x = hash2(i, 877, 31) * size, y = hash2(i, 881, 37) * size;
+    let x = hash2(i, 881, 31) * size, y = hash2(i, 887, 37) * size;
     g.moveTo(x, y);
-    const steps = 3 + Math.floor(hash2(i, 883, 41) * 4);
+    const steps = 3 + Math.floor(hash2(i, 893, 41) * 4);
     for (let k = 0; k < steps; k++) {
-      x += (hash2(i + k, 887, 43) - 0.5) * 30;
-      y += (hash2(i + k, 907, 47) - 0.5) * 30;
+      x += (hash2(i + k, 907, 43) - 0.5) * 26;
+      y += (hash2(i + k, 911, 47) - 0.5) * 26;
       g.lineTo(x, y);
     }
     g.stroke();
   }
 
-  // крапины породы — мелкие и негромкие, иначе стена выглядит грязной.
-  // Их было 700 — на низком разрешении стена читалась как «помеха».
-  for (let i = 0; i < 260; i++) {
-    const x = hash2(i, 911, 53) * size, y = hash2(i, 919, 59) * size;
-    const v = hash2(i, 929, 61);
-    g.fillStyle = v > 0.6 ? 'rgba(126,132,156,0.10)' : 'rgba(24,26,36,0.10)';
+  // крапины породы — мелкие и негромкие, иначе стена выглядит грязной
+  for (let i = 0; i < 220; i++) {
+    const x = hash2(i, 919, 53) * size, y = hash2(i, 929, 59) * size;
+    const v = hash2(i, 937, 61);
+    g.fillStyle = v > 0.6 ? 'rgba(126,132,156,0.08)' : 'rgba(24,26,36,0.10)';
     g.fillRect(x, y, 1 + (v > 0.94 ? 1 : 0), 1);
   }
   return c;

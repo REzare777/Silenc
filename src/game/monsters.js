@@ -333,8 +333,7 @@ export function createMonsters(ctx) {
    * @param {string} [zone] зона подземелья (для печатей)
    * @returns {object} монстр
    */
-  function makeMonster(spec, x, y, z, zone) {
-    const model = monsterModel(spec.id);
+  function makeMonster(spec, x, y, z, zone) {    const model = monsterModel(spec.id);
     const hp = Math.round(spec.hp * difficulty.hp);
     const m = {
       spec,
@@ -370,6 +369,34 @@ export function createMonsters(ctx) {
     m.baseScale = spec.scale || 1;
     m.group.scale.setScalar(m.baseScale);
     m.group.position.set(x, y, z);
+    // Зверь не должен стоять в полу: поднимаем модель так, чтобы низ
+    // (подошвы, лапы, брюхо) стоял на земле. Раньше босс, голем и часть
+    // зверей уходили в пол на половину тела — отсюда «стоит в текстуре».
+    // Габариты меряем в СВОИХ координатах модели: иначе на нижнем ярусе
+    // (y = -4.6) подъём вышел бы вчетверо больше нужного.
+    //
+    // И меряем в нескольких фазах шага: ноги то поднимаются, то опускаются,
+    // и по одной фазе зверь либо проваливался, либо подвисал над полом.
+    let lowest = 0;
+    const savedPhase = m.phase;
+    for (let i = 0; i < 6; i++) {
+      m.phase = i * 0.9;
+      if (m.model && m.model.update) m.model.update(i * 0.7, 0.016, m);
+      m.group.position.y = 0;
+      m.group.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(m.group);
+      if (box.min.y < lowest) lowest = box.min.y;
+    }
+    m.phase = savedPhase;
+    if (m.model && m.model.update) m.model.update(0, 0.016, m);
+    m.group.position.y = y;
+    if (lowest < -0.02) {
+      m.group.position.y += -lowest;
+      m.footLift = -lowest;
+    }
+    // полоска здоровья над зверем (у босса своя, в интерфейсе)
+    m.bar = spec.boss ? null : makeHpBar(spec);
+    if (m.bar && root) root.add(m.bar.sprite);
     if (root) root.add(m.group);
     list.push(m);
     if (m.boss) {
@@ -377,6 +404,61 @@ export function createMonsters(ctx) {
       // полосу босса показываем, когда он проснётся (в update), а не сразу при спавне
     }
     return m;
+  }
+
+  /**
+   * Полоска здоровья над зверем.
+   *
+   * Небольшая линия, всегда лицом к игроку. Появляется, когда зверь
+   * проснулся или получил урон, и исчезает после смерти. Без неё нельзя
+   * было понять, сколько зверю осталось и как выбор оружия меняет бой:
+   * кинжал снимает по девять, двуручный меч — по сорок, и это видно.
+   *
+   * @param {object} spec порода
+   * @returns {object} полоска: спрайт, канва и состояние
+   */
+  function makeHpBar(spec) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 72;
+    canvas.height = 10;
+    const g = canvas.getContext('2d');
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: texture, transparent: true, depthWrite: false, depthTest: false, fog: false,
+    }));
+    sprite.renderOrder = 12;
+    // маленькая линия, а не плашка: зверь должен оставаться зверь
+    sprite.scale.set(0.6, 0.083, 1);
+    sprite.visible = false;
+    return {
+      sprite, canvas, g, texture, hp: -1,
+      color: spec.tier === 'elite' ? '#e0463c' : spec.tier === 'normal' ? '#dc8a38' : '#b9553a',
+    };
+  }
+
+  /**
+   * Перерисовать полоску здоровья.
+   *
+   * @param {object} bar полоска
+   * @param {number} hp сколько осталось
+   * @param {number} maxHp сколько было
+   */
+  function drawHpBar(bar, hp, maxHp) {
+    const g = bar.g;
+    const w = bar.canvas.width, h = bar.canvas.height;
+    g.clearRect(0, 0, w, h);
+    g.fillStyle = 'rgba(12,9,9,0.72)';
+    g.fillRect(0, 0, w, h);
+    const f = Math.max(0, Math.min(1, hp / (maxHp || 1)));
+    g.fillStyle = bar.color;
+    g.fillRect(2, 2, (w - 4) * f, h - 4);
+    g.fillStyle = 'rgba(255,240,220,0.2)';
+    g.fillRect(2, 2, (w - 4) * f, 1.5);
+    g.strokeStyle = 'rgba(0,0,0,0.6)';
+    g.lineWidth = 1;
+    g.strokeRect(0.5, 0.5, w - 1, h - 1);
+    bar.texture.needsUpdate = true;
   }
 
   /**
@@ -474,6 +556,7 @@ export function createMonsters(ctx) {
   function clear() {
     for (const m of list) {
       if (m.group.parent) m.group.parent.remove(m.group);
+      if (m.bar && m.bar.sprite.parent) m.bar.sprite.parent.remove(m.bar.sprite);
     }
     list.length = 0;
     for (const p of projectiles) {
@@ -1311,7 +1394,23 @@ export function createMonsters(ctx) {
     m.x = clx;
     m.z = clz;
 
-    m.group.position.set(m.x, m.y, m.z);
+    // подъём модели (низ стоит на земле) сохраняется при каждом кадре
+    m.group.position.set(m.x, m.y + (m.footLift || 0), m.z);
+
+    // полоска здоровья над зверем: видно, сколько осталось и как работает
+    // оружие. У спящих и целых зверей её нет — только у тех, кто в бою
+    // или уже ранен.
+    if (m.bar) {
+      const show = m.hp > 0 && m.dying <= 0 && (m.hp < m.maxHp || m.state !== 'sleep');
+      m.bar.sprite.visible = show;
+      if (show) {
+        m.bar.sprite.position.set(m.x, m.y + beastHeight(m) + 0.42, m.z);
+        if (m.bar.hp !== m.hp) {
+          m.bar.hp = m.hp;
+          drawHpBar(m.bar, m.hp, m.maxHp);
+        }
+      }
+    }
 
     // кольца ударной волны
     if (m.shocks) {
