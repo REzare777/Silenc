@@ -383,6 +383,78 @@ export const LOOT = [
     craft: { tags: ['trophy', 'legendary'], hint: 'Настоящая реликвия' },
     desc: 'Обруч из тёмного металла с семью зубцами. Тот, кто наденет его, узнает, зачем.',
   },
+  {
+    id: 'cave_rat_tail',
+    name: 'Хвост пещерной крысы',
+    kind: 'loot',
+    rarity: 'common',
+    value: 6,
+    sell: 7,
+    weight: 0.05,
+    stackable: true,
+    craft: { tags: ['trophy', 'alchemy'], hint: 'Сушат и крошат — выходит приманка' },
+    desc: 'Жёсткий, как проволока, хвост. Прячется в темноте и умирает от голода.',
+  },
+  {
+    id: 'moss_lump',
+    name: 'Мох с камня',
+    kind: 'loot',
+    rarity: 'common',
+    value: 5,
+    sell: 8,
+    weight: 0.15,
+    stackable: true,
+    craft: { tags: ['food', 'tool'], hint: 'Кладётся в зелье или в сад' },
+    desc: 'Влажный сине-зелёный комок. Пахнет дождём, хотя внизу не бывает дождя.',
+  },
+  {
+    id: 'glow_cap',
+    name: 'Светящаяся шляпка',
+    kind: 'loot',
+    rarity: 'uncommon',
+    value: 24,
+    sell: 11,
+    weight: 0.1,
+    stackable: true,
+    craft: { tags: ['alchemy', 'light'], hint: 'Светит в темноте — пока не засохнет' },
+    desc: 'Гриб с бледно-голубой шляпкой. Светит ещё сутки после того, как его сорвали.',
+  },
+  {
+    id: 'bat_wing',
+    name: 'Крыло летучей мыши',
+    kind: 'loot',
+    rarity: 'uncommon',
+    value: 20,
+    sell: 10,
+    weight: 0.05,
+    stackable: true,
+    craft: { tags: ['trophy', 'alchemy'], hint: 'Тонкая плёнка — идёт в перчатки' },
+    desc: 'Перепонка тоньше бумаги, но прочнее, чем кажется.',
+  },
+  {
+    id: 'spore_powder',
+    name: 'Споровая пыль',
+    kind: 'loot',
+    rarity: 'uncommon',
+    value: 28,
+    sell: 14,
+    weight: 0.05,
+    stackable: true,
+    craft: { tags: ['alchemy', 'poison'], hint: 'Рассыпается в воздухе — и кто-то засыпает' },
+    desc: 'Рыжий порошок в мешочке из паучьей нити. Не открывать в жилой комнате.',
+  },
+  {
+    id: 'obsidian_shard',
+    name: 'Осколок обсидиана',
+    kind: 'loot',
+    rarity: 'rare',
+    value: 55,
+    sell: 28,
+    weight: 0.7,
+    stackable: false,
+    craft: { tags: ['material', 'magic'], hint: 'Вставляется в клинок — будет резать как бритва' },
+    desc: 'Стекло вулкана, острые грани. Торн берёт такие не глядя и платит не торгуясь.',
+  },
 ];
 
 /* ------------------------------------------------------------------
@@ -870,6 +942,96 @@ function drawLootIcon(ctx, spec, px) {
         ctx.closePath();
         ctx.fill();
       }
+      break;
+    }
+    case 'cave_rat_tail': {
+      ctx.strokeStyle = '#6d5a48';
+      ctx.lineWidth = px * 0.07;
+      ctx.beginPath();
+      ctx.moveTo(c - px * 0.24, c - px * 0.18);
+      ctx.quadraticCurveTo(c + px * 0.1, c, c - px * 0.12, c + px * 0.2);
+      ctx.stroke();
+      ctx.strokeStyle = '#8a7461';
+      ctx.lineWidth = px * 0.03;
+      ctx.beginPath();
+      ctx.moveTo(c - px * 0.24, c - px * 0.18);
+      ctx.quadraticCurveTo(c + px * 0.1, c, c - px * 0.12, c + px * 0.2);
+      ctx.stroke();
+      break;
+    }
+    case 'moss_lump': {
+      ctx.fillStyle = '#4d7a56';
+      ctx.beginPath();
+      ctx.ellipse(c, c + px * 0.04, px * 0.26, px * 0.2, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#6fa172';
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(c + Math.cos(a) * px * 0.13, c + px * 0.04 + Math.sin(a) * px * 0.1, px * 0.06, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    }
+    case 'glow_cap': {
+      ctx.fillStyle = '#7fd8e8';
+      ctx.beginPath();
+      ctx.ellipse(c, c + px * 0.02, px * 0.26, px * 0.18, 0, Math.PI, 0);
+      ctx.fill();
+      ctx.fillStyle = '#d8f4f8';
+      ctx.beginPath();
+      ctx.ellipse(c - px * 0.08, c - px * 0.02, px * 0.1, px * 0.06, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#e8f6d0';
+      ctx.fillRect(c - px * 0.05, c + px * 0.02, px * 0.1, px * 0.24);
+      break;
+    }
+    case 'bat_wing': {
+      ctx.fillStyle = '#5c4a63';
+      ctx.beginPath();
+      ctx.moveTo(c - px * 0.26, c - px * 0.18);
+      ctx.quadraticCurveTo(c + px * 0.18, c - px * 0.3, c + px * 0.26, c + px * 0.16);
+      ctx.quadraticCurveTo(c + px * 0.02, c + px * 0.02, c - px * 0.26, c - px * 0.18);
+      ctx.fill();
+      ctx.strokeStyle = '#7b6484';
+      ctx.lineWidth = px * 0.025;
+      for (let i = 1; i <= 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(c - px * 0.2, c - px * 0.12);
+        ctx.lineTo(c - px * 0.2 + i * px * 0.14, c + px * 0.12);
+        ctx.stroke();
+      }
+      break;
+    }
+    case 'spore_powder': {
+      ctx.fillStyle = '#c08a3e';
+      ctx.beginPath();
+      ctx.ellipse(c, c, px * 0.2, px * 0.22, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,214,140,0.85)';
+      for (let i = 0; i < 7; i++) {
+        const a = (i / 7) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(c + Math.cos(a) * px * 0.14, c + Math.sin(a) * px * 0.15, px * 0.035, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    }
+    case 'obsidian_shard': {
+      ctx.fillStyle = '#2a2438';
+      ctx.beginPath();
+      ctx.moveTo(c - px * 0.16, c + px * 0.28);
+      ctx.lineTo(c + px * 0.02, c - px * 0.3);
+      ctx.lineTo(c + px * 0.2, c + px * 0.26);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#6d5f8c';
+      ctx.beginPath();
+      ctx.moveTo(c + px * 0.02, c - px * 0.3);
+      ctx.lineTo(c + px * 0.09, c + px * 0.12);
+      ctx.lineTo(c + px * 0.2, c + px * 0.26);
+      ctx.closePath();
+      ctx.fill();
       break;
     }
     default: {

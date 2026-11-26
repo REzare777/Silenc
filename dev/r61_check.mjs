@@ -277,6 +277,8 @@ check('слизень оставляет лужу', atk.puddles > 0, `луж: ${
 check('споры гриба замедляют игрока', atk.slow > 0, `slow=${atk.slow}`);
 
 /* ---------------- босс: полоска и атаки ---------------- */
+// печать Врат держит босса запечатанным — для проверки его атак печать снимаем
+await page.evaluate(() => window.__dbg.monsters.setBossLocked(false));
 const boss = await page.evaluate(() => {
   const d = window.__dbg;
   const m = d.monsters;

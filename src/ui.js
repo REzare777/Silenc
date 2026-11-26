@@ -81,6 +81,8 @@ export class UI {
       veil: document.getElementById('veil'),
       threat: document.getElementById('threat'),
       dmg: document.getElementById('dmg'),
+      sealBar: document.getElementById('sealBar'),
+      sealText: document.getElementById('sealText'),
       numHp: document.getElementById('numHp'),
       numSt: document.getElementById('numSt'),
       numMp: document.getElementById('numMp'),
@@ -682,7 +684,25 @@ export class UI {
       if (this.el.veil) this.el.veil.classList.remove('on');
       if (this.el.threat) this.el.threat.classList.remove('on');
       if (this.el.reticle) this.el.reticle.classList.remove('target', 'swing');
+      if (this.el.sealBar) this.el.sealBar.classList.remove('on');
     }
+  }
+
+  /**
+   * Подсказка о печати: что мешает пройти дальше.
+   *
+   * Пустая строка — подсказки нет (например, все печати уже пали).
+   *
+   * @param {string} text текст подсказки
+   */
+  setSeal(text) {
+    if (!this.el.sealBar || !this.el.sealText) return;
+    if (!text) {
+      this.el.sealBar.classList.remove('on');
+      return;
+    }
+    if (this.el.sealText.textContent !== text) this.el.sealText.textContent = text;
+    this.el.sealBar.classList.add('on');
   }
 
   /**
@@ -785,6 +805,28 @@ export class UI {
     if (!this.el.dmg) return;
     this.el.dmg.classList.add('on');
     setTimeout(() => this.el.dmg && this.el.dmg.classList.remove('on'), 180);
+  }
+
+  /**
+   * Цифра урона над зверем.
+   *
+   * Экранные координаты считает боевая система: у интерфейса нет камеры,
+   * а проекция должна идти от того же кадра, который видит игрок.
+   *
+   * @param {number} sx экранная X
+   * @param {number} sy экранная Y
+   * @param {number} amount сколько урона
+   * @param {boolean} [crit] критический ли удар
+   */
+  popDamage(sx, sy, amount, crit = false) {
+    const el = document.createElement('div');
+    el.className = crit ? 'dmgNum crit' : 'dmgNum';
+    el.textContent = crit ? `${amount}!` : String(amount);
+    el.style.left = `${Math.round(sx)}px`;
+    el.style.top = `${Math.round(sy)}px`;
+    document.body.appendChild(el);
+    setTimeout(() => el.classList.add('go'), 70);
+    setTimeout(() => el.remove(), 1150);
   }
 
   /**

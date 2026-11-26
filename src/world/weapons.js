@@ -78,6 +78,11 @@ export const WEAPONS = [
     reach: 1.3,
     price: 25,
     weight: 0.6,
+    sweep: 1,        // сколько зверей задевает удар
+    crit: 0.15,      // шанс критического удара
+    knock: 2.6,      // отбрасывание
+    stun: 0.22,      // оглушение
+    effort: 2,       // сколько силы уходит на удар
     hands: 'one',
     stackable: false,
     desc: 'Короткий клинок. Быстрый, слабый и незаметный — то, что берут первым.',
@@ -93,6 +98,11 @@ export const WEAPONS = [
     reach: 1.6,
     price: 60,
     weight: 1.4,
+    sweep: 1,
+    crit: 0.12,
+    knock: 3.6,
+    stun: 0.3,
+    effort: 4,
     hands: 'one',
     stackable: false,
     desc: 'Клинок в одну ладонь. Лёгкий, надёжный, ничего особенного.',
@@ -108,6 +118,11 @@ export const WEAPONS = [
     reach: 1.9,
     price: 120,
     weight: 2.6,
+    sweep: 2,        // длинный клинок рубит по площади
+    crit: 0.12,
+    knock: 5.2,
+    stun: 0.42,
+    effort: 6,
     hands: 'one',
     stackable: false,
     desc: 'Стальная полоса с яблоком-противовесом. Рабочая лошадь любого ополченца.',
@@ -123,6 +138,11 @@ export const WEAPONS = [
     reach: 1.7,
     price: 150,
     weight: 3.4,
+    sweep: 2,
+    crit: 0.18,      // тяжёлый удар секирой — самый шансливый
+    knock: 6.8,
+    stun: 0.58,
+    effort: 8,
     hands: 'one',
     stackable: false,
     desc: 'Тяжёлое лезвие на дубовом топорище. Рубит и шкуры, и кости.',
@@ -138,6 +158,11 @@ export const WEAPONS = [
     reach: 2.4,
     price: 280,
     weight: 6.5,
+    sweep: 3,        // двуручник сносит всю толпу
+    crit: 0.2,
+    knock: 9.2,
+    stun: 0.82,
+    effort: 12,
     hands: 'two',
     stackable: false,
     desc: 'Двухметровая полоса стали. Чтобы замахнуться, нужно разбежаться.',
@@ -153,6 +178,11 @@ export const WEAPONS = [
     reach: 40,
     price: 90,
     weight: 1.8,
+    sweep: 1,
+    crit: 0.15,
+    knock: 1.8,
+    stun: 0.26,
+    effort: 3,
     hands: 'two',
     stackable: false,
     desc: 'Рог из оленьего рога на ясеневом луке. Тетива воет — и летит стрела.',
@@ -168,6 +198,11 @@ export const WEAPONS = [
     reach: 16,
     price: 180,
     weight: 2.2,
+    sweep: 2,        // волна магии достаёт двоих
+    crit: 0.1,
+    knock: 3.4,
+    stun: 0.5,
+    effort: 5,
     hands: 'one',
     mana: 6,
     stackable: false,

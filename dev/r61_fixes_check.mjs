@@ -53,25 +53,38 @@ await page.evaluate(() => window.__dbg.setLocation('dungeon'));
 await page.waitForTimeout(2000);
 
 /* ---------------- 1. проём между залами ---------------- */
-const gap = await page.evaluate(() => {
-  const d = window.__dbg;
-  const m = d.monsters;
-  const g = m.list.find((s) => s.spec.id === 'goblin_sword');
-  if (!g) return { err: 'нет гоблина' };
-  // гоблин — в кристальном зале, игрок — во входном, проём между ними
-  g.x = 0; g.z = -22; g.y = 0; g.state = 'stalk'; g.hp = g.maxHp;
-  d.player.pos.set(0, 0, -17);
-  d.player.groundY = 0;
-  let minD = 1e9;
-  for (let i = 0; i < 400; i++) {
+/**
+ * Прогнать зверя к игроку сквозь проём и замерить, насколько он подошёл.
+ *
+ * @returns {Promise<object>} замер
+ */
+async function gapRun() {
+  return page.evaluate(() => {
+    const d = window.__dbg;
+    const m = d.monsters;
+    const g = m.list.find((s) => s.spec.id === 'goblin_sword');
+    if (!g) return { err: 'нет гоблина' };
+    g.x = 0; g.z = -22; g.y = 0; g.state = 'stalk'; g.hp = g.maxHp; g.dying = 0;
     d.player.pos.set(0, 0, -17);
     d.player.groundY = 0;
-    d.stats.hp = 100;
-    m.update(1 / 30, i / 30);
-    minD = Math.min(minD, Math.hypot(d.player.pos.x - g.x, d.player.pos.z - g.z));
-  }
-  return { minD: +minD.toFixed(2), z: +g.z.toFixed(2), x: +g.x.toFixed(2) };
-});
+    let minD = 1e9;
+    for (let i = 0; i < 400; i++) {
+      d.player.pos.set(0, 0, -17);
+      d.player.groundY = 0;
+      d.stats.hp = 100;
+      m.update(1 / 30, i / 30);
+      minD = Math.min(minD, Math.hypot(d.player.pos.x - g.x, d.player.pos.z - g.z));
+    }
+    return { minD: +minD.toFixed(2), z: +g.z.toFixed(2), x: +g.x.toFixed(2) };
+  });
+}
+// печать входа держит проём закрытым — зверь сквозь неё не проходит
+const gapClosed = await gapRun();
+check('печать входа не пускает зверя в следующий зал', gapClosed.minD > 3,
+  `минимальная дистанция ${gapClosed.minD} (позиция ${gapClosed.x}, ${gapClosed.z})`);
+// печать падает — проём открыт, и зверь проходит
+await page.evaluate(() => window.__dbg.dungeonLoc.openSeal('hall'));
+const gap = await gapRun();
 check('зверь проходит через проём между залами', gap.minD < 3,
   `минимальная дистанция ${gap.minD} (позиция ${gap.x}, ${gap.z})`);
 
@@ -98,6 +111,8 @@ check('призрак проходит сквозь стены', ghost.minD < 2.
   `минимальная дистанция ${ghost.minD} (z=${ghost.z})`);
 
 /* ---------------- 3. четыре атаки босса ---------------- */
+// печать Врат держит босса запечатанным — для проверки его приёмов печать снимаем
+await page.evaluate(() => window.__dbg.monsters.setBossLocked(false));
 const bossAtk = await page.evaluate(() => {
   const d = window.__dbg;
   const m = d.monsters;
@@ -252,6 +267,9 @@ const partial = await page.evaluate(async () => {
   // роняем мешок: убиваем гоблина ударом игрока
   const target = m.list.find((x) => x.spec.id === 'goblin_sword');
   for (const o of m.list) if (o !== target) o.dying = 5;
+  // гоблин должен быть живым и бьющимся: в прошлых проверках его могли
+  // «добить» — тогда удара не выйдет и мешка не будет
+  target.dying = 0; target.hp = target.maxHp; target.state = 'stalk';
   d.player.pos.set(target.x, target.y, target.z + 1.5);
   d.player.groundY = target.y;
   m.hit({ x: d.player.pos.x, z: d.player.pos.z }, { x: 0, z: -1 }, 4, 1.2, 9999);

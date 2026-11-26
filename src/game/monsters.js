@@ -100,7 +100,7 @@ export const MONSTERS = [
     id: 'goblin_guard', name: 'Гоблин-страж', tier: 'elite',
     hp: 78, dmg: 13, speed: 1.45, aggro: 15, reach: 1.8, cd: 1.9,
     attack: 'melee', windup: 0.6, active: 0.2, radius: 0.5, height: 1.75,
-    sp: 2, scale: 1, exp: 18, guard: 0.35,
+    sp: 2, scale: 1, exp: 18, guard: 0.35, armor: 0.1,
   },
   {
     id: 'ghost', name: 'Призрак', tier: 'normal',
@@ -148,14 +148,14 @@ export const MONSTERS = [
     id: 'golem_small', name: 'Каменный голем', tier: 'normal',
     hp: 96, dmg: 16, speed: 1.2, aggro: 14, reach: 1.9, cd: 2.3,
     attack: 'slam', windup: 0.85, active: 0.24, radius: 0.6, height: 1.25,
-    sp: 2, scale: 0.72, exp: 16,
+    sp: 2, scale: 0.72, exp: 16, armor: 0.2,
   },
   {
     id: 'orc_boss', name: 'Орк-владыка Гримм', tier: 'boss',
-    hp: 420, dmg: 22, speed: 2.1, aggro: 26, reach: 2.6, cd: 1.6,
+    hp: 420, dmg: 17, speed: 2.1, aggro: 26, reach: 2.6, cd: 1.6,
     attack: 'boss', windup: 0.7, active: 0.26, radius: 0.85, height: 3.2,
     engage: 9,          // босс начинает атаку издалека: наскок и рёв
-    sp: 1, scale: 1, exp: 90, boss: true,
+    sp: 1, scale: 1, exp: 90, boss: true, armor: 0.15,
   },
 ];
 
@@ -214,6 +214,13 @@ export function createMonsters(ctx) {
   let boss = null;
   let difficulty = currentDifficulty();
   let lootBagId = 0;
+  /**
+   * Босс запечатан, пока жива стража у Врат.
+   *
+   * Пока печать Врат держит, Гримм спит и не выходит на бой: иначе можно
+   * было бы пройти к боссу мимо стражи и сломать весь порядок подземелья.
+   */
+  let bossLocked = false;
 
   const _v = new THREE.Vector3();
 
@@ -323,9 +330,10 @@ export function createMonsters(ctx) {
    * @param {number} x координата X
    * @param {number} y высота пола
    * @param {number} z координата Z
+   * @param {string} [zone] зона подземелья (для печатей)
    * @returns {object} монстр
    */
-  function makeMonster(spec, x, y, z) {
+  function makeMonster(spec, x, y, z, zone) {
     const model = monsterModel(spec.id);
     const hp = Math.round(spec.hp * difficulty.hp);
     const m = {
@@ -334,6 +342,7 @@ export function createMonsters(ctx) {
       group: model.group,
       x, y, z,
       home: { x, z },
+      zone: zone || null,
       hp,
       maxHp: hp,
       veil: spec.tier === 'boss' ? 6 : spec.tier === 'elite' ? 3 : 2,
@@ -426,7 +435,7 @@ export function createMonsters(ctx) {
       for (const spec of byTier[tier]) {
         const spot = randomSpot(zone, spec.radius + 0.25);
         if (!spot) continue;
-        makeMonster(spec, spot.x, spot.y, spot.z);
+        makeMonster(spec, spot.x, spot.y, spot.z, zone.id);
       }
     }
 
@@ -447,14 +456,14 @@ export function createMonsters(ctx) {
         }
         const spot = randomSpot(zone, pick.radius + 0.2);
         if (!spot) continue;
-        makeMonster(pick, spot.x, spot.y, spot.z);
+        makeMonster(pick, spot.x, spot.y, spot.z, zone.id);
       }
     }
 
     // босс — в зале Врат
     const bossSpec = monsterSpec('orc_boss');
     if (bossSpec) {
-      const b = makeMonster(bossSpec, BOSS_SPOT.x, BOSS_SPOT.y, BOSS_SPOT.z);
+      const b = makeMonster(bossSpec, BOSS_SPOT.x, BOSS_SPOT.y, BOSS_SPOT.z, 'gate');
       b.state = 'sleep';
     }
   }
@@ -502,6 +511,8 @@ export function createMonsters(ctx) {
       { id: 'slime_jelly', rarity: 'common', weight: 4 },
       { id: 'spider_web', rarity: 'common', weight: 3 },
       { id: 'shroom_cap', rarity: 'common', weight: 3 },
+      { id: 'cave_rat_tail', rarity: 'common', weight: 2 },
+      { id: 'moss_lump', rarity: 'common', weight: 2 },
     ],
     normal: [
       { id: 'goblin_ear', rarity: 'common', weight: 3 },
@@ -510,17 +521,26 @@ export function createMonsters(ctx) {
       { id: 'ghost_dust', rarity: 'uncommon', weight: 3 },
       { id: 'snake_fang', rarity: 'uncommon', weight: 3 },
       { id: 'golem_core', rarity: 'rare', weight: 2 },
+      { id: 'cave_rat_tail', rarity: 'common', weight: 2 },
+      { id: 'glow_cap', rarity: 'uncommon', weight: 2 },
+      { id: 'bat_wing', rarity: 'uncommon', weight: 2 },
+      { id: 'spore_powder', rarity: 'uncommon', weight: 2 },
     ],
     elite: [
       { id: 'guard_badge', rarity: 'uncommon', weight: 3 },
       { id: 'ghost_dust', rarity: 'uncommon', weight: 2 },
       { id: 'golem_core', rarity: 'rare', weight: 3 },
       { id: 'warden_seal', rarity: 'epic', weight: 1 },
+      { id: 'glow_cap', rarity: 'uncommon', weight: 2 },
+      { id: 'spore_powder', rarity: 'uncommon', weight: 2 },
+      { id: 'obsidian_shard', rarity: 'rare', weight: 2 },
     ],
     boss: [
       { id: 'orc_tusk', rarity: 'rare', weight: 4 },
       { id: 'warden_seal', rarity: 'epic', weight: 3 },
       { id: 'grim_crown', rarity: 'legendary', weight: 2 },
+      { id: 'obsidian_shard', rarity: 'rare', weight: 3 },
+      { id: 'goblin_tooth', rarity: 'common', weight: 2 },
     ],
   };
 
@@ -707,12 +727,43 @@ export function createMonsters(ctx) {
     const d = Math.hypot(dx, dz) || 1;
     ctx.player.pos.x += (dx / d) * (m.boss ? 1.2 : 0.7);
     ctx.player.pos.z += (dz / d) * (m.boss ? 1.2 : 0.7);
+    // удар по игроку должен ощущаться: кадр дёргается
+    if (ctx.player && ctx.player.addShake) ctx.player.addShake(m.boss ? 1.0 : 0.45);
     if (ctx.ambience) ctx.ambience.hurt();
     if (ctx.ui && ctx.ui.flashDamage) ctx.ui.flashDamage();
     return true;
   }
 
   /* ---------------- атаки игрока по монстрам ---------------- */
+
+  /**
+   * Все звери под конусом, от ближнего к дальнему.
+   *
+   * Раньше удар доставал только первого зверя: толпа гоблинов стояла
+   * столбом, и клинок рубил только того, кто оказался первым. Теперь
+   * можно задать, сколько целей задевает удар.
+   *
+   * @param {THREE.Vector3} org начало луча
+   * @param {THREE.Vector3} dir направление
+   * @param {number} range дальность
+   * @param {number} cone половина угла
+   * @param {number} max сколько целей вернуть
+   * @returns {object[]} звери, от ближнего к дальнему
+   */
+  function aimTargets(org, dir, range, cone, max = 1) {
+    const found = [];
+    for (const m of list) {
+      if (m.hp <= 0 || m.dying > 0) continue;
+      const dx = m.x - org.x, dz = m.z - org.z;
+      const d = Math.hypot(dx, dz);
+      if (d > range || d < 1e-3) continue;
+      const dot = (dx / d) * dir.x + (dz / d) * dir.z;
+      if (dot < Math.cos(cone)) continue;
+      found.push({ m, d });
+    }
+    found.sort((a, b) => a.d - b.d);
+    return found.slice(0, Math.max(1, max)).map((f) => f.m);
+  }
 
   /**
    * Монстр под прицелом (для подсказки HUD).
@@ -769,40 +820,79 @@ export function createMonsters(ctx) {
   /**
    * Удар оружием: снимает здоровье.
    *
+   * Что изменилось против прежнего «бью первого, кто попался»:
+   *   · удар достаёт несколько зверей, если оружие рубит по площади;
+   *   · бывает критический удар — вдвое больший урон;
+   *   · тяжёлое оружие отбрасывает и оглушает сильнее лёгкого;
+   *   · звери с бронёй гасят часть урона.
+   *
    * @param {THREE.Vector3} org начало луча
    * @param {THREE.Vector3} dir направление
    * @param {number} range дальность
    * @param {number} cone половина угла
    * @param {number} dmg урон
-   * @returns {{hit: boolean, killed: boolean}} результат
+   * @param {object} [opts] {count, crit, knock, stun}
+   * @returns {{hit: boolean, killed: boolean, hits: object[]}} результат
    */
-  function hit(org, dir, range, cone, dmg) {
-    const best = aimTarget(org, dir, range, cone);
-    if (!best) {
+  function hit(org, dir, range, cone, dmg, opts = {}) {
+    const count = Math.max(1, opts.count || 1);
+    const critChance = opts.crit || 0;
+    const knock = opts.knock ?? 4.5;
+    const stun = opts.stun ?? 0.35;
+    const targets = aimTargets(org, dir, range, cone, count);
+    if (!targets.length) {
       makeNoise(org, 10);
-      return { hit: false, killed: false };
+      return { hit: false, killed: false, hits: [] };
     }
-    let amount = dmg;
-    // щит элитного гасит часть урона
-    if (best.spec.guard) amount = Math.max(1, Math.round(amount * (1 - best.spec.guard)));
-    best.hp -= amount;
-    best.hitFlash = 1;
-    best.stun = 0.35;
-    if (best.state !== 'dead') best.state = 'recoil';
-    best.stateT = 0;
-    const dx = best.x - org.x, dz = best.z - org.z;
-    const d = Math.hypot(dx, dz) || 1;
-    best.vx = (dx / d) * 4.5;
-    best.vz = (dz / d) * 4.5;
-    let killed = false;
-    if (best.hp <= 0) {
-      killed = true;
-      kill(best);
-    } else if (ctx.ambience) {
-      ctx.ambience.hiss();
+    const hits = [];
+    for (const best of targets) {
+      // запечатанный босс неуязвим: печать Врат держит его в сне
+      if (best.boss && bossLocked) {
+        hits.push({
+          x: best.x,
+          y: best.y + (best.spec.height || 1.6) * (best.baseScale || 1) * 0.62,
+          z: best.z,
+          amount: 0,
+          crit: false,
+          killed: false,
+          sealed: true,
+        });
+        continue;
+      }
+      let amount = dmg;
+      // крит: удар в уязвимое место
+      const crit = critChance > 0 && Math.random() < critChance;
+      if (crit) amount *= 2;
+      // щит элитного и броня гасят часть урона
+      if (best.spec.guard) amount = Math.max(1, Math.round(amount * (1 - best.spec.guard)));
+      if (best.spec.armor) amount = Math.max(1, Math.round(amount * (1 - best.spec.armor)));
+      best.hp -= amount;
+      best.hitFlash = 1;
+      best.stun = Math.max(best.stun || 0, stun);
+      if (best.state !== 'dead') best.state = 'recoil';
+      best.stateT = 0;
+      const dx = best.x - org.x, dz = best.z - org.z;
+      const d = Math.hypot(dx, dz) || 1;
+      best.vx = (dx / d) * knock;
+      best.vz = (dz / d) * knock;
+      let killed = false;
+      if (best.hp <= 0) {
+        killed = true;
+        kill(best);
+      }
+      hits.push({
+        x: best.x,
+        y: best.y + (best.spec.height || 1.6) * (best.baseScale || 1) * 0.62,
+        z: best.z,
+        amount: Math.round(amount),
+        crit,
+        killed,
+        guard: !!best.spec.guard,
+      });
     }
+    if (!hits.some((h) => h.killed) && ctx.ambience) ctx.ambience.hiss();
     makeNoise(org, 6);
-    return { hit: true, killed };
+    return { hit: true, killed: hits.some((h) => h.killed), hits };
   }
 
   /**
@@ -1075,7 +1165,7 @@ export function createMonsters(ctx) {
         m.stateT = 0;
       }
     } else if (m.state === 'sleep') {
-      if (dist < aggro) {
+      if (dist < aggro && !(m.boss && bossLocked)) {
         m.state = 'stalk';
         m.stateT = 0;
       } else {
@@ -1389,6 +1479,38 @@ export function createMonsters(ctx) {
   }
 
   /**
+   * Сколько зверей осталось в каждой зоне подземелья.
+   *
+   * По этим числам печати понимают, когда зал зачищен и путь дальше
+   * можно открыть.
+   *
+   * @returns {object} {зона: {alive, total}}
+   */
+  function zoneCounts() {
+    const out = {};
+    for (const z of ZONES) out[z.id] = { alive: 0, total: 0 };
+    for (const m of list) {
+      const key = m.zone && out[m.zone] ? m.zone : 'gate';
+      out[key].total++;
+      if (m.hp > 0 && m.dying <= 0) out[key].alive++;
+    }
+    return out;
+  }
+
+  /**
+   * Запечатать или отпустить босса.
+   *
+   * @param {boolean} locked запечатан ли
+   */
+  function setBossLocked(locked) {
+    bossLocked = !!locked;
+    if (boss && bossLocked && boss.state !== 'dead') {
+      boss.state = 'sleep';
+      boss.stateT = 0;
+    }
+  }
+
+  /**
    * Живой ли босс (нужно для HUD).
    *
    * @returns {object|null} босс
@@ -1399,7 +1521,9 @@ export function createMonsters(ctx) {
 
   return {
     list, bags, spawn, clear, update, strike, hit, flare, makeNoise, aimTarget,
-    guardsCleared, guardsLeft, getBoss,
+    guardsCleared, guardsLeft, getBoss, zoneCounts, setBossLocked,
+    /** Запечатан ли босс (печать Врат держит). */
+    get bossLocked() { return bossLocked; },
     /** Сколько снарядов в полёте (для проверок). */
     __projCount() { return projectiles.length; },
     /** Сколько ядовитых луж на полу (для проверок). */

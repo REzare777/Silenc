@@ -83,6 +83,7 @@ import { createFishingSystem } from './game/fishing.js';
 import { createLocations } from './game/locations.js';
 import { createCombat, COMBAT } from './game/combat.js';
 import { createMonsters } from './game/monsters.js';
+import { createProgression } from './game/progression.js';
 import { createDeath } from './game/death.js';
 import { createDialog } from './game/dialog.js';
 import { createTrade } from './game/trade.js';
@@ -370,6 +371,8 @@ ctx.systems.locations = createLocations(ctx);
 // боёвка: факел в руке и тени в подземелье
 ctx.systems.combat = createCombat(ctx);
 ctx.systems.monsters = createMonsters(ctx);
+// печати подземелья: уровни, которые открываются по мере зачистки залов
+ctx.systems.progression = createProgression(ctx);
 // заклинания: мана, откаты и вспышки
 ctx.systems.spells = createSpells(ctx);
 // смерть: падение и экран «Погиб». Появилась вместе с сохранениями —
@@ -1161,6 +1164,8 @@ function loop() {
   if (ctx.loc === 'dungeon') {
     monsters.update(dt, t);
     combat.update(dt, t);
+    // печати: зал зачищен — путь дальше открыт
+    if (ctx.systems.progression) ctx.systems.progression.update(dt);
   } else {
     combat.update(dt, t);
   }
@@ -1379,6 +1384,7 @@ window.__dbg = {
   // слоты и смерть — для проверок и отладки
   listSlots, loadSlot, saveToSlot,
   death, combat, monsters,
+  progression: ctx.systems.progression,
   trade: ctx.systems.trade, loadout: ctx.systems.loadout, spells: ctx.systems.spells,
   npcs: Object.assign({}, locations.npcs || {}, ctx.npcs || {}),
   items: { ITEMS, GOODS, MATERIALS, itemIcon, itemBadge, itemDesc, sellPrice, buyPrice, getItem, GEAR, SPELLS },

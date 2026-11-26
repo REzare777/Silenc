@@ -79,6 +79,7 @@ export function createCombat(ctx) {
 
   const _dir = new THREE.Vector3();
   const _org = new THREE.Vector3();
+  const _v = new THREE.Vector3();
 
   /**
    * Поставить/убрать бранд в руках.
@@ -229,7 +230,9 @@ export function createCombat(ctx) {
    *   * урон — случайное число из диапазона оружия;
    *   * скорость — кулдаун равен `speed` оружия: тяжёлое бьёт медленно;
    *   * дальность — `reach`: у лука и посоха своя;
-   *   * посох тратит ману.
+   *   * посох тратит ману, любой клинок — силы;
+   *   * замах бьёт по площади: длинный меч достаёт двоих, двуручный — троих;
+   *   * бывает крит — вдвое больший урон.
    *
    * @returns {boolean} попали ли
    */
@@ -242,6 +245,14 @@ export function createCombat(ctx) {
       if (ctx.ui) ctx.ui.toast('Мана кончилась — жезл молчит.', 2000);
       return false;
     }
+    // тяжёлый замах стоит силы: без этого можно рубить бесконечно
+    const effort = spec.effort ?? 4;
+    if (ctx.stats.stamina < effort) {
+      if (ctx.ambience) ctx.ambience.dryClick();
+      if (ctx.ui) ctx.ui.toast('Сил не хватает — опусти оружие.', 1600);
+      return false;
+    }
+    ctx.stats.spendStamina(effort);
     state.weaponCd = spec.speed;
     state.lastWeapon = spec.id;
 
@@ -264,9 +275,28 @@ export function createCombat(ctx) {
     const monsters = ctx.systems.monsters;
     let hit = false;
     if (monsters) {
-      const res = monsters.hit(_org, _dir, spec.reach, cone, dmg);
+      const res = monsters.hit(_org, _dir, spec.reach, cone, dmg, {
+        count: spec.sweep ?? 1,
+        crit: spec.crit ?? 0,
+        knock: spec.knock ?? 4.5,
+        stun: spec.stun ?? 0.35,
+      });
       hit = res.hit;
-      if (res.hit && ctx.ambience) {
+      if (hit) {
+        // цифры урона над зверем и тряска камеры: удар должен чувствоваться
+        let sealed = false;
+        for (const h of res.hits || []) {
+          if (h.sealed) { sealed = true; continue; }
+          showDamage(h.x, h.y, h.z, h.amount, h.crit);
+        }
+        if (sealed && ctx.ui) {
+          ctx.ui.toast('Печать Врат держит его. Сначала — стража.', 2600);
+        }
+        if (ctx.player && ctx.player.addShake) {
+          ctx.player.addShake((spec.weight || 1) >= 3 ? 0.55 : 0.22);
+        }
+      }
+      if (hit && ctx.ambience) {
         if (spec.subclass === 'bow') ctx.ambience.twang();
         else if (spec.subclass === 'magic') ctx.ambience.zap();
         else ctx.ambience.hitBlade(spec.weight >= 3);
@@ -274,6 +304,27 @@ export function createCombat(ctx) {
     }
     if (!hit && ctx.ambience) ctx.ambience.hitStone();
     return hit;
+  }
+
+  /**
+   * Показать цифру урона над зверем.
+   *
+   * Мировая точка переводится в экранную здесь же: у интерфейса нет
+   * камеры, а проекция должна идти от того же кадра, который игрок видит.
+   *
+   * @param {number} x где по X
+   * @param {number} y где по Y
+   * @param {number} z где по Z
+   * @param {number} amount сколько урона
+   * @param {boolean} crit критический ли
+   */
+  function showDamage(x, y, z, amount, crit) {
+    if (!ctx.ui || !ctx.ui.popDamage) return;
+    const p = _v.set(x, y, z).project(ctx.camera);
+    if (p.z < -1 || p.z > 1) return;          // цель за камерой или слишком далеко
+    const sx = (p.x * 0.5 + 0.5) * window.innerWidth;
+    const sy = (-p.y * 0.5 + 0.5) * window.innerHeight;
+    ctx.ui.popDamage(sx, sy, amount, crit);
   }
 
   /**

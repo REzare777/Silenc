@@ -88,6 +88,16 @@ const res = await page.evaluate(async () => {
   const reachedEntry = walkTo(0, -23);
   ok(reachedEntry, `дошли до южного проёма входного зала (z=${p.pos.z.toFixed(1)})`);
 
+  // 4-а) печати: печать входа закрыта и держит игрока
+  ok(Array.isArray(spot.seals) && spot.seals.length === 3, 'у локации три печати');
+  const sealHall = (spot.seals || []).find((s) => s.id === 'hall');
+  ok(!!sealHall && !sealHall.open, 'печать входа закрыта');
+  const blocked = walkTo(0, -17, 220);
+  ok(!blocked && p.pos.z < -19.4, `печать входа держит игрока (z=${p.pos.z.toFixed(1)})`);
+  // зачистка зала открывает печать — для проверки маршрута открываем вручную
+  spot.openSeal('hall');
+  spot.openSeal('crystal');
+
   const reachedHall = walkTo(0, -8);
   ok(reachedHall, `прошли в кристальный зал (z=${p.pos.z.toFixed(1)})`);
 

@@ -90,7 +90,7 @@ export function buildDungeon(M, glowTex) {
   const flagstone = new THREE.MeshStandardMaterial({
     map: M.caveWall.map, roughness: 0.92, metalness: 0.04,
   });
-  flagstone.color.setRGB(0.44, 0.44, 0.55);
+  flagstone.color.setRGB(0.52, 0.48, 0.44);
   // Самоцвет — матовый камень с собственным свечением. Металл и гладкая
   // поверхность давали белый блик, и кристалл выглядел картонным.
   const crystal = new THREE.MeshStandardMaterial({
@@ -457,17 +457,34 @@ export function buildDungeon(M, glowTex) {
 
   /* ================================================================
    *  ПОЛЫ
+   *
+   *  Пол — земля и щебень, а не тот же камень, что на стенах. Раньше он
+   *  был сине-серым, и зал читался как коробка: пол и стены были одного
+   *  цвета. Теперь пол тёплый и бурый — он сразу отделяется от стен,
+   *  и по нему видно, где проход, а где завал.
    * ================================================================ */
   const floorMat = new THREE.MeshStandardMaterial({
-    map: M.cave.map, color: 0x82829c, roughness: 0.85, metalness: 0.05,
+    map: M.cave.map, color: 0x7a6c56, roughness: 0.97, metalness: 0.0,
+    emissive: 0x3d2c1c, emissiveIntensity: 0.55,
   });
   const floorDeepMat = new THREE.MeshStandardMaterial({
-    map: M.cave.map, color: 0x6a7088, roughness: 0.88, metalness: 0.05,
+    map: M.cave.map, color: 0x675546, roughness: 0.97, metalness: 0.0,
+    emissive: 0x4a3520, emissiveIntensity: 0.8,
   });
 
   /** Пол прямоугольного участка. */
   const floor = (x0, x1, z0, z1, y, m) => {
-    const f = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), m);
+    const w = x1 - x0, d = z1 - z0;
+    const g = new THREE.PlaneGeometry(w, d);
+    // Текстура пола не растягивается на весь зал: без этого UV 0..1
+    // натягивали камень на 24×14 м, и под ногами была огромная
+    // размытая клякса вместо щебня. Тайлим примерно по 3 м.
+    const uv = g.attributes.uv;
+    for (let i = 0; i < uv.count; i++) {
+      uv.setXY(i, uv.getX(i) * (w / 3), uv.getY(i) * (d / 3));
+    }
+    uv.needsUpdate = true;
+    const f = new THREE.Mesh(g, m);
     f.rotation.x = -Math.PI / 2;
     f.position.set((x0 + x1) / 2, y, (z0 + z1) / 2);
     f.receiveShadow = true;
@@ -655,14 +672,34 @@ export function buildDungeon(M, glowTex) {
     [-5.4, 23.2, Y_DEEP], [5.4, 23.2, Y_DEEP],
   ];
   for (const [px, pz, base] of pillarSpots) {
+    const H = (base === Y_TOP ? H_TOP : H_DEEP) - 0.6;
     const r = rr(0.72, 1.0);
-    pillars.add(cyl(r * 0.88, r, (base === Y_TOP ? H_TOP : H_DEEP) - 0.6, 8),
-      'rock', mat(px, base + ((base === Y_TOP ? H_TOP : H_DEEP) - 0.6) / 2, pz, rr(0, 3)));
+    // Колонна собрана из трёх ярусов: каждый чуть смещён и наклонён.
+    // Ровный цилиндр читался как труба, поставленная в зал, а не как
+    // камень, выдолбленный в скале.
+    const segs = 3;
+    let y = base;
+    for (let i = 0; i < segs; i++) {
+      const sh = H / segs;
+      const rad = r * (1 - i * 0.07);
+      pillars.add(cyl(rad * 0.9, rad, sh, 8), 'rock',
+        mat(px + rr(-0.13, 0.13), y + sh / 2, pz + rr(-0.13, 0.13),
+          rr(0, 3), rr(-0.035, 0.035), rr(-0.035, 0.035)));
+      y += sh;
+    }
     pillars.add(cyl(r * 1.22, r * 1.02, 0.4, 8), 'rockDark',
-      mat(px, base + (base === Y_TOP ? H_TOP : H_DEEP) - 0.42, pz));
+      mat(px, base + H - 0.42, pz));
     pillars.add(cyl(r * 1.16, r * 1.28, 0.5, 8), 'rockDark', mat(px, base + 0.22, pz));
+    // обломки у подножия: колонна стоит на вывороченном камне
+    for (let i = 0; i < 3; i++) {
+      const a = rr(0, 6.28), d = rr(r + 0.25, r + 0.95);
+      const s = rr(0.16, 0.4);
+      pillars.add(sphere(s, 6, 5), 'rockDark',
+        mat(px + Math.cos(a) * d, base + s * 0.38, pz + Math.sin(a) * d,
+          rr(0, 3), rr(0, 3), rr(0, 3)));
+    }
     colliders.circles.push({
-      x: px, z: pz, r: r + 0.16, y0: base, y1: base + (base === Y_TOP ? H_TOP : H_DEEP) - 0.6,
+      x: px, z: pz, r: r + 0.16, y0: base, y1: base + H,
     });
   }
   group.add(pillars.build({ rock, rockDark }, null, { name: 'dungeonPillars' }));
@@ -784,6 +821,15 @@ export function buildDungeon(M, glowTex) {
   brazier(-5.6, Y_TOP, -17.2);
   brazier(5.6, Y_TOP, -4.5);
   brazier(-5.6, Y_DEEP, 20.5);
+  // входной зал и зал Врат были провалами темноты: пол уходил в чёрное
+  // пятно, и зал читался пустым. Ещё по жаровне с каждой стороны — тёплые
+  // pools света на земле, и зал оживает.
+  brazier(-8.4, Y_TOP, -25.5);
+  brazier(8.4, Y_TOP, -25.5);
+  brazier(-5.4, Y_DEEP, 19.5);
+  brazier(5.4, Y_DEEP, 19.5);
+  brazier(-8.8, Y_DEEP, 29.5);
+  brazier(8.8, Y_DEEP, 29.5);
 
   /* ================================================================
    *  РЕКВИЗИТ — то, что делает пещеру местом, а не пустым залом
@@ -875,6 +921,57 @@ export function buildDungeon(M, glowTex) {
     p.scale.set(1, 0.72, 1);
     group.add(p);
   }
+
+  /* --- светящиеся грибы: живой зелёный акцент в холодной пещере ---
+   *
+   *  Пещера была вся синяя: кристаллы, туман, камень. Зелёные пятна
+   *  грибов дают глазу второй цвет и подсказывают, где мокро и где
+   *  что-то растёт. Свет дают только самые крупные — каждый точечный
+   *  источник дорого стоит в пещере.
+   * --------------------------------------------------------------- */
+  const capMat = new THREE.MeshStandardMaterial({
+    color: 0x2c5a3c, emissive: 0x4fd88a, emissiveIntensity: 1.35, roughness: 0.78,
+  });
+  const stemMat = new THREE.MeshStandardMaterial({
+    color: 0x9db6a4, roughness: 0.92,
+  });
+  const shrooms = new Builder();
+  let shroomLights = 3;
+  const shroomSpots = [
+    // входной зал — у самой стены, где темнее всего
+    [-10.6, -28.4, Y_TOP], [-10.2, -27.6, Y_TOP], [10.8, -26.8, Y_TOP],
+    // кристальный зал — вдоль луж и у подножия колонн
+    [-9.4, -21.0, Y_TOP], [-8.8, -20.4, Y_TOP], [8.2, -4.6, Y_TOP],
+    [-2.2, -9.0, Y_TOP], [-2.8, -8.6, Y_TOP], [-11.0, -6.2, Y_TOP],
+    [11.4, 1.6, Y_TOP], [4.6, 3.4, Y_TOP], [-5.0, -16.0, Y_TOP],
+    // нижний ярус — у Врат гуще и ядрёнее
+    [-6.8, 18.2, Y_DEEP], [-6.2, 18.9, Y_DEEP], [7.2, 25.0, Y_DEEP],
+    [6.6, 25.6, Y_DEEP], [-10.4, 28.6, Y_DEEP], [2.6, 30.2, Y_DEEP],
+    [-3.4, 21.0, Y_DEEP], [9.8, 20.4, Y_DEEP],
+  ];
+  for (const [sx, sz, base] of shroomSpots) {
+    const s = rr(0.16, 0.42);
+    const h = s * rr(1.6, 2.6);
+    // ножка
+    shrooms.add(cyl(s * 0.16, s * 0.26, h, 6), 'stem',
+      mat(sx, base + h / 2, sz, 0, 0, rr(-0.12, 0.12)));
+    // шляпка
+    shrooms.add(sphere(s * 0.62, 9, 6), 'cap', mat(sx, base + h, sz, 0, 0, rr(0, 3)));
+    shrooms.add(cyl(s * 0.62, s * 0.2, s * 0.36, 9), 'cap',
+      mat(sx, base + h - s * 0.1, sz, 0, 0, rr(0, 3)));
+    if (s > 0.3 && shroomLights > 0) {
+      shroomLights--;
+      const l = new THREE.PointLight(0x57e39a, 1.5, 9, 1.5);
+      l.position.set(sx, base + h, sz);
+      group.add(l);
+    } else if (s > 0.24) {
+      const g = makeGlow(glowTex, s * 3.2, 0x5ce39c, 0.22);
+      g.position.set(sx, base + h, sz);
+      group.add(g);
+      glowSprites.push(g);
+    }
+  }
+  group.add(shrooms.build({ cap: capMat, stem: stemMat }, null, { name: 'dungeonShrooms' }));
 
   /* --- истоптанная тропа от портала к Вратам: плиты по линии пути --- */
   const pathPts = [
@@ -1124,6 +1221,210 @@ export function buildDungeon(M, glowTex) {
         rr(0, 6.28), rr(-1.4, 1.4), rr(-1.4, 1.4)));
   }
   group.add(shards.build({ blue: crystal, violet: crystalViolet }, null, { name: 'dungeonShards' }));
+
+  /* ================================================================
+   *  ПЕЧАТИ: магические барьеры между ярусами
+   *
+   *  Подземелье устроено как три уровня. Пока в зале живы звери,
+   *  путь дальше закрыт печатью — светящейся завесой в проёме.
+   *  Зачистил зал — печать рассыпалась, и открылся следующий ярус.
+   *  Так у игрока появляется понятный порядок: сначала мелочь,
+   *  потом серьёзная порода, потом стража у Врат и сам Гримм.
+   * ================================================================ */
+  const SEAL_DEFS = [
+    {
+      id: 'hall',
+      title: 'Печать входа',
+      zone: 'hall',
+      need: 'входном зале',
+      hud: 'Печать входа держит: {n} зверей в зале',
+      parts: [
+        { x: 0, z: A.z1, w: GAP_MAIN[1] - GAP_MAIN[0], h: 3.8 },
+        { x: (GAP_WEST[0] + GAP_WEST[1]) / 2, z: A.z1, w: GAP_WEST[1] - GAP_WEST[0], h: 3.2 },
+        { x: (GAP_EAST[0] + GAP_EAST[1]) / 2, z: A.z1, w: GAP_EAST[1] - GAP_EAST[0], h: 3.2 },
+      ],
+      y: Y_TOP,
+    },
+    {
+      id: 'crystal',
+      title: 'Печать шахты',
+      zone: 'crystal',
+      need: 'кристальном зале',
+      hud: 'Печать шахты держит: {n} зверей в зале',
+      parts: [{ x: 0, z: B.z1, w: SH.x1 - SH.x0, h: 4.4 }],
+      y: Y_TOP,
+    },
+    {
+      // Печать Врат: барьера нет — запечатан сам босс, пока жива стража.
+      id: 'gate',
+      title: 'Печать Врат',
+      zone: 'gateElite',
+      need: 'страже у Врат',
+      hud: 'Печать Врат держит: {n} стражей на месте',
+      parts: [],
+      y: Y_DEEP,
+      pos: { x: 0, z: az },
+    },
+  ];
+
+  /** Печати: барьеры в проёмах и запечатанные Врата. */
+  const seals = [];
+
+  for (const def of SEAL_DEFS) {
+    // завеса: тонкая полупрозрачная плоскость + нити света + руны
+    const veilMat = new THREE.MeshBasicMaterial({
+      color: 0x5fb4ff, transparent: true, opacity: 0.07,
+      side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending,
+    });
+    const strandMat = new THREE.MeshStandardMaterial({
+      color: 0x2b5f99, emissive: 0x74c4ff, emissiveIntensity: 1.15,
+      transparent: true, opacity: 0.42, roughness: 0.4, metalness: 0,
+      depthWrite: false,
+    });
+    const grp = new THREE.Group();
+    grp.name = 'seal_' + def.id;
+    const strands = new Builder();
+
+    for (const part of def.parts) {
+      const veil = new THREE.Mesh(new THREE.PlaneGeometry(part.w, part.h), veilMat);
+      veil.position.set(part.x, def.y + part.h / 2, part.z);
+      grp.add(veil);
+
+      // вертикальные нити света — редкие и тонкие, чтобы не читались клеткой
+      const n = Math.max(3, Math.round(part.w / 0.72));
+      for (let i = 0; i <= n; i++) {
+        const sx = part.x - part.w / 2 + (part.w * i) / n;
+        strands.add(box(0.03, part.h * 0.94, 0.03, 1), 'strand',
+          mat(sx, def.y + part.h / 2, part.z, 0, 0, rr(-0.02, 0.02)));
+      }
+      // рунное кольцо в проёме — главный знак печати
+      const ringR = Math.min(part.w, part.h) * 0.3;
+      strands.add(new THREE.TorusGeometry(ringR, 0.05, 6, 40), 'strand',
+        mat(part.x, def.y + part.h * 0.5, part.z + 0.02));
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2 + 0.3;
+        strands.add(box(0.05, 0.26, 0.05, 1), 'strand',
+          mat(part.x + Math.cos(a) * ringR, def.y + part.h * 0.5 + Math.sin(a) * ringR,
+            part.z + 0.02, 0, 0, a));
+      }
+      // парящие осколки-руны
+      for (let i = 0; i < 6; i++) {
+        const rx = part.x + rr(-part.w / 2 + 0.35, part.w / 2 - 0.35);
+        const ry = def.y + rr(0.45, part.h - 0.45);
+        strands.add(sphere(rr(0.035, 0.065), 5, 4), 'strand',
+          mat(rx, ry, part.z + rr(-0.12, 0.12)));
+      }
+      // ореол в проёме
+      const gl = makeGlow(glowTex, Math.min(part.w, 7) * 0.6, 0x7fc8ff, 0.2);
+      gl.position.set(part.x, def.y + part.h * 0.45, part.z);
+      grp.add(gl);
+      glowSprites.push(gl);
+    }
+
+    if (def.parts.length) {
+      grp.add(strands.build({ strand: strandMat }, null,
+        { name: 'sealStrands', castShadow: false, receiveShadow: false }));
+    }
+    group.add(grp);
+
+    seals.push({
+      id: def.id,
+      title: def.title,
+      zone: def.zone,
+      need: def.need,
+      hud: def.hud,
+      group: grp,
+      mats: def.parts.length ? [veilMat, strandMat] : [],
+      colliders: [],
+      open: false,
+      openT: 0,
+      parts: def.parts,
+      pos: def.pos || (def.parts.length
+        ? { x: def.parts[0].x, z: def.parts[0].z }
+        : { x: 0, z: 0 }),
+    });
+  }
+
+  // коллайдеры барьеров — их убираем, когда печать падает
+  for (const seal of seals) {
+    const def = SEAL_DEFS.find((d) => d.id === seal.id);
+    for (const part of seal.parts) {
+      const c = {
+        cx: part.x, cz: part.z, hx: part.w / 2, hz: 0.18,
+        ang: 0, y0: def.y, y1: def.y + part.h, seal: seal.id,
+      };
+      seal.colliders.push(c);
+      colliders.boxes.push(c);
+    }
+  }
+
+  // печать на самих Вратах: кольцо рун вокруг алтаря, красное, пока
+  // стража жива. Когда стража падает — кольцо синеет и гаснет.
+  const gateSealMat = new THREE.MeshStandardMaterial({
+    color: 0x61253f, emissive: 0xd8465f, emissiveIntensity: 1.3,
+    roughness: 0.5, metalness: 0, transparent: true, opacity: 0.92,
+  });
+  const gateSeal = new THREE.Group();
+  gateSeal.position.set(0, Y_DEEP + 0.07, az);
+  const gateRing = new THREE.Mesh(new THREE.TorusGeometry(4.4, 0.1, 6, 44), gateSealMat);
+  gateRing.rotation.x = -Math.PI / 2;
+  gateSeal.add(gateRing);
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const mark = new THREE.Mesh(box(0.14, 0.06, 0.55, 1), gateSealMat);
+    mark.position.set(Math.cos(a) * 4.4, 0, Math.sin(a) * 4.4);
+    mark.rotation.y = -a;
+    gateSeal.add(mark);
+  }
+  group.add(gateSeal);
+  const gateSealGlow = makeGlow(glowTex, 12, 0xd8465f, 0.18);
+  gateSealGlow.position.set(0, Y_DEEP + 0.5, az);
+  group.add(gateSealGlow);
+  glowSprites.push(gateSealGlow);
+
+  /**
+   * Открыть печать: барьер рассыпается, коллайдер уходит, проём открыт.
+   *
+   * @param {string} id идентификатор печати
+   * @returns {boolean} открылась ли
+   */
+  function openSeal(id) {
+    const seal = seals.find((s) => s.id === id);
+    if (!seal || seal.open) return false;
+    seal.open = true;
+    seal.openT = 0;
+    for (let i = colliders.boxes.length - 1; i >= 0; i--) {
+      if (colliders.boxes[i].seal === id) colliders.boxes.splice(i, 1);
+    }
+    if (id === 'gate') {
+      gateSealMat.emissive.setHex(0x6fc0ff);
+      gateSealMat.color.setHex(0x27506f);
+      gateSealGlow.material.color.setHex(0x6fc0ff);
+    }
+    return true;
+  }
+
+  /**
+   * Закрыть все печати заново — новая вылазка в подземелье.
+   */
+  function resetSeals() {
+    for (const seal of seals) {
+      seal.open = false;
+      seal.openT = 0;
+      seal.group.visible = true;
+      seal.group.scale.set(1, 1, 1);
+      for (const c of seal.colliders) {
+        if (!colliders.boxes.includes(c)) colliders.boxes.push(c);
+      }
+      for (const m of seal.mats) m.opacity = m === seal.mats[0] ? 0.07 : 0.42;
+      if (seal.id === 'gate') {
+        gateSealMat.emissive.setHex(0xd8465f);
+        gateSealMat.color.setHex(0x61253f);
+        gateSealMat.opacity = 0.92;
+        gateSealGlow.material.color.setHex(0xd8465f);
+      }
+    }
+  }
 
   /* ================================================================
    *  РУНЫ НА СТЕНАХ — светящиеся знаки
@@ -1414,8 +1715,7 @@ export function buildDungeon(M, glowTex) {
     }
 
     // огни факелов и жаровень живут: пламя подрагивает, свет пульсирует
-    for (let i = 0; i < flames.length; i++) {
-      const f = flames[i];
+    for (let i = 0; i < flames.length; i++) {      const f = flames[i];
       const ph = i * 2.7;
       const k = 0.86 + Math.sin(t * 8.3 + ph) * 0.09 + Math.sin(t * 19.7 + ph * 1.7) * 0.05;
       f.scale.set(0.9 + k * 0.16, k, 0.9 + k * 0.16);
@@ -1428,6 +1728,37 @@ export function buildDungeon(M, glowTex) {
       const l = torchLights[i];
       const ph = i * 1.9;
       l.intensity = l.userData.base * (0.82 + Math.sin(t * 9.2 + ph) * 0.12 + Math.sin(t * 21.1 + ph) * 0.06);
+    }
+
+    // печати: барьер мерцает, а когда печать падает — рассыпается
+    for (const s of seals) {
+      if (s.open) {
+        if (s.openT < 1.5) {
+          s.openT = Math.min(1.5, s.openT + dt);
+          const k = s.openT / 1.5;
+          const fade = 1 - k;
+          if (s.mats.length) {
+            s.mats[0].opacity = 0.07 * fade;
+            s.mats[1].opacity = 0.42 * fade;
+          }
+          s.group.scale.y = 1 - k * 0.6;
+          if (s.id === 'gate') {
+            gateSealMat.opacity = 0.92 * fade;
+            gateSeal.scale.setScalar(1 + k * 0.5);
+            gateSealGlow.material.opacity = 0.18 * fade;
+          }
+        }
+      } else {
+        const pulse = 0.5 + Math.sin(t * 1.7 + s.parts.length) * 0.5;
+        if (s.mats.length) {
+          s.mats[0].opacity = 0.05 + pulse * 0.045;
+          s.mats[1].opacity = 0.3 + pulse * 0.18;
+        }
+        if (s.id === 'gate') {
+          gateSealMat.emissiveIntensity = 1.0 + pulse * 0.9;
+          gateSealGlow.material.opacity = 0.12 + pulse * 0.12;
+        }
+      }
     }
 
     // пылинки медленно плывут в потоке
@@ -1471,6 +1802,12 @@ export function buildDungeon(M, glowTex) {
     spawn,
     exit,
     spots,
+    /** Печати между ярусами: барьеры и запечатанные Врата. */
+    seals,
+    /** Открыть печать (барьер рассыпается, проём открыт). */
+    openSeal,
+    /** Закрыть печати заново — новая вылазка. */
+    resetSeals,
     /** Три факела на кронштейнах, которые можно снять. */
     torchBrackets,
     update,

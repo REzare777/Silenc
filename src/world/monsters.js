@@ -409,13 +409,13 @@ function goblinGuard() {
 function ghost() {
   const g = new THREE.Group();
   g.name = 'ghost';
-  const shroud = std(0x9fb4d8, {
-    transparent: true, opacity: 0.44, roughness: 1,
-    emissive: 0x1b2740, side: THREE.DoubleSide, depthWrite: false,
+  const shroud = std(0x76879f, {
+    transparent: true, opacity: 0.5, roughness: 1,
+    emissive: 0x101a2c, side: THREE.DoubleSide, depthWrite: false,
   });
-  const shroudDeep = std(0x6f86ad, {
-    transparent: true, opacity: 0.3, roughness: 1,
-    emissive: 0x131c2e, depthWrite: false,
+  const shroudDeep = std(0x4c5f80, {
+    transparent: true, opacity: 0.34, roughness: 1,
+    emissive: 0x0c1424, depthWrite: false,
   });
 
   // торс — перевёрнутый конус: широкий книзу, узкий к плечам
@@ -434,10 +434,12 @@ function ghost() {
     mesh(w, cone(0.22, 1.15, 7), shroudDeep, [0, -0.55, 0]);
     wisps.push(w);
   }
-  // глаза — две яркие точки в глубине капюшона
-  const eyeM = glow(0xd6ecff);
-  mesh(body, sphere(0.085, 8, 7), eyeM, [-0.14, 0.92, 0.4]);
-  mesh(body, sphere(0.085, 8, 7), eyeM, [0.14, 0.92, 0.4]);
+  // глаза — две тусклые точки в глубине капюшона. Раньше они были
+  // крупные и яркие, и призрак читался как мультяшный; в полумраке
+  // пещеры смотреть должны две холодные точки, а не фонарики.
+  const eyeM = glow(0xa9c9e6);
+  mesh(body, sphere(0.055, 8, 7), eyeM, [-0.13, 0.92, 0.4]);
+  mesh(body, sphere(0.055, 8, 7), eyeM, [0.13, 0.92, 0.4]);
   // тёмная «пустота» под капюшоном — оттуда смотрят глаза
   mesh(body, sphere(0.26, 12, 10), std(0x121a2c, {
     transparent: true, opacity: 0.72, roughness: 1, depthWrite: false,

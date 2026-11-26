@@ -28,6 +28,7 @@ export class Player {
     this.bob = 0;
     this.bobPhase = 0;
     this.bobScale = 0.5;      // покачивание камеры при ходьбе (0 = выключено)
+    this.shake = 0;           // тряска камеры от ударов
     this.stepDistance = 0;
     this.onStep = null;
     this.speedWalk = 3.1;
@@ -359,7 +360,24 @@ export class Player {
     this.camera.rotation.set(0, 0, 0);
     this.camera.rotateY(this.yaw);
     this.camera.rotateX(this.pitch);
+    // тряска: удар по игроку или тяжёлый удар по зверю. Кадр дёргается,
+    // но управление не ломается — смещение только позиционное.
+    if (this.shake > 0.002) {
+      const s = this.shake;
+      this.camera.position.x += (Math.random() - 0.5) * s * 0.17;
+      this.camera.position.y += (Math.random() - 0.5) * s * 0.17;
+      this.camera.rotateZ((Math.random() - 0.5) * s * 0.055);
+    }
     this.camera.rotateZ(this.roll);
+  }
+
+  /**
+   * Тряска камеры: короткий толчок, который сам затухает.
+   *
+   * @param {number} amount сила толчка (0.2 — лёгкий, 0.6 — тяжёлый)
+   */
+  addShake(amount) {
+    this.shake = Math.min(1.2, (this.shake || 0) + amount);
   }
 
   /**
@@ -536,6 +554,8 @@ export class Player {
     this.roll = Math.sin(this.bobPhase) * 0.012 * bobK;
 
     this.updateCamY(dt);
+    // тряска затухает сама: толчок длится доли секунды
+    if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 2.4);
     this.applyCamera();
   }
 
