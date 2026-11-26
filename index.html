@@ -146,6 +146,12 @@
   /* ---------- reticle ---------- */
   #reticle{position:absolute;left:50%;top:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;
     background:rgba(255,255,255,.5);box-shadow:0 0 6px rgba(0,0,0,.7);transition:.2s}
+  /* ---------- цифры урона над зверем ---------- */
+  .dmgNum{position:fixed;z-index:24;pointer-events:none;font:800 15px/1 ui-sans-serif,system-ui,sans-serif;
+    color:#ffd7a0;text-shadow:0 2px 6px rgba(0,0,0,.95);transform:translate(-50%,-50%);
+    transition:transform .95s cubic-bezier(.18,.72,.28,1),opacity .95s ease;opacity:1}
+  .dmgNum.crit{font-size:22px;color:#ff8a4d;text-shadow:0 0 12px rgba(255,120,60,.9),0 2px 6px rgba(0,0,0,.95)}
+  .dmgNum.go{transform:translate(-50%,-170%) scale(.92);opacity:0}
   /* ---------- бой: топливо факела, «veil», угроза ---------- */
   #vitals .vIco.fire{background:#d8802a;color:#ffb35c}
   #vitals .vTrack i.fire{background:linear-gradient(90deg,#8a4a12,#f0a640)}
@@ -161,6 +167,67 @@
   #threat{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .25s;
     background:radial-gradient(120% 90% at 50% 50%,rgba(0,0,0,0) 34%,rgba(10,4,16,.9) 100%)}
   #threat.on{opacity:.55}
+  /* ---------- печать: что мешает пройти дальше ---------- */
+  #sealBar{position:absolute;left:22px;top:64px;display:none;align-items:center;gap:9px;
+    padding:7px 13px;font-size:11.5px;letter-spacing:.03em;color:#a9c9ea;pointer-events:none;
+    background:rgba(8,15,26,.55);border:1px solid rgba(120,180,255,.16);border-radius:9px;
+    box-shadow:0 6px 18px rgba(0,0,0,.35)}
+  #sealBar.on{display:flex}
+  #sealBar .sIco{width:9px;height:9px;border-radius:50%;flex:0 0 9px;
+    background:#74c6ff;box-shadow:0 0 9px rgba(116,198,255,.9);animation:pulseSeal 1.6s ease-in-out infinite}
+  @keyframes pulseSeal{0%,100%{opacity:.55}50%{opacity:1}}
+  /* ---------- трекер дел: что сейчас в работе ---------- */
+  #questTrack{position:absolute;right:22px;top:96px;max-width:270px;display:none;
+    flex-direction:column;gap:5px;padding:10px 13px;pointer-events:none}
+  #questTrack.on{display:flex}
+  #questTrack .qtHead{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--ink-dim)}
+  #questTrack .qtIco{width:8px;height:8px;border-radius:50%;flex:0 0 8px;
+    background:#ffc94a;box-shadow:0 0 8px rgba(255,201,74,.85)}
+  #questTrack.ready .qtIco{background:#7ce8a6;box-shadow:0 0 8px rgba(124,232,166,.85)}
+  #questTrack .qtTitle{font-family:"Cormorant Garamond",Georgia,serif;font-size:15px;
+    font-weight:600;letter-spacing:.02em;color:#e9c9a2;line-height:1.25}
+  #questTrack .qtGoal{font-size:11.5px;line-height:1.5;color:#bfb09c}
+  #questTrack .qtGoal b{color:#e9c9a2;font-weight:600}
+  /* ---------- журнал дел ---------- */
+  #questLog{position:fixed;inset:0;z-index:26;display:none;align-items:center;justify-content:center;
+    background:rgba(8,6,4,.62);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+  #questLog.on{display:flex}
+  #questLog .qLogCard{width:min(640px,94vw);max-height:86vh;overflow:auto;padding:24px 26px 20px}
+  #questLog .qLogHead{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px}
+  #questLog .qLogHead h2{font-family:"Cormorant Garamond",Georgia,serif;font-size:24px;
+    font-weight:600;letter-spacing:.04em;margin:0;color:#e9c9a2}
+  #questLog .qLogSub{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:16px}
+  #questLog .qLogEmpty{font-size:12.5px;line-height:1.7;color:#bfb09c;font-style:italic}
+  #questLog .qItem{border-top:1px solid rgba(255,255,255,.08);padding:13px 0 12px}
+  #questLog .qItem:first-child{border-top:0;padding-top:0}
+  #questLog .qTop{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  #questLog .qTop b{font-family:"Cormorant Garamond",Georgia,serif;font-size:17px;
+    font-weight:600;color:#e9c9a2;letter-spacing:.02em}
+  #questLog .qTop i{font-style:normal;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-dim)}
+  #questLog .qTop .qState{margin-left:auto;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+    padding:3px 9px;border-radius:20px;border:1px solid rgba(232,177,99,.3);color:var(--gold)}
+  #questLog .qItem.done .qTop .qState{border-color:rgba(124,232,166,.35);color:#7ce8a6}
+  #questLog .qItem.ready .qTop .qState{border-color:rgba(124,232,166,.5);color:#9df0bd;
+    background:rgba(124,232,166,.12)}
+  #questLog .qDesc{font-size:12px;line-height:1.6;color:#a99c8b;margin:5px 0 8px;font-style:italic}
+  #questLog .qGoals{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+  #questLog .qGoals li{font-size:12px;color:#bfb09c;display:flex;align-items:center;gap:8px}
+  #questLog .qGoals li::before{content:"";width:7px;height:7px;border-radius:2px;flex:0 0 7px;
+    border:1px solid rgba(255,255,255,.28)}
+  #questLog .qGoals li.done{color:#8fdcae}
+  #questLog .qGoals li.done::before{background:#7ce8a6;border-color:#7ce8a6;
+    box-shadow:0 0 6px rgba(124,232,166,.6)}
+  #questLog .qGoals li b{margin-left:auto;color:#e9c9a2;font-weight:600;font-variant-numeric:tabular-nums}
+  #questLog .qReward{font-size:11px;color:var(--ink-dim);margin-top:7px;letter-spacing:.03em}
+  #questLog .qReward b{color:var(--gold);font-weight:600}
+  #questLog .qFoot{margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);
+    font-size:11px;color:var(--ink-dim);display:flex;justify-content:space-between;align-items:center}
+  #questLog .qFoot kbd{font:inherit;font-size:10px;font-weight:600;color:var(--gold);
+    background:rgba(232,177,99,.13);border:1px solid rgba(232,177,99,.25);border-radius:4px;padding:1px 5px}
+  #questClose{appearance:none;background:none;border:1px solid rgba(255,255,255,.14);color:var(--ink-dim);
+    width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:12px;line-height:1;transition:.2s}
+  #questClose:hover{color:var(--ink);border-color:rgba(255,255,255,.32);background:rgba(255,255,255,.07)}
   #dmg{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s;
     background:radial-gradient(110% 80% at 50% 50%,rgba(120,10,10,0) 28%,rgba(150,20,20,.8) 100%)}
   #dmg.on{opacity:1}
@@ -509,7 +576,7 @@
     #viewCanvas{width:100%;height:180px}
   }
 </style>
-  <script type="module" crossorigin src="./assets/index-D4jTD9m1.js"></script>
+  <script type="module" crossorigin src="./assets/index-Ci8Yzic6.js"></script>
 </head>
 <body>
 <script>
@@ -568,6 +635,7 @@
     <div><kbd>T</kbd> время суток</div>
     <div><kbd>O</kbd> настройки</div>
     <div><kbd>I</kbd> инвентарь</div>
+    <div><kbd>J</kbd> журнал дел</div>
     <div><kbd>P</kbd> фото-режим</div>
     <div><kbd>Q</kbd> убрать из рук</div>
     <div><kbd>1</kbd>–<kbd>9</kbd> пояс</div>
@@ -668,6 +736,14 @@
   <div id="veil"><i></i><i></i><i></i></div>
   <div id="threat"></div>
   <div id="dmg"></div>
+  <div id="sealBar"><i class="sIco"></i><span id="sealText">Печать держит путь</span></div>
+
+  <!-- ---------- трекер дел: что в работе прямо сейчас ---------- -->
+  <div id="questTrack" class="panel">
+    <div class="qtHead"><i class="qtIco"></i><span>Дело</span></div>
+    <div class="qtTitle" id="qtTitle"></div>
+    <div class="qtGoal" id="qtGoal"></div>
+  </div>
 
   <!-- ---------- босс: имя и полоса здоровья сверху ---------- -->
   <div id="bossBar">
@@ -811,6 +887,21 @@
       </div>
     </div>
     <div class="tradeFoot" id="tradeFoot"></div>
+  </div>
+</div>
+
+<!-- ---------- журнал дел ---------- -->
+<div id="questLog">
+  <div class="qLogCard panel">
+    <div class="qLogHead">
+      <div>
+        <h2>Журнал дел</h2>
+        <div class="qLogSub">Что обещали — и что за это дадут</div>
+      </div>
+      <button id="questClose" title="Закрыть">✕</button>
+    </div>
+    <div id="questList"></div>
+    <div class="qFoot"><span><kbd>J</kbd> или <kbd>Esc</kbd> — закрыть</span><span>Дела Хорта и Торна</span></div>
   </div>
 </div>
 
