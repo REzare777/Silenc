@@ -11,6 +11,14 @@ whispervale.html
 # скриншоты и отладочные кадры (весят сотни мегабайт)
 shots/
 
+# временные файлы сборки трейлера и промо
+.work/
+
+# генерируемые релизы: трейлер и пакет для itch
+publish/*.mp4
+publish/itch-upload.zip
+publish/itch-shots/
+
 # логи автотестов
 .testlogs/
 
