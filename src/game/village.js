@@ -130,7 +130,8 @@ const BUILDING_CLEARINGS = [
   [LAYOUT.well.x, LAYOUT.well.z, 6],
   [PASTURE.x, PASTURE.z, 16],          // овечье пастбище — лес вырублен
   [WOODS.x, WOODS.z, 12],              // лесная делянка на опушке — лес вырублен
-  // дом игрока у скалы: полянка вокруг него, иначе ели заходят под стены
+  // дом игрока на поляне у опушки: полянка вокруг него, иначе ели
+  // заходят под стены
   [PLAYER_HOME.x, PLAYER_HOME.z, 13],
 ];
 
@@ -484,8 +485,9 @@ export function createVillage(ctx) {
       [-40, -8, { w: 6, d: 5, h: 3.35, roof: 'thatch', floors: 1 }],
       [29, -22, { w: 6, d: 5, h: 3.35, roof: 'thatch', floors: 1 }],
       // Дом игрока. Раньше он стоял на отшибе у трактира (−34, −16) и был
-      // просто одним из двенадцати. Теперь он стоит у скалы, справа от
-      // дороги к пещере, и стал «твоим»: фасадом к дороге, дверь открыта.
+      // просто одним из двенадцати. Теперь он стоит на поляне у опушки,
+      // справа от дороги к пещере (место — как на скриншоте игрока), и стал
+      // «твоим»: фасадом к дороге, дверь открыта.
       [PLAYER_HOME.x, PLAYER_HOME.z, { w: 5.5, d: 4.6, h: 3.25, roof: 'thatch', floors: 1 }],
       [19, -34, { w: 5.5, d: 4.6, h: 3.25, roof: 'thatch', floors: 1 }],
     ];
@@ -570,9 +572,18 @@ export function createVillage(ctx) {
       const c = Math.cos(h.ry || 0), s = Math.sin(h.ry || 0);
       const ext = Math.abs((h.w / 2) * c) + Math.abs((h.d / 2) * s);
       const off = Math.sign(h.x) * (ext + 2.4);
+      // Дом игрока стоит фасадом к дороге, и с его «внешней» стороны —
+      // сама дорога. Поэтому огород у него — за домом, в сторону опушки.
+      const behind = h.i === PLAYER_HOME.index;
       for (const dz of [-2.2, 2.2]) {
         const bed = gardenBed(ctx.M, { w: 1.2, d: 2.6 });
-        bed.position.set(h.x + off, 0, h.z + dz);
+        if (behind) {
+          const bx = h.x - Math.sin(h.ry) * (h.d / 2 + 1.7) + Math.cos(h.ry) * dz;
+          const bz = h.z + Math.cos(h.ry) * (h.d / 2 + 1.7) - Math.sin(h.ry) * dz;
+          bed.position.set(bx, 0, bz);
+        } else {
+          bed.position.set(h.x + off, 0, h.z + dz);
+        }
         bed.rotation.y = Math.PI / 2;
         ctx.scene.add(bed);
       }
@@ -802,12 +813,12 @@ export function createVillage(ctx) {
   }
 
   function buildNoticeBoard() {
-    // Доска стоит у дома игрока — на полянке перед крыльцом, лицом к дороге.
+    // Доска стоит у дома игрока — сбоку от крыльца, лицом к дороге.
     // Раньше она была у дороги к скале, но посреди леса: её никто не
     // находил, и пёс, который ждёт у дома «с табличкой», тоже уезжал
     // в дальний конец дороги.
     const hry = ryToFace([PLAYER_HOME.x, PLAYER_HOME.z], PLAYER_HOME.look);
-    const bp = facadePos(PLAYER_HOME.x, PLAYER_HOME.z, hry, -2.4, -4.9);
+    const bp = facadePos(PLAYER_HOME.x, PLAYER_HOME.z, hry, -3.6, -2.0);
     const BX = bp.x, BZ = bp.z;
     const BRY = hry + Math.PI;          // лицевая сторона доски — к дороге
     const board = noticeBoard(ctx.M, { w: 1.9, h: 1.2, postH: 1.35 });
@@ -915,12 +926,12 @@ export function createVillage(ctx) {
     /* --- фонарь у двери дома игрока ---
      *
      * У распахнутой двери встроенного фонаря нет (он ставится только к
-     * запертой), а дом стоит в лесу под скалой — без огня крыльцо тонет
+     * запертой), а дом стоит на опушке — без огня крыльцо тонет
      * в темноте, и дом не видно даже с дороги.
      */
     {
       const hry = ryToFace([PLAYER_HOME.x, PLAYER_HOME.z], PLAYER_HOME.look);
-      const lp = facadePos(PLAYER_HOME.x, PLAYER_HOME.z, hry, 2.3, -3.9);
+      const lp = facadePos(PLAYER_HOME.x, PLAYER_HOME.z, hry, 2.3, -2.6);
       const l = lantern(ctx.M, ctx.glowTex, {
         x: lp.x, z: lp.z, height: 2.9, lit: true, intensity: 2.4, distance: 13,
       });

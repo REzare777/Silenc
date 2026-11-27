@@ -242,14 +242,15 @@ console.log('=== Раунд 67: проверки ===');
 console.log(JSON.stringify(res, null, 2));
 
 const checks = [
-  ['дом игрока стоит у скалы', !!res.home && res.homeCliffDist < 22],
+  ['дом игрока стоит там, где стоял игрок на скриншоте',
+    !!res.home && Math.abs(res.home.x + 8.9) < 3 && Math.abs(res.home.z + 34.3) < 3],
   ['дом справа от дороги', res.homeSide > 0],
   ['дом не стоит на дороге', res.homeRoadDist >= 5],
   ['фасад дома смотрит на дорогу', res.homeFacesRoad > 0.75],
   ['до двери — пара минут ходьбы от дороги', res.doorRoadDist > 1.5 && res.doorRoadDist < 7],
   ['в свой дом есть вход', res.doorInteract],
   ['в свой дом пускают и ночью', res.inHome === 'home10' && res.phase === 'night'],
-  ['дом называется «Твой дом у скалы»', res.homeName === 'Твой дом у скалы'],
+  ['дом называется «Твой дом у дороги»', res.homeName === 'Твой дом у дороги'],
   ['чужие дома заперты по-прежнему', res.otherLocked],
   ['в доме есть кровать', res.hasBed],
   ['на кровати можно поспать', res.sleepInteract && res.sleepOk],

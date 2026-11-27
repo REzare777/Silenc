@@ -47,7 +47,8 @@ console.log('=== Опубликованный сайт:', URL, '===');
 console.log(JSON.stringify(res, null, 2));
 
 const checks = [
-  ['дом игрока у скалы', !!res.home && Math.abs(res.home.x + 58.6) < 1 && Math.abs(res.home.z + 67.4) < 1],
+  ['дом игрока на поляне у опушки (как на скриншоте)',
+    !!res.home && Math.abs(res.home.x + 8.9) < 2 && Math.abs(res.home.z + 34.3) < 2],
   ['в свой дом можно войти', res.doorInteract],
   ['в доме есть кровать', res.sleepInteract],
   ['после сна наступает утро', res.afterSleep === 'morning' || res.afterSleep === 'dawn'],
@@ -55,7 +56,7 @@ const checks = [
   ['тропа к дому есть', res.trail],
   ['дорога к скале в сети дорог', res.caveRoad],
   ['доска у дома игрока', res.boardHome === 10],
-  ['дом называется «Твой дом у скалы»', res.homeName === 'Твой дом у скалы'],
+  ['дом называется «Твой дом у дороги»', res.homeName === 'Твой дом у дороги'],
 ];
 
 let bad = 0;
