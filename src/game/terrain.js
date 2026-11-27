@@ -151,8 +151,10 @@ export function addRoads(ctx) {
 
   // тропинки: повороты скруглены, края мягкие
   for (const t of TRAILS) {
-    ribbon(t.pts, TRAIL_W, PATH_Y.trail, ctx.T.dirt, {
-      rounds: 3, step: 1.1, uScale: 0.36, vScale: 0.17, taper: 1.6,
+    // у дороги к скале своё полотно — рисуется в village.js
+    if (t.noRibbon) continue;
+    ribbon(t.pts, t.w || TRAIL_W, t.y ?? PATH_Y.trail, ctx.T.dirt, {
+      rounds: 3, step: 1.1, uScale: 0.36, vScale: 0.17, taper: 1.6, ...(t.opts || {}),
     });
   }
 }

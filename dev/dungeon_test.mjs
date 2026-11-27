@@ -101,22 +101,39 @@ const res = await page.evaluate(async () => {
   const reachedHall = walkTo(0, -8);
   ok(reachedHall, `прошли в кристальный зал (z=${p.pos.z.toFixed(1)})`);
 
-  // 5) спуск в шахту — вниз по каменной лестнице
-  const reachedShaft = walkTo(0, 10);
-  ok(reachedShaft, `дошли до спуска (z=${p.pos.z.toFixed(1)})`);
-  ok(p.groundY + p.y < -1.0, `идём по лестнице вниз (y=${(p.groundY + p.y).toFixed(2)})`);
+  // 5) шахта: лестницы нет — у края стоит парапет, в шахту не войти
+  const reachedShaft = walkTo(0, 4);
+  ok(reachedShaft, `дошли до края шахты (z=${p.pos.z.toFixed(1)})`);
+  const intoShaft = walkTo(0, 11, 420);
+  ok(!intoShaft && p.pos.z < 6.2, `в шахту не зайти (z=${p.pos.z.toFixed(1)})`);
+  ok(p.groundY + p.y > -1.0, `остались на верхнем ярусе (y=${(p.groundY + p.y).toFixed(2)})`);
+
+  // 5-а) переход вниз — мгновенный, по интеракту у парапета
+  const down = d.interactables.find((x) => x.label === 'Спуститься в зал Врат');
+  ok(!!down, 'есть интеракт «Спуститься в зал Врат»');
+  if (down) {
+    const reachedDown = walkTo(down.pos.x, down.pos.z, 600, 0.8);
+    ok(reachedDown, `дошли до перехода (z=${p.pos.z.toFixed(1)})`);
+    down.act();
+    await new Promise((r2) => setTimeout(r2, 200));
+    ok(Math.abs(p.pos.z - 17.6) < 2, `переход в зал Врат (z=${p.pos.z.toFixed(1)})`);
+    ok(p.groundY + p.y < -3.0, `мы на нижнем уровне (y=${(p.groundY + p.y).toFixed(2)})`);
+  }
 
   // 6) зал Врат
   const reachedGate = walkTo(0, 27);
   ok(reachedGate, `дошли до алтаря Врат (z=${p.pos.z.toFixed(1)})`);
-  ok(p.groundY + p.y < -3.0, `мы на нижнем уровне (y=${(p.groundY + p.y).toFixed(2)})`);
 
-  // 7) обратно наверх — лестница должна вывести на верхний ярус
-  const backShaft = walkTo(0, 9);
-  ok(backShaft, `вернулись к лестнице (z=${p.pos.z.toFixed(1)})`);
-  const climbed = walkTo(0, 4);
-  ok(climbed, `поднялись по лестнице (z=${p.pos.z.toFixed(1)})`);
-  ok(p.groundY + p.y > -1.0, `снова на верхнем ярусе (y=${(p.groundY + p.y).toFixed(2)})`);
+  // 7) обратно наверх — такой же переход, из ниши шахты
+  const up = d.interactables.find((x) => x.label === 'Подняться на верхний ярус');
+  ok(!!up, 'есть интеракт «Подняться на верхний ярус»');
+  if (up) {
+    const reachedUp = walkTo(up.pos.x, up.pos.z, 900, 0.8);
+    ok(reachedUp, `дошли до ниши шахты (z=${p.pos.z.toFixed(1)})`);
+    up.act();
+    await new Promise((r2) => setTimeout(r2, 200));
+    ok(p.groundY + p.y > -1.0, `снова на верхнем ярусе (y=${(p.groundY + p.y).toFixed(2)})`);
+  }
 
   // 8) выход наружу — интеракт должен быть достижим пешком
   const out = d.interactables.find((x) => x.label === 'Подняться на поверхность');

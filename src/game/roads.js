@@ -19,6 +19,8 @@
  *  @module game/roads
  */
 
+import { DUNGEON_TRAIL, dungeonGate } from './layout.js';
+
 /** Ширина главной улицы (вдоль Z). */
 export const MAIN_W = 7.4;
 /** Ширина поперечной дороги (вдоль X). */
@@ -67,6 +69,20 @@ export const TRAILS = [
    * тропа к дому на отшибе — тот дом переехал к скале, и тропа поехала с ним.
    */
   { id: 'homeCliff', pts: [[-62, -60], [-61.4, -62], [-60.2, -63.9]] },
+
+  /* --- дорога к скале ---
+   *
+   * Она же часть дорожной сети: от неё отходят тропинки, и по ней
+   * проверяется, что дороги не висят в воздухе. Само полотно рисует
+   * `village.js` — шире, чем тропинка, и с меньшей растушёвкой, чтобы
+   * дорога читалась с любого расстояния.
+   */
+  {
+    id: 'caveRoad',
+    pts: [...DUNGEON_TRAIL, [dungeonGate().foot.x, dungeonGate().foot.z]],
+    noRibbon: true,     // полотно рисуется отдельно, в village.js
+    noClear: true,      // лес у дороги вырубается по отдельному правилу
+  },
 
   /* --- дома восточной стороны (зеркало западной) --- */
   { id: 'homeA_e', pts: [[3.7, 5], [6.5, 7.5], [8.6, 9.8], [10.6, 11.4]] },
@@ -134,6 +150,9 @@ export function distToSeg(px, pz, a, b) {
 export function distToTrails(x, z) {
   let best = Infinity;
   for (const t of TRAILS) {
+    // дорога к скале вырубает лес по своему правилу (собственной шириной
+    // полотна), в общий радиус очистки она не входит
+    if (t.noClear) continue;
     for (let i = 0; i < t.pts.length - 1; i++) {
       const d = distToSeg(x, z, t.pts[i], t.pts[i + 1]);
       if (d < best) best = d;

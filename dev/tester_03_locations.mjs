@@ -62,23 +62,22 @@ const errors = await withGame({ start: true }, async (page, errs) => {
   }
   report('выход в деревню', exits);
 
-  /* ---------- подземелье: пол и спуск ---------- */
+  /* ---------- подземелье: пол и переход вниз ---------- */
   await page.evaluate(() => window.__dbg.setLocation('dungeon'));
   const dun = await page.evaluate(() => {
-    const p = window.__dbg.player;
+    const D = window.__dbg;
+    const p = D.player;
     const out = [];
-    // спускаемся по лестнице в шахте: идём вперёд и смотрим вниз
-    for (let i = 0; i < 200; i++) {
-      p.keys.clear(); p.keys.add('KeyW');
-      p.pitch = -0.9;
-      p.update(0.05);
-      if (i % 40 === 0) out.push({ i, x: +p.pos.x.toFixed(2), y: +p.pos.y.toFixed(2), z: +p.pos.z.toFixed(2), h: +p.y.toFixed(2), gy: +p.groundY.toFixed(2), g: p.grounded });
-    }
-    p.keys.clear();
-    out.push({ i: 200, x: +p.pos.x.toFixed(2), y: +p.pos.y.toFixed(2), z: +p.pos.z.toFixed(2), h: +p.y.toFixed(2), gy: +p.groundY.toFixed(2), g: p.grounded });
+    // в шахте лестницы нет: переход в зал Врат — по интеракту у парапета
+    const it = (D.ctx.interactables || []).find((x) => x.label === 'Спуститься в зал Врат');
+    if (!it) return [{ note: 'интеракта нет' }];
+    out.push({ note: 'интеракт найден', x: it.pos.x, z: it.pos.z, r: it.radius });
+    it.act();
+    for (let i = 0; i < 40; i++) { p.keys.clear(); p.update(0.05); }
+    out.push({ note: 'после перехода', x: +p.pos.x.toFixed(2), y: +p.pos.y.toFixed(2), z: +p.pos.z.toFixed(2), gy: +p.groundY.toFixed(2), g: p.grounded });
     return out;
   });
-  report('спуск в подземелье (шаги)', dun);
+  report('переход в зал Врат', dun);
 
   report('итого ошибок', errs.slice());
 });
