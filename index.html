@@ -684,11 +684,11 @@
 
   <div id="dogCmd">
     <div class="dogCard">
-      <h2>Пёс слушается</h2>
+      <h2>Пёс ждёт команды</h2>
       <p class="dogSub">Что скажете хвостатому?</p>
       <div class="dogBtns">
         <button data-cmd="stay"><b>Стой тут</b><i>остаться на месте</i></button>
-        <button data-cmd="goto"><b>Иди туда</b><i>кликните по земле</i></button>
+        <button data-cmd="goto"><b>Иди туда</b><i>щёлкните по земле</i></button>
         <button data-cmd="follow"><b>За мной</b><i>следовать за хозяином</i></button>
         <button data-cmd="jump"><b>Прыжок</b><i>прыгнуть через голову</i></button>
       </div>
@@ -699,7 +699,7 @@
   <div id="note">
     <div class="noteCard">
       <h2>Доска у дороги</h2>
-      <p class="noteSub">Написать можно только один раз. Что напишете — останется здесь навсегда.</p>
+      <p class="noteSub">Написать можно только раз. Что напишете — останется навсегда.</p>
       <textarea id="noteInput" maxlength="140" placeholder="Например: не ходите к скале после заката"></textarea>
       <div class="noteBtns">
         <button id="noteCancel">Отойти</button>
@@ -720,7 +720,7 @@
     <div class="dlgCard">
       <div class="dlgPortrait"><div id="dlgPic"></div></div>
       <div class="dlgBody">
-        <div class="dlgHead"><b id="dlgName">Хорт</b><i id="dlgTitle">бармен</i></div>
+        <div class="dlgHead"><b id="dlgName">Хорт</b><i id="dlgTitle">трактирщик</i></div>
         <p class="dlgText" id="dlgText"></p>
         <div class="dlgTopics" id="dlgTopics"></div>
         <div class="dlgFoot"><span><kbd>Esc</kbd> — закончить разговор</span></div>
@@ -798,7 +798,7 @@
           </div>
         </div>
       </div>
-      <div class="mHint">«Сохранить» — в последнее сохранение · «Слоты…» — свои места<br>
+      <div class="mHint">«Сохранить» — быстрое сохранение · «Слоты…» — отдельные ячейки<br>
         WASD — идти · Space — прыжок · T — время суток · P — фото-режим · M — звук<br>
         Esc — это меню · кликните по сцене, чтобы вернуть управление · C — показать границы столкновений</div>
     </div>
@@ -912,7 +912,7 @@
       <button id="slotsClose" title="Закрыть">✕</button>
     </div>
     <div id="slotsList"></div>
-    <div class="slotsFoot">Ручные слоты не перетираются автосохранением.</div>
+    <div class="slotsFoot">Автосохранение не затирает ручные слоты.</div>
   </div>
 </div>
 

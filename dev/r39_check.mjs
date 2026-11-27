@@ -38,7 +38,7 @@ const res = await page.evaluate(() => {
     // выход из бара: игрок должен оказаться на крыльце, а не в ступне
     d.ctx.systems.locations.setLocation('tavern');
     await0();
-    const exitAct = d.ctx.interactables.find((x) => x.where === 'tavern' && x.label === 'Выйти из таверны');
+    const exitAct = d.ctx.interactables.find((x) => x.where === 'tavern' && x.label === 'Выйти из трактира');
     out.tavernExitExists = !!exitAct;
     exitAct.act();
     out.tavernOutside = d.ctx.loc === 'village';

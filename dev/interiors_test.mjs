@@ -22,7 +22,7 @@ await page.evaluate(() => {
   const d = window.__dbg;
   // координаты берём из самой игры, а не из зашитых чисел:
   // трактир переезжал, и старые координаты роняли весь каскад проверок
-  const it = d.interactables.find(i => i.label.startsWith('Войти в таверну'));
+  const it = d.interactables.find(i => i.label.startsWith('Войти в трактир'));
   d.teleport(it.pos.x, it.pos.z + 0.2, 0);
 });
 await page.waitForTimeout(600);
@@ -270,7 +270,7 @@ const climb = await page.evaluate(() => {
 });
 ok(`подъём на второй этаж (max=${climb.max.toFixed(2)}, настил 4.20)`, climb.max > 4.0 && climb.climbed);
 
-/* ---- настил расширен: балкон над баром ---- */
+/* ---- настил расширен: балкон над стойкой ---- */
 const wing = await page.evaluate(() => {
   const d = window.__dbg;
   const p = d.player;
@@ -280,7 +280,7 @@ const wing = await page.evaluate(() => {
   p.keys.clear();
   return { y: p.groundY + p.y, supported: p.grounded };
 });
-ok('балкон над баром держит игрока', wing.y > 3.9 && wing.y < 4.5);
+ok('балкон над стойкой держит игрока', wing.y > 3.9 && wing.y < 4.5);
 
 /* ---- стойки фахверка — настоящие препятствия ---- */
 const postTest = await page.evaluate(() => {

@@ -41,7 +41,7 @@ export const SPELL_INFO = {
     name: 'Огненная вспышка',
     mana: 25,
     color: 0xffb066,
-    desc: 'Свет разом отбрасывает всё, что подошло слишком близко.',
+    desc: 'Свет отшвыривает всех, кто подобрался слишком близко.',
   },
   heal: {
     name: 'Лечебное слово',
@@ -155,7 +155,7 @@ export function createSpells(ctx) {
     if (ctx.ambience) ctx.ambience.spell('flash');
     // свет в мире: короткий круг света вокруг игрока
     pulseLight(0xffc07a, 22, 0.6);
-    say('Огненная вспышка! Тени отброшены.', 2200);
+    say('Вспышка! Тени шарахнулись прочь.', 2200);
   }
 
   /**
@@ -184,7 +184,7 @@ export function createSpells(ctx) {
       state.glowT = info.glow;
       if (ctx.viewmodel) ctx.viewmodel.flash(0xffd98a, 7);
       pulseLight(0xffd07a, 16, 1.6);
-      say('Живой огонь: вокруг тебя светло минуту. Факела в руках нет.', 3000);
+      say('Живой огонь: факела в руках нет, но минуту вокруг вас будет светло.', 3000);
     }
     if (ctx.ambience) ctx.ambience.spell('light');
   }
@@ -232,7 +232,7 @@ export function createSpells(ctx) {
     if (!info) return false;
     const left = cooldownLeft(spec.spell);
     if (left > 0) {
-      say(`«${info.name}» не отвечает ещё ${left.toFixed(0)} с.`, 2000);
+      say(`«${info.name}» пока не отзывается: ещё ${left.toFixed(0)} с.`, 2000);
       if (ctx.ambience) ctx.ambience.dryClick();
       return false;
     }

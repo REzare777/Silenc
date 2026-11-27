@@ -213,7 +213,7 @@ export function createAnimalsSystem(ctx) {
         () => {
           g.userData.pet && g.userData.pet();
           ctx.ambience.meow(0.9);
-          ctx.ui.toast('Кот заурчал и задрал голову.', 2200);
+          ctx.ui.toast('Кот довольно заурчал и подставил голову под ладонь.', 2200);
         },
       );
     }
@@ -361,17 +361,17 @@ export function createAnimalsSystem(ctx) {
       if (d.mode === 'wait') {
         // пёс ждёт у дома хозяина: стоит на месте и смотрит на игрока
         hold = true;
-        d.cmd = 'Ждёт у дома хозяина';
+        d.cmd = 'Ждёт хозяина у дома';
         if (dist < 12) d.dir = Math.atan2(pdz, pdx);
       } else if (d.mode === 'stay') {
         hold = true;
-        d.cmd = 'Стоит и ждёт приказаний';
+        d.cmd = 'Сидит и ждёт команды';
       } else if (d.mode === 'goto' && d.target) {
         const tx = d.target.x - d.g.position.x, tz = d.target.z - d.g.position.z;
         if (Math.hypot(tx, tz) < 0.8) {
           d.mode = 'stay';
           hold = true;
-          d.cmd = 'Дошёл до места и сидит';
+          d.cmd = 'Добежал до места и сидит';
         } else {
           follow = true;
           target = d.target;
@@ -480,7 +480,7 @@ export function createAnimalsSystem(ctx) {
     const home = (ctx.doors.homes || [])[idx];
     if (!home) return;
     d.mode = 'wait';
-    d.cmd = 'Ждёт у дома хозяина';
+    d.cmd = 'Ждёт хозяина у дома';
     d.path = null;
     d.pathTimer = 0;
     d.target = null;
@@ -533,7 +533,7 @@ export function createAnimalsSystem(ctx) {
   function dogAim() {
     closeDogMenu();
     ctx.mode = 'aim';
-    ctx.ui.toast('Кликните по земле, куда направить пса.', 3400);
+    ctx.ui.toast('Щёлкните по земле — туда пёс и пойдёт.', 3400);
     ctx.player.enabled = true;
     ctx.player.acceptInput = false;
     ctx.player.lookOnly = true;        // можно оборачиваться, но не идти
@@ -569,8 +569,8 @@ export function createAnimalsSystem(ctx) {
     if (!d) return;
     if (cmd === 'stay') {
       d.mode = 'stay'; d.target = null;
-      d.cmd = 'Стоит и ждёт приказаний';
-      ctx.ui.toast('Пёс сел и ждёт.', 2200);
+      d.cmd = 'Сидит и ждёт команды';
+      ctx.ui.toast('Пёс сел и не сводит с вас глаз.', 2200);
       ctx.ambience.bark(0.85);
       closeDogMenu();
     } else if (cmd === 'goto') {
@@ -578,13 +578,13 @@ export function createAnimalsSystem(ctx) {
     } else if (cmd === 'follow') {
       d.mode = 'follow'; d.target = null;
       d.cmd = 'Ходит за хозяином';
-      ctx.ui.toast('Пёс идёт за вами.', 2200);
+      ctx.ui.toast('Пёс трусцой бежит следом.', 2200);
       ctx.ambience.bark(0.9);
       closeDogMenu();
     } else if (cmd === 'jump') {
       d.jumpT = 0.001;
       d.cmd = 'Прыгнул!';
-      ctx.ui.toast('Пёс прыгнул — смотрите, как летит.', 2400);
+      ctx.ui.toast('Пёс прыгнул — гляньте, как летит!', 2400);
       ctx.ambience.bark(1.0);
       setTimeout(() => ctx.ambience.bark(0.6), 320);
       closeDogMenu();

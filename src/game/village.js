@@ -254,7 +254,7 @@ export function createVillage(ctx) {
     const t = tavern(ctx.M, {});
     const tavernRy = ryToFace([LAYOUT.tavern.x, LAYOUT.tavern.z], [0, 0]);
     const tPlaced = place(t, LAYOUT.tavern.x, LAYOUT.tavern.z, tavernRy);
-    ctx.footprints.push({ name: 'таверна', x: LAYOUT.tavern.x, z: LAYOUT.tavern.z, hx: 7.5, hz: 9, ry: tavernRy });
+    ctx.footprints.push({ name: 'трактир', x: LAYOUT.tavern.x, z: LAYOUT.tavern.z, hx: 7.5, hz: 9, ry: tavernRy });
     // выход через заднюю дверь таверны (сбоку, у восточной стены)
     {
       const back = facadePos(LAYOUT.tavern.x, LAYOUT.tavern.z, tavernRy, 8.5, -6.7, 0);
@@ -265,7 +265,7 @@ export function createVillage(ctx) {
     }
     // дверь таверны — на фасаде, левее центра (локальные x = -w*0.3, z = -d/2)
     addInteract(
-      tavernDoor().pos.clone(), 2.6, 'Войти в таверну «Уставший вепрь»',
+      tavernDoor().pos.clone(), 2.6, 'Войти в трактир «Уставший вепрь»',
       () => ctx.systems.locations.setLocation('tavern'),
     );
 
@@ -293,7 +293,7 @@ export function createVillage(ctx) {
       forgeFill.intensity = 6.6 + Math.sin(tt * 7.3) * 0.6;
     });
     ctx.interactables.push({
-      pos: bs.forge.clone(), radius: 2.8, label: 'Подуть на горн',
+      pos: bs.forge.clone(), radius: 2.8, label: 'Раздуть горн',
       act: () => { forgeLight.intensity = 34; ctx.ui.toast('Горн разгорелся — жар пошёл!'); },
     });
     /* --- кузнец Торн у горна --- */
@@ -352,7 +352,7 @@ export function createVillage(ctx) {
         if (combat.state.fuel >= 99) { ctx.ui.toast('Факел полон — нечего заправлять.'); return; }
         if (!ctx.stats.spendCoins(12)) { ctx.ui.toast('Не хватает монет.'); return; }
         combat.state.fuel = 100;
-        ctx.ui.toast('Кузнец набил фитиль смолой. Факел горит на полную.');
+        ctx.ui.toast('Торн заправил факел свежей смолой. Хватит надолго.');
       },
     });
 
@@ -451,7 +451,7 @@ export function createVillage(ctx) {
     ctx.footprints.push({ name: 'колодец', x: LAYOUT.well.x, z: LAYOUT.well.z, hx: 1.5, hz: 1.5, ry: 0 });
     ctx.interactables.push({
       pos: new THREE.Vector3(0, 1.2, 0), radius: 2.8, label: 'Набрать воды',
-      act: () => ctx.ui.toast('Вода из колодца — ледяная и чистая. Ведро полно.'),
+      act: () => ctx.ui.toast('Вода ледяная и чистая — аж зубы ломит.'),
     });
 
     /* --- дома ---
@@ -543,7 +543,7 @@ export function createVillage(ctx) {
             return;
           }
           if (HOUSES_LOCKED) {
-            ctx.ui.toast('Дом заперт на ключ: хозяева не жалуют гостей.', 3600);
+            ctx.ui.toast('Заперто. Хозяева гостей не жалуют.', 3600);
             return;
           }
           // в дом пускают только утром и днём
@@ -553,8 +553,8 @@ export function createVillage(ctx) {
             return;
           }
           ctx.ui.toast(phase === 'night'
-            ? 'Дверь заперта: хозяева спят. В дом пускают утром и днём.'
-            : 'Дом уже заперт на ночь. Заходите утром или днём.', 3600);
+            ? 'Заперто: хозяева спят. Приходите утром или днём.'
+            : 'Дом уже заперли на ночь. Приходите утром.', 3600);
         },
       );
     });
@@ -595,10 +595,10 @@ export function createVillage(ctx) {
     // перед дверью трактира и закрывал подход к ней
     const stalls = [[5.6, 5.6, 'fabric'], [-5.8, 6.4, 'fabric2'], [6.4, -6.2, 'fabric2'], [-8.0, 0.0, 'fabric']];
     const stallLines = [
-      'На прилавке — мед, репа и кусок сыра.',
-      'Ткани, ленты и пряжа. Торговец здоровается кивком.',
+      'На прилавке — мёд, репа и кусок сыра.',
+      'Ткани, ленты и пряжа. Торговка кивает вам.',
       'Кувшин с квасом и свежие лепёшки.',
-      'Здесь продают дичь, мёд и всё, что поймали за ночь.',
+      'Дичь, мёд и всё, что удалось добыть за ночь.',
     ];
     stalls.forEach(([sx, sz, cl], i) => {
       const st = marketStall(ctx.M, { cloth: cl });
@@ -808,7 +808,7 @@ export function createVillage(ctx) {
     // поленница — с подсказкой
     addInteract(
       new THREE.Vector3(WOODS.x + 2.4, 1.0, WOODS.z - 1.2), 2.4, 'Осмотреть поленницу',
-      () => ctx.ui.toast('Дрова сухие, хвойные. На зиму хватит — лесоруб складывал всю зиму.', 3800),
+      () => ctx.ui.toast('Дрова сухие, сосновые. До весны хватит — лесоруб всё лето колол.', 3800),
     );
   }
 
@@ -877,11 +877,11 @@ export function createVillage(ctx) {
           ctx.player.enabled = true;
           ctx.player.keys.clear();
           ctx.player.requestLock();
-          if (!text) { ctx.ui.toast('Пустая доска. Ладно, в следующий раз.', 2200); return; }
+          if (!text) { ctx.ui.toast('Вы так ничего и не написали. Может, в другой раз.', 2200); return; }
           ctx.boardNote = text;
           board.setText(text, 'написано углём');
           try { localStorage.setItem('wv.note', text); } catch (e) { /* без localStorage — просто не сохраняем */ }
-          ctx.ui.toast('Уголь кончился. Больше написать не получится.', 3200);
+          ctx.ui.toast('Уголёк стёрся. Больше ничего не написать.', 3200);
         });
       },
     };
@@ -962,7 +962,7 @@ export function createVillage(ctx) {
     ctx.colliders.circles.push({ x: FIRE.x, z: FIRE.z, r: 1.5 });   // круг камней костра
     ctx.interactables.push({
       pos: new THREE.Vector3(FIRE.x, 1, FIRE.z), radius: 2.8, label: 'Подбросить дрова',
-      act: () => { ctx.fireBoost = 12; ctx.ui.toast('Огонь разгорелся — тепло до ушей.'); },
+      act: () => { ctx.fireBoost = 12; ctx.ui.toast('Огонь взметнулся — тепло до самых ушей.'); },
     });
     ctx.animated.push((tt) => {
       const f = 0.75 + Math.sin(tt * 9.1) * 0.12 + Math.sin(tt * 21.7) * 0.07;

@@ -794,7 +794,7 @@ function enterGame(message) {
 // «Начать игру» — новая игра с нуля, сохранения не трогаем
 ui.onStart = () => {
   newGame();
-  enterGame('Добро пожаловать в долину. Идите, куда зовёт сердце.');
+  enterGame('Добро пожаловать в долину. Ступайте куда глаза глядят.');
   ui.hideHintsSoon();
 };
 
@@ -1316,7 +1316,7 @@ function loop() {
 
   if (started && ctx.mode === 'play') {
     if (fishing.session.state === 'bite') {
-      ui.setPrompt('Подсечь! Нажмите E');
+      ui.setPrompt('Подсекайте! Жмите E');
     } else if (fishing.session.state === 'wait' || fishing.session.state === 'cast') {
       ui.setPrompt('Ждите поклёвки…');
     } else {
@@ -1330,7 +1330,7 @@ function loop() {
         const hint = player.climbHint();
         if (it) ui.setPrompt(it.labelFn ? it.labelFn() : it.label);
         else if (hint) ui.setPrompt(hint);
-        else if (fishing.nearestCastSpot()) ui.setPrompt('Наведитесь на удочку, чтобы закинуть её');
+        else if (fishing.nearestCastSpot()) ui.setPrompt('Посмотрите на удочку, чтобы её закинуть');
         else ui.setPrompt('');
       }
     }

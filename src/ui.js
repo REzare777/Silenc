@@ -536,7 +536,7 @@ export class UI {
       const b = document.createElement('b');
       b.textContent = m.spec.name + (m.count > 1 ? ` ×${m.count}` : '');
       const sp = document.createElement('span');
-      sp.textContent = `отдаст за ${m.price} зол.`;
+      sp.textContent = `даст ${m.price} зол.`;
       info.appendChild(b);
       info.appendChild(sp);
       row.appendChild(info);
@@ -663,7 +663,7 @@ export class UI {
     if (!this.el.clock) return;
     const names = {
       morning: 'Утро', day: 'День', golden: 'Золотой час',
-      dusk: 'Вечер', night: 'Ночь',
+      dusk: 'Сумерки', night: 'Ночь',
     };
     const m = Math.max(0, Math.floor(remainSec / 60));
     const sec = Math.max(0, Math.floor(remainSec % 60));
@@ -769,8 +769,8 @@ export class UI {
     if (!rows.length) {
       const p = document.createElement('p');
       p.className = 'qLogEmpty';
-      p.textContent = 'Пока никаких дел. Поговори с Хортом в трактире '
-        + 'или с Торном у кузни — там всегда есть работа.';
+      p.textContent = 'Пока никаких дел. Загляните к Хорту в трактир '
+        + 'или к Торну в кузню — там всегда найдётся работа.';
       this.el.questList.appendChild(p);
       return;
     }

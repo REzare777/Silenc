@@ -800,7 +800,7 @@ export function createMonsters(ctx) {
     if (stats.hp <= 0) {
       stats.hp = 0;
       if (ctx.systems && ctx.systems.death) {
-        ctx.systems.death.kill(`${m.spec.name} забрала вас в пещере. Тьма сомкнулась.`);
+        ctx.systems.death.kill(`${m.spec.name} — последнее, что вы увидели. Тьма сомкнулась.`);
       }
       return true;
     }
@@ -992,7 +992,7 @@ export function createMonsters(ctx) {
     m.state = 'dead';
     if (m.boss) {
       if (ctx.ui && ctx.ui.setBoss) ctx.ui.setBoss(null, 0);
-      if (ctx.ui) ctx.ui.toast('Орк-владыка Гримм падает. Пещера затихает.', 4200);
+      if (ctx.ui) ctx.ui.toast('Орк-владыка Гримм рухнул. Пещера затихла.', 4200);
     }
     // дела: убийство засчитывается в прогресс (гоблины, босс)
     if (ctx.systems && ctx.systems.quests) ctx.systems.quests.onKill(m.spec);

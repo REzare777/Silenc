@@ -204,7 +204,7 @@ export function createFishingSystem(ctx) {
     session.bobber = makeBobber();
     session.bobber.position.set(from.x, from.y - 0.2, from.z);
     ctx.scene.add(session.bobber);
-    ctx.ui.toast(spot ? 'Заброс с удочки. Ждите поклёвки...' : 'Заброс. Ждите поклёвки...');
+    ctx.ui.toast(spot ? 'Удочка заброшена. Ждите поклёвки…' : 'Заброс. Ждите поклёвки…');
   }
 
   /**
@@ -250,7 +250,7 @@ export function createFishingSystem(ctx) {
     if (f.state !== 'bite') return;
     const inZone = f.mark >= f.zonePos - f.zone / 2 && f.mark <= f.zonePos + f.zone / 2;
     if (!inZone) {
-      failFish('Слишком рано — рыба сорвалась с крючка.');
+      failFish('Поторопились — рыба сорвалась.');
       return;
     }
     f.stage++;
@@ -258,7 +258,7 @@ export function createFishingSystem(ctx) {
       catchFish();
     } else {
       prepareHook();
-      ctx.ui.toast('Рыба дёрнулась! Ещё раз — <b>E</b>.', 1500);
+      ctx.ui.toast('Рыба дёрнула! Ещё раз — <b>E</b>.', 1500);
     }
   }
 
@@ -289,7 +289,7 @@ export function createFishingSystem(ctx) {
       ctx.caught[spec.id] = rec;
     }
     if (!placed.ok) {
-      ctx.ui.toast('Все слоты заняты — пришлось выпустить рыбу обратно в озеро.', 3600);
+      ctx.ui.toast('Сумка полна — пришлось отпустить рыбу обратно в озеро.', 3600);
       endFishing();
       ctx.ui.hideFishing();
       return;
@@ -331,7 +331,7 @@ export function createFishingSystem(ctx) {
     if (f.state !== 'idle' && ctx.player.pos.distanceTo(f.spot) > 20) {
       endFishing();
       ctx.ui.hideFishing();
-      ctx.ui.toast('Вы ушли далеко — удочка утонула.', 2000);
+      ctx.ui.toast('Вы отошли слишком далеко — удочку утянуло под воду.', 2000);
       return;
     }
 
@@ -370,7 +370,7 @@ export function createFishingSystem(ctx) {
       f.bobber.position.y = -0.1 + Math.sin(f.t * 18) * 0.03;
       ctx.ui.setFishing({ mark: f.mark, zone: f.zone, zonePos: f.zonePos, stage: f.stage, need: f.need });
       f.biteTime -= dt;
-      if (f.biteTime <= 0) failFish('Рыба ушла с крючка. Терпение.');
+      if (f.biteTime <= 0) failFish('Рыба сошла с крючка. Терпение.');
       return;
     }
 

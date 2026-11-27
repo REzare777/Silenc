@@ -78,7 +78,7 @@ export function createLoadout(ctx) {
    */
   function toggleTorch() {
     if (!ownsTorch()) {
-      if (ctx.ui) ctx.ui.toast('Факела нет. Купи у кузнеца Торна.', 2800);
+      if (ctx.ui) ctx.ui.toast('Факела нет. Его продаёт кузнец Торн.', 2800);
       return false;
     }
     state.torchEquipped = !state.torchEquipped;
@@ -162,7 +162,7 @@ export function createLoadout(ctx) {
     if (spec && spec.kind === 'spell') {
       const spells = ctx.systems && ctx.systems.spells;
       if (spells) spells.cast(spec);
-      else if (ctx.ui) ctx.ui.toast('Заклинания не работают здесь.', 2000);
+      else if (ctx.ui) ctx.ui.toast('Здесь заклинания не действуют.', 2000);
       return;
     }
     if (spec && spec.kind === 'gear' && spec.id === 'torch') {

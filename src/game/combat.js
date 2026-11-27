@@ -179,22 +179,22 @@ export function createCombat(ctx) {
    */
   function toggleTorch() {
     if (!state.torchEquipped) {
-      return 'Факела в руках нет. Возьми его с пояса (клавиша R).';
+      return 'В руках нет факела. Возьмите его с пояса — клавиша R.';
     }
     if (state.lit) {
       state.lit = false;
       brand.setLit(false);
       if (ctx.ambience) ctx.ambience.torchOut();
-      return 'Факел погашен. В темноте тени ближе.';
+      return 'Факел потушен. В темноте тени подбираются ближе.';
     }
     if (state.lighting > 0) return 'Факел уже разжигается…';
     if (state.fuel <= 0) {
       if (ctx.ambience) ctx.ambience.torchOut();
-      return 'В факеле нет топлива. Подойди к огню или купи смолу и фитиль.';
+      return 'Факел пуст. Подойдите к огню или купите смолу с фитилём.';
     }
     state.lighting = COMBAT.lightTime;
     if (ctx.ambience) ctx.ambience.torchLight();
-    return 'Разжигаю факел…';
+    return 'Факел разгорается…';
   }
 
   /**
@@ -249,7 +249,7 @@ export function createCombat(ctx) {
     const effort = spec.effort ?? 4;
     if (ctx.stats.stamina < effort) {
       if (ctx.ambience) ctx.ambience.dryClick();
-      if (ctx.ui) ctx.ui.toast('Сил не хватает — опусти оружие.', 1600);
+      if (ctx.ui) ctx.ui.toast('Сил не осталось — дайте рукам передохнуть.', 1600);
       return false;
     }
     ctx.stats.spendStamina(effort);
@@ -290,7 +290,7 @@ export function createCombat(ctx) {
           showDamage(h.x, h.y, h.z, h.amount, h.crit);
         }
         if (sealed && ctx.ui) {
-          ctx.ui.toast('Печать Врат держит его. Сначала — стража.', 2600);
+          ctx.ui.toast('Его держит печать Врат. Сперва разберитесь со стражей.', 2600);
         }
         if (ctx.player && ctx.player.addShake) {
           ctx.player.addShake((spec.weight || 1) >= 3 ? 0.55 : 0.22);
@@ -340,12 +340,12 @@ export function createCombat(ctx) {
     }
     if (!ctx.stats.spendMana(COMBAT.flashMana)) {
       if (ctx.ambience) ctx.ambience.dryClick();
-      if (ctx.ui) ctx.ui.toast('Мана кончилась — вспышка не вышла.', 1800);
+      if (ctx.ui) ctx.ui.toast('Маны не хватило — вспышка не вышла.', 1800);
       return false;
     }
     if (state.fuel < COMBAT.flashFuel) {
       if (ctx.ambience) ctx.ambience.dryClick();
-      if (ctx.ui) ctx.ui.toast('В факеле не хватило топлива.', 1800);
+      if (ctx.ui) ctx.ui.toast('Топлива в факеле не хватило.', 1800);
       return false;
     }
     state.fuel -= COMBAT.flashFuel;
@@ -422,7 +422,7 @@ export function createCombat(ctx) {
           state.lit = false;
           brand.setLit(false);
           if (ctx.ambience) ctx.ambience.torchOut();
-          if (ctx.ui) ctx.ui.toast('Факел погас. Найди огонь.', 2400);
+          if (ctx.ui) ctx.ui.toast('Факел погас. Нужен огонь.', 2400);
         }
       }
       brand.update(t);
@@ -450,7 +450,7 @@ export function createCombat(ctx) {
         state.lit = false;
         brand.setLit(false);
         if (ctx.ambience) ctx.ambience.torchOut();
-        if (ctx.ui) ctx.ui.toast('Факел погас. Найди огонь.', 2400);
+        if (ctx.ui) ctx.ui.toast('Факел погас. Нужен огонь.', 2400);
       }
     }
 
@@ -521,16 +521,16 @@ export function createCombat(ctx) {
   function prompt() {
     if (!state.active) return '';
     if (state.flashCd > 0.01) {
-      return `Вспышка перезаряжается — ${state.flashCd.toFixed(1)} с`;
+      return `Вспышка копит силу — ещё ${state.flashCd.toFixed(1)} с`;
     }
-    if (!state.torchEquipped) return 'Факела нет в руках — R';
-    if (state.lighting > 0) return 'Разжигаю факел…';
+    if (!state.torchEquipped) return 'Взять факел — R';
+    if (state.lighting > 0) return 'Факел разгорается…';
     if (!state.lit) {
-      return state.fuel > 0 ? 'Зажечь факел — F' : 'Факел пуст — найди огонь';
+      return state.fuel > 0 ? 'Зажечь факел — F' : 'Факел пуст — нужен огонь';
     }
     const pct = Math.round(state.fuel / COMBAT.fuelMax * 100);
     if (pct < 15) return `Горит: ${pct} % — топливо на исходе`;
-    return 'Ударь факелом — ЛКМ';
+    return 'Ударить факелом — ЛКМ';
   }
 
   /**

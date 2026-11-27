@@ -210,14 +210,14 @@ export function createLocations(ctx) {
       ctx.player.teleport(sp.x, sp.z, sp.yaw);
       ctx.player.y = 0; ctx.player.vy = 0; ctx.player.camY = null;
       ctx.ui.toast(inDungeon
-        ? 'Подземелье. Холодный свет кристаллов и полная тишина. Вглубь — по лестнице в шахте.'
+        ? 'Подземелье. Холодный свет кристаллов и мёртвая тишина. Вглубь ведёт лестница в шахте.'
         : inTavern
           ? '«Уставший вепрь». Тепло, пахнет дымом и элем.'
           : inChurch
-            ? `${CHURCH_NAME}. Холодный свет витражей, ладан и полная тишина.`
+            ? `${CHURCH_NAME}. Цветной свет витражей, запах ладана, тишина.`
             : inHome
               ? `${homeLocs[homeIdx].name}. ${HOME_LINES[homeIdx] || ''}`.trim()
-              : 'Амбар. Тут пахнет сеном и зерном.', 2600);
+              : 'Амбар. Пахнет сеном и зерном.', 2600);
     } else {
       // назад — к той двери, откуда вошли
       if (prev.startsWith('home')) {
@@ -261,9 +261,9 @@ export function createLocations(ctx) {
    * каждый кадр (см. updateNpc).
    */
   const talkToBarkeep = add(new THREE.Vector3(barkeepNpc.x, 1.4, barkeepNpc.z), 2.9,
-    'Поговорить с барменом', () => {
+    'Поговорить с трактирщиком', () => {
       if (barkeepNpc.away) {
-        ctx.ui.toast('Трактир закрыт: бармен ушёл спать. Вернётся с рассветом.', 3000);
+        ctx.ui.toast('Трактир закрыт: Хорт ушёл домой. Вернётся с рассветом.', 3000);
         return;
       }
       if (ctx.systems.dialog) ctx.systems.dialog.open('barkeep');
@@ -282,8 +282,8 @@ export function createLocations(ctx) {
     barkeepNpc.setAway(night);
     if (night !== wasAway) {
       ctx.ui.toast(night
-        ? 'Бармен задул свечу и ушёл домой через заднюю дверь за стойкой.'
-        : 'Бармен вернулся через заднюю дверь: вытер стойку, зажёг свечу и ждёт гостей.', 3200);
+        ? 'Хорт задул свечу и ушёл домой через заднюю дверь.'
+        : 'Хорт вернулся: протёр стойку, зажёг свечу и ждёт гостей.', 3200);
     }
     barkeepNpc.update(dt, t, ctx.player.pos);
     talkToBarkeep.pos.set(barkeepNpc.x, 1.4, barkeepNpc.z);
@@ -294,38 +294,38 @@ export function createLocations(ctx) {
     'Выйти из амбара', () => setLocation('village'), 'barn');
 
   const barnCartLines = [
-    'Телега нагружена мешками: вчера привезли зерно с мельницы.',
-    'Колёса крепкие, оглобли ровные. С такой телегой и до луга далеко не уедешь.',
+    'Телега гружена мешками: вчера привезли зерно с мельницы.',
+    'Колёса крепкие, оглобли ровные. На такой и до ярмарки доедешь.',
   ];
   [{ x: -3.4, z: 2.6 }, { x: 4.6, z: 2.2 }].forEach((c, i) => {
     add(new THREE.Vector3(c.x, 1.1, c.z), 2.1, 'Осмотреть телегу',
       () => ctx.ui.toast(barnCartLines[i % barnCartLines.length]), 'barn');
   });
   add(new THREE.Vector3(2.6, 4.9, -3.4), 2.2, 'Осмотреть сено',
-    () => ctx.ui.toast('Сено сухое, душистое. Зимой коровы не будут голодать.'), 'barn');
+    () => ctx.ui.toast('Сено сухое, душистое. Зимой коровы голодать не будут.'), 'barn');
   add(new THREE.Vector3(5.0, 1.2, -3.4), 2.2, 'Осмотреть верстак',
-    () => ctx.ui.toast('На верстаке — топор, колода и свежие опилки.'), 'barn');
+    () => ctx.ui.toast('На верстаке — топор, колода и свежая стружка.'), 'barn');
 
   // таверна
   add(new THREE.Vector3(tavernLoc.exitDoor.x, 1.4, tavernLoc.exitDoor.z), 2.6,
-    'Выйти из таверны', () => setLocation('village'), 'tavern');
+    'Выйти из трактира', () => setLocation('village'), 'tavern');
   add(new THREE.Vector3(-6.5, 1.2, 0), 2.4, 'Погреться у очага',
-    () => ctx.ui.toast('Очаг дышит жаром. Слышно, как потрескивают дрова.'), 'tavern');
+    () => ctx.ui.toast('Очаг пышет жаром. Потрескивают дрова.'), 'tavern');
   add(new THREE.Vector3(5.0, 1.5, -1.0), 2.4, 'Осмотреть стойку',
-    () => ctx.ui.toast('Бутылки на полках — от тёмного эля до прозрачной водки.'), 'tavern');
+    () => ctx.ui.toast('Бутылки на полках — от тёмного эля до прозрачной сливовицы.'), 'tavern');
   // торговля с трактирщиком: улов — в его деньги, товары — к нам
   add(new THREE.Vector3(4.9, 1.2, 2.2), 2.0, 'Торговать с трактирщиком', () => {
     if (ctx.systems.trade) ctx.systems.trade.open('barkeep');
   }, 'tavern');
   add(new THREE.Vector3(-7.0, 2.0, -3.4), 2.0, 'Взять лютню',
-    () => ctx.ui.toast('Струны звонкие, но пыльные — их давно не играли.'), 'tavern');
+    () => ctx.ui.toast('Струны звонкие, но пыльные — на лютне давно никто не играл.'), 'tavern');
   add(new THREE.Vector3(-2.6, 1.0, 2.0), 2.2, 'Сесть за стол',
-    () => ctx.ui.toast('Дуб крепкий, скола на нём по кругу. Хорошее место.'), 'tavern');
+    () => ctx.ui.toast('Дубовый стол, весь в зарубках и кругах от кружек. Хорошее место.'), 'tavern');
   // задняя дверь за стойкой: её можно отворить и выйти в сени
   add(new THREE.Vector3(tavernLoc.barExit.x - 1.05, 1.4, tavernLoc.barExit.z), 2.2,
     'Открыть заднюю дверь', () => {
       if (tavernLoc.openBackDoor()) {
-        ctx.ui.toast('Щеколда щёлкнула, створка отошла. За дверью — сени с бочками и дровами.', 3200);
+        ctx.ui.toast('Щеколда щёлкнула, дверь подалась. За ней — сени с бочками и дровами.', 3200);
       } else {
         ctx.ui.toast('Дверь уже открыта. В сенях пахнет дровами и пролитым элем.', 2600);
       }
@@ -333,7 +333,7 @@ export function createLocations(ctx) {
   // выход из сеней на улицу — с задней стороны таверны
   add(new THREE.Vector3(tavernLoc.backExit.x - 0.5, 1.4, tavernLoc.backExit.z), 2.4,
     'Выйти на улицу', () => {
-      ctx.ui.toast('Ты выходишь в задний двор таверны. За забором — тропа к мельнице.', 2800);
+      ctx.ui.toast('Вы выходите на задний двор трактира. За забором — тропа к мельнице.', 2800);
       setLocation('village', 'tavernBack');
     }, 'tavern');
 
@@ -354,14 +354,14 @@ export function createLocations(ctx) {
   // задняя дверь нефа: рабочий выход в задний двор
   add(new THREE.Vector3(churchLoc.backExit.x, 1.4, churchLoc.backExit.z), 2.6,
     'Открыть тяжёлую дверь', () => {
-      ctx.ui.toast('Засов откинут. За дверью — задний двор и тропа вниз, к долине.', 3200);
+      ctx.ui.toast('Засов отодвинут. За дверью — задний двор и тропа вниз, в долину.', 3200);
       setLocation('village', 'churchBack');
     }, 'church');
   // колокол — только наверху, в самой колокольне: с пола он недоступен
   const bellAct = add(churchLoc.bellPoint.clone(), 2.6, 'Ударить в колокол', () => {
     churchLoc.ringBell();
     if (ctx.ambience && ctx.ambience.bell) ctx.ambience.bell();
-    ctx.ui.toast('Колокол над долиной — глухой и тёплый. Звук уходит далеко вниз.', 3200);
+    ctx.ui.toast('Колокол гудит над долиной — глухо и тепло. Звук уходит далеко вниз.', 3200);
   }, 'church');
   bellAct.y = 9.2;          // галерея башни: на каком уровне ног срабатывает интеракт
   bellAct.yTol = 1.6;
@@ -370,7 +370,7 @@ export function createLocations(ctx) {
   if (churchLoc.naveDoor) {
     add(new THREE.Vector3(churchLoc.naveDoor.x, 1.4, churchLoc.naveDoor.z - 0.9), 2.4,
       'Открыть дверь в башню', () => {
-        ctx.ui.toast('За дверью — винтовая лестница. Наверху, под перекладиной, висит колокол.', 3200);
+        ctx.ui.toast('За дверью — винтовая лестница. Наверху, на перекладине, висит колокол.', 3200);
         setLocation('church', 'tower');
       }, 'church');
     add(new THREE.Vector3(churchLoc.naveDoor.x, 1.4, churchLoc.naveDoor.z + 0.9), 2.4,
@@ -399,14 +399,14 @@ export function createLocations(ctx) {
         const counts = m && m.zoneCounts ? m.zoneCounts() : null;
         const left = counts && counts.crystal ? counts.crystal.alive : 0;
         ctx.ui.toast(left > 0
-          ? `Печать шахты держит путь: в кристальном зале живы ещё ${left}.`
-          : 'Печать шахты слабеет… ещё минуту.', 3200);
+          ? `Печать шахты не пускает дальше: в кристальном зале осталось врагов — ${left}.`
+          : 'Печать шахты слабеет… ещё минута.', 3200);
         return;
       }
       ctx.player.teleport(dungeonLoc.spawnDeep.x, dungeonLoc.spawnDeep.z, dungeonLoc.spawnDeep.yaw);
       ctx.player.y = 0; ctx.player.vy = 0; ctx.player.camY = null;
       ctx.player.keys.clear();
-      ctx.ui.toast('Зал Врат. Внизу холоднее, и откуда-то тянет дыханием.', 3000);
+      ctx.ui.toast('Зал Врат. Здесь холоднее, и из глубины тянет чьим-то дыханием.', 3000);
     }, 'dungeon');
 
   // Подъём обратно: из ниши шахты, со стороны зала Врат.
@@ -419,11 +419,11 @@ export function createLocations(ctx) {
     }, 'dungeon');
 
   const dungeonLines = [
-    'Кристаллы растут прямо из камня и холодят ладонь. Таких в долине не водится.',
-    'Врата в глубине: огромный синий самоцвет, в котором будто движется туман.',
+    'Кристаллы растут прямо из камня, ладонь от них стынет. В долине таких не сыщешь.',
+    'Врата в глубине: огромный синий самоцвет, внутри которого будто клубится туман.',
     'Колонны из тёмного камня держат свод. Кто и зачем их поставил — неизвестно.',
-    'У пола ползёт сизоватый туман. Звуки здесь гаснут, будто пещера слушает.',
-    'Знаки на стене горят синим. Их рисуют чем-то жидким, а не высекают.',
+    'По полу стелется сизый туман. Звуки здесь глохнут, будто пещера прислушивается.',
+    'Знаки на стене светятся синим. Их не высекли — нарисовали чем-то жидким.',
     'Самоцвет лежит в пыли, будто его положили только что. Рядом никого.',
   ];
   const dungeonSpots = [
@@ -458,7 +458,7 @@ export function createLocations(ctx) {
       const combat = ctx.systems.combat;
       if (combat) combat.state.fuel = 100;
       if (ctx.ambience) ctx.ambience.torchLight();
-      ctx.ui.toast('Факел с кронштейна — в руке. Внизу стало темнее.', 3200);
+      ctx.ui.toast('Факел с кронштейна теперь у вас в руке. Вокруг стало темнее.', 3200);
     }, 'dungeon');
   });
 
@@ -474,20 +474,20 @@ export function createLocations(ctx) {
         if (lights) lights.gateBoost = 2.0;
         setTimeout(() => { if (lights) lights.gateBoost = 0; }, 8000);
         if (ctx.ambience) ctx.ambience.crystalChime();
-        ctx.ui.toast('Тишина, которая настала после боя, вдруг оказывается '
-          + 'не пустой. Самоцвет горит ровно и ждёт. Где-то внизу глухо ударило — '
-          + 'и на этот раз в ответ ударило тихо, почти ласково.', 6000);
+        ctx.ui.toast('Тишина после боя оказывается '
+          + 'живой. Самоцвет горит ровно, будто ждёт. Где-то в глубине ударило — '
+          + 'на этот раз тихо, почти ласково.', 6000);
       } else {
         ctx.ui.toast('Самоцвет холодит ладонь, и на миг кажется, что из глубины '
-          + 'кто-то дотронулся в ответ. Где-то внизу глухо ударило. Потом всё стихает.', 5200);
+          + 'кто-то коснулся её в ответ. Где-то внизу глухо ударило. Потом всё стихло.', 5200);
       }
     }, 'dungeon');
 
   // ---- комнаты второго этажа: переночевать ----
   const nightLines = [
     'Вы устроились на ночь. Свеча догорела, за окном запел петух.',
-    'Тёплая постель, и сон приходит сразу — как будто ждали.',
-    'Вы засыпаете под тихое скрипание половиц. Утро начнётся с колокола.',
+    'Тёплая постель — и сон приходит сразу, будто только вас и ждал.',
+    'Вы засыпаете под тихий скрип половиц. Утро начнётся с колокола.',
   ];
 
   /**
@@ -523,12 +523,12 @@ export function createLocations(ctx) {
 
   (tavernLoc.rooms || []).forEach((room, i) => {
     add(new THREE.Vector3(room.bedX, room.bedY, room.bedZ), 1.7,
-      `Переночевать — комната ${room.name}`,
+      `Переночевать в комнате ${room.name}`,
       () => {
         // переночевать можно только на втором этаже.
         // pos.y у игрока всегда 0 — высота считается как пол + смещение
         if (ctx.player.groundY + ctx.player.y < 3.0) {
-          ctx.ui.toast('Сначала поднимитесь на второй этаж — по лестнице у очага.');
+          ctx.ui.toast('Сначала поднимитесь на второй этаж — лестница у очага.');
           return;
         }
         sleepThroughNight(nightLines[i % nightLines.length]);
@@ -542,8 +542,8 @@ export function createLocations(ctx) {
     const loc = homeLocs[PLAYER_HOME.index];
     if (loc && loc.bed) {
       add(loc.bed.clone(), 2.0, 'Лечь и поспать', () => {
-        sleepThroughNight('Ты ложишься на сухую постель. Сон приходит сразу — '
-          + 'и утро встречают петухи.');
+        sleepThroughNight('Вы ложитесь на сухую постель. Сон приходит сразу — '
+          + 'а будят вас уже петухи.');
       }, `home${PLAYER_HOME.index}`);
     }
   }

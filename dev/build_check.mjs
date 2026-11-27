@@ -372,7 +372,7 @@ const res = await page.evaluate(() => {
       }));
 
     const cases = [
-      { key: 'таверна', enter: /Войти в таверну/, exit: 'Выйти из таверны', loc: 'tavern' },
+      { key: 'таверна', enter: /Войти в трактир/, exit: 'Выйти из трактира', loc: 'tavern' },
       { key: 'амбар', enter: /Войти в амбар/, exit: 'Выйти из амбара', loc: 'barn' },
       { key: 'храм (юг)', enter: /^Войти в храм$/, exit: 'Выйти из храма', loc: 'church' },
       { key: 'подземелье', enter: /Спуститься в подземелье/, exit: 'Подняться на поверхность', loc: 'dungeon' },
@@ -731,7 +731,7 @@ const res = await page.evaluate(() => {
     }
     const itMill = ctx.interactables.find((i) => i.label === 'Войти в мельницу');
     if (itMill) add('мельница, точка входа', itMill.pos.x, itMill.pos.z);
-    const itTav = ctx.interactables.find((i) => /Войти в таверну/.test(i.label || ''));
+    const itTav = ctx.interactables.find((i) => /Войти в трактир/.test(i.label || ''));
     if (itTav) {
       add('таверна, точка входа', itTav.pos.x, itTav.pos.z);
       add('таверна, 1 м выше', itTav.pos.x, itTav.pos.z + 1);

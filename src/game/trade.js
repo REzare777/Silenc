@@ -49,7 +49,7 @@ export const TRADERS = {
     // от прежней хозяйки, а продаёт их от её имени
     sells: GOODS.concat(SPELLS),
     margin: 1.0,
-    greet: 'Эль, хлеб, сыр — всё по цене, какой я сам себе назначу. А за улов твой дам полную стоимость: в деревне рыба в цене. За свитки с заклинаниями — отдельный разговор.',
+    greet: 'Эль, хлеб, сыр — цены я назначаю сам, не обессудь. А за улов дам сполна: в деревне рыба нарасхват. Свитки с заклинаниями — разговор особый.',
     stock: null,       // товары не кончаются
   },
   blacksmith: {
@@ -61,7 +61,7 @@ export const TRADERS = {
     // чем он набивает факел, поэтому её можно и купить, и сразу заправить
     sells: WEAPONS.concat(MATERIALS).concat(GEAR),
     margin: 1.0,
-    greet: 'Мне нужен металл, а тебе — оружие. Меняемся. Только осторожно с двуручным: он и вправду тяжёлый. Факел тоже могу — обмотанный, крепкий.',
+    greet: 'Мне нужен металл, тебе — оружие. Сговоримся. Только с двуручником поосторожней: он и правда тяжёлый. Факел тоже найдётся — крепкий, туго обмотанный.',
     stock: null,
   },
 };
@@ -154,7 +154,7 @@ export function createTrade(ctx) {
     ctx.stats.earnCoins(price);
     ctx.ui.renderInventory(ctx.inventory);
     refresh();
-    ctx.ui.toast(`Продал ${spec.name} за ${price} зол. Теперь у тебя ${ctx.stats.coins} зол.`, 3200);
+    ctx.ui.toast(`Продано: ${spec.name} за ${price} зол. В кошельке теперь ${ctx.stats.coins} зол.`, 3200);
     return true;
   }
 
@@ -206,16 +206,16 @@ export function createTrade(ctx) {
     let msg = `Куплено: ${spec.name} за ${price} зол.`;
     if (spec.kind === 'weapon') {
       msg = beltSlot >= 0
-        ? `Куплено: ${spec.name} за ${price} зол. Теперь в руках — клавиша ${beltSlot - BELT_START + 1}.`
-        : `Куплено: ${spec.name} за ${price} зол. Пояс занят: положи оружие на пояс (Shift+ЛКМ) и нажми цифру.`;
+        ? `Куплено: ${spec.name} за ${price} зол. Взять в руки — клавиша ${beltSlot - BELT_START + 1}.`
+        : `Куплено: ${spec.name} за ${price} зол. Пояс занят — оружие в сумке. Освободите ячейку пояса, перенесите его туда (Shift+ЛКМ) и нажмите цифру.`;
     } else if (spec.kind === 'spell') {
       msg = beltSlot >= 0
-        ? `Куплено: ${spec.name} за ${price} зол. Колдуй клавишей ${beltSlot - BELT_START + 1}.`
-        : `Куплено: ${spec.name} за ${price} зол. Пояс занят: положи свиток на пояс (Shift+ЛКМ).`;
+        ? `Куплено: ${spec.name} за ${price} зол. Колдовать — клавиша ${beltSlot - BELT_START + 1}.`
+        : `Куплено: ${spec.name} за ${price} зол. Пояс занят — свиток в сумке. Освободите ячейку пояса и перенесите его туда (Shift+ЛКМ).`;
     } else if (spec.kind === 'gear') {
       msg = beltSlot >= 0
-        ? `Куплено: ${spec.name} за ${price} зол. Возьми в руку клавишей ${beltSlot - BELT_START + 1}.`
-        : `Куплено: ${spec.name} за ${price} зол. Пояс занят: положи на пояс (Shift+ЛКМ).`;
+        ? `Куплено: ${spec.name} за ${price} зол. Взять в руку — клавиша ${beltSlot - BELT_START + 1}.`
+        : `Куплено: ${spec.name} за ${price} зол. Пояс занят — вещь в сумке. Освободите ячейку пояса и перенесите её туда (Shift+ЛКМ).`;
     }
     ctx.ui.toast(msg, 3600);
     return true;

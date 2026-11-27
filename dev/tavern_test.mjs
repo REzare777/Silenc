@@ -18,7 +18,7 @@ const res = await page.evaluate(async () => {
   const errs = [];
 
   // 1) у двери таверны снаружи
-  const doorIt = d.interactables.find((x) => x.label === 'Войти в таверну «Уставший вепрь»');
+  const doorIt = d.interactables.find((x) => x.label === 'Войти в трактир «Уставший вепрь»');
   log.push(`интеракт двери: ${!!doorIt} радиус=${doorIt ? doorIt.radius : '-'}`);
   if (!doorIt) return { log, errs };
   // телепортируемся к двери и проверяем радиус
@@ -133,7 +133,7 @@ const res = await page.evaluate(async () => {
   log.push(`спуск: min=${minFeet.toFixed(2)} pos=(${p.pos.x.toFixed(2)}, ${p.pos.z.toFixed(2)}) y=${p.groundY.toFixed(2)}`);
 
   // 8) выход из таверны
-  const ex = d.interactables.find((x) => x.label === 'Выйти из таверны');
+  const ex = d.interactables.find((x) => x.label === 'Выйти из трактира');
   log.push(`интеракт выхода: ${!!ex}`);
   if (ex) {
     p.teleport(ex.pos.x, ex.pos.z, 0);

@@ -31,19 +31,19 @@ export const FISH = [
     id: 'ukleyka', name: 'Уклейка', rarity: 'common',
     weightMin: 0.02, weightMax: 0.09, lengthMin: 7, lengthMax: 14, value: 5,
     shape: 'long', pattern: 'scale', tint: '#9fb6c6',
-    desc: 'Нежная и мелкая, ходит косяками у самого берега.',
+    desc: 'Мелкая и нежная, ходит стайками у самого берега.',
   },
   {
     id: 'elets', name: 'Елец', rarity: 'common',
     weightMin: 0.04, weightMax: 0.18, lengthMin: 9, lengthMax: 20, value: 6,
     shape: 'long', pattern: 'stripe', tint: '#b5c4c7',
-    desc: 'Быстрый и стайный, держится быстрого течения.',
+    desc: 'Шустрый и стайный, любит быстрое течение.',
   },
   {
     id: 'plotva', name: 'Плотва', rarity: 'common',
     weightMin: 0.06, weightMax: 0.35, lengthMin: 10, lengthMax: 22, value: 8,
     shape: 'round', pattern: 'belly', tint: '#8b9a60',
-    desc: 'Кисловатая, но в улове всегда вкусная.',
+    desc: 'Самая обычная рыба, но в ухе всегда к месту.',
   },
   {
     id: 'okun', name: 'Окунь', rarity: 'common',
@@ -55,19 +55,19 @@ export const FISH = [
     id: 'ersh', name: 'Ёрш', rarity: 'common',
     weightMin: 0.09, weightMax: 0.42, lengthMin: 11, lengthMax: 25, value: 12,
     shape: 'spiny', pattern: 'plain', tint: '#6f6a4c',
-    desc: 'Вонючий и колючий, зато уха с него знатная.',
+    desc: 'Колючий и склизкий, зато уха из него знатная.',
   },
   {
     id: 'krasnoperka', name: 'Краснопёрка', rarity: 'common',
     weightMin: 0.05, weightMax: 0.32, lengthMin: 12, lengthMax: 24, value: 14,
     shape: 'round', pattern: 'spots', tint: '#c4532f',
-    desc: 'Яркая, с золотыми плавниками — жарится золотистой.',
+    desc: 'Красные плавники, золотистый бок. Жарится до хруста.',
   },
   {
     id: 'lin', name: 'Линь', rarity: 'common',
     weightMin: 0.30, weightMax: 3.20, lengthMin: 25, lengthMax: 52, value: 20,
     shape: 'round', pattern: 'belly', tint: '#8a7838',
-    desc: 'Жилистый и крепкий, наваренный суп с ним знают все.',
+    desc: 'Скользкий, золотисто-зелёный, любит тихие заводи. Уха из него выходит сладкая.',
   },
   {
     id: 'lesch', name: 'Лещ', rarity: 'common',
@@ -79,7 +79,7 @@ export const FISH = [
     id: 'karas', name: 'Карась', rarity: 'common',
     weightMin: 0.15, weightMax: 1.50, lengthMin: 18, lengthMax: 36, value: 30,
     shape: 'round', pattern: 'scale', tint: '#b0762c',
-    desc: 'Броня чешуи, выживает в любой заводи.',
+    desc: 'Чешуя что броня — выживает в любой заводи.',
   },
 
   /* ---------------- редкие ---------------- */
@@ -93,25 +93,25 @@ export const FISH = [
     id: 'schuka', name: 'Щука', rarity: 'rare',
     weightMin: 1.20, weightMax: 11.00, lengthMin: 45, lengthMax: 95, value: 120,
     shape: 'long', pattern: 'spots', tint: '#5c7a44',
-    desc: 'Зелёная в пятнах, бросается из-за куста.',
+    desc: 'Зелёная в пятнах, бросается из засады в траве.',
   },
   {
     id: 'forel', name: 'Форель', rarity: 'rare',
     weightMin: 0.30, weightMax: 3.00, lengthMin: 22, lengthMax: 55, value: 75,
     shape: 'flat', pattern: 'spots', tint: '#9c7a5a',
-    desc: 'Живёт в холодных ручьях, розовеет на морозе.',
+    desc: 'Живёт в холодных ручьях, бока в розовых крапинках.',
   },
   {
     id: 'karp', name: 'Карп', rarity: 'rare',
     weightMin: 2.50, weightMax: 16.00, lengthMin: 38, lengthMax: 82, value: 70,
     shape: 'round', pattern: 'scale', tint: '#a8823f',
-    desc: 'Обитает в прудах, плодовит и нежданно богат.',
+    desc: 'Хозяин прудов: живуч, плодовит и тяжелее, чем кажется.',
   },
   {
     id: 'zerkalny_karp', name: 'Зеркальный карп', rarity: 'rare',
     weightMin: 3.00, weightMax: 20.00, lengthMin: 45, lengthMax: 90, value: 110,
     shape: 'round', pattern: 'belly', tint: '#c9a04e',
-    desc: 'Редкая порода с голой золотой спиной.',
+    desc: 'Редкая порода: почти без чешуи, спина отливает золотом.',
   },
 
   /* ---------------- эпические ---------------- */
@@ -119,13 +119,13 @@ export const FISH = [
     id: 'som', name: 'Сом', rarity: 'epic',
     weightMin: 4.00, weightMax: 80.00, lengthMin: 70, lengthMax: 180, value: 240,
     shape: 'eel', pattern: 'plain', tint: '#4b4436',
-    desc: 'Ночной голод с длинными усами, берёт всё живое.',
+    desc: 'Ночной обжора с длинными усами, хватает всё живое.',
   },
   {
     id: 'nalim', name: 'Налим', rarity: 'epic',
     weightMin: 1.50, weightMax: 10.00, lengthMin: 40, lengthMax: 95, value: 180,
     shape: 'eel', pattern: 'spots', tint: '#3d4a3b',
-    desc: 'Слепой ночной рыбак, ползёт по дну на усах.',
+    desc: 'Ночной охотник: ползает по дну и шарит усами.',
   },
   {
     id: 'osetr', name: 'Осётр', rarity: 'epic',
@@ -136,7 +136,7 @@ export const FISH = [
 
   /* ---------------- легендарные ---------------- */
   {
-    id: 'zolotaya_forel', name: 'Форель золотая', rarity: 'legendary',
+    id: 'zolotaya_forel', name: 'Золотая форель', rarity: 'legendary',
     weightMin: 2.00, weightMax: 12.00, lengthMin: 40, lengthMax: 75, value: 850,
     shape: 'flat', pattern: 'scale', tint: '#e3c063',
     desc: 'Светится золотом и уходит на дно при луне.',
@@ -145,7 +145,7 @@ export const FISH = [
     id: 'drakon_doliny', name: 'Дракон Долины', rarity: 'legendary',
     weightMin: 25.00, weightMax: 140.00, lengthMin: 150, lengthMax: 380, value: 1200,
     shape: 'long', pattern: 'scale', tint: '#e0b23c',
-    desc: 'Легенда долины: чешуя звенит, а глаза горят золотом.',
+    desc: 'Легенда Долины: чешуя звенит, а глаза горят золотом.',
   },
 
   /* ---------------- мифическая ---------------- */
@@ -153,7 +153,7 @@ export const FISH = [
     id: 'hozyain_glubin', name: 'Хозяин Глубин', rarity: 'mythic',
     weightMin: 120.00, weightMax: 900.00, lengthMin: 300, lengthMax: 900, value: 3000,
     shape: 'eel', pattern: 'scale', tint: '#2b2f3a',
-    desc: 'Тот, кто спит на дне. Ловцы шепчут, уходя.',
+    desc: 'Тот, кто спит на дне. Рыбаки говорят о нём только шёпотом.',
   },
 ];
 

@@ -250,7 +250,7 @@ const checks = [
   ['до двери — пара минут ходьбы от дороги', res.doorRoadDist > 1.5 && res.doorRoadDist < 7],
   ['в свой дом есть вход', res.doorInteract],
   ['в свой дом пускают и ночью', res.inHome === 'home10' && res.phase === 'night'],
-  ['дом называется «Твой дом у дороги»', res.homeName === 'Твой дом у дороги'],
+  ['дом называется «Ваш дом у дороги»', res.homeName === 'Ваш дом у дороги'],
   ['чужие дома заперты по-прежнему', res.otherLocked],
   ['в доме есть кровать', res.hasBed],
   ['на кровати можно поспать', res.sleepInteract && res.sleepOk],

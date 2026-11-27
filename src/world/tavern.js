@@ -942,7 +942,7 @@ export function buildTavernInterior(M, glowTex) {
     const parts = [
       { x0: -3.5, x1: -0.2, name: 'у окна' },
       { x0: -0.2, x1: 3.1, name: 'у лестницы' },
-      { x0: 3.1, x1: 6.7, name: 'над баром' },
+      { x0: 3.1, x1: 6.7, name: 'над стойкой' },
     ];
     const DOOR_W = 1.1;                   // ширина дверного проёма
     const KW = 1.75, KL = 1.0;            // размер кровати
