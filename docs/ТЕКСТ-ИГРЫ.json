@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-27T11:57:16.417Z",
+  "generated": "2026-11-27T15:15:23.801Z",
   "total": 911,
   "files": [
     {
@@ -1136,62 +1136,62 @@
       "kind": "file",
       "items": [
         {
-          "line": 140,
+          "line": 145,
           "text": "Дом у костра: свет в окнах горит до полуночи.",
           "type": "string"
         },
         {
-          "line": 141,
+          "line": 146,
           "text": "Дом напротив костра. На крыльце — закопчённая грядка.",
           "type": "string"
         },
         {
-          "line": 142,
+          "line": 147,
           "text": "Дом в глубине улицы. Дверь выкрашена в синий.",
           "type": "string"
         },
         {
-          "line": 143,
+          "line": 148,
           "text": "Дом с большим огородом за ним.",
           "type": "string"
         },
         {
-          "line": 144,
+          "line": 149,
           "text": "Двухэтажный дом: внизу печь, наверху сушатся травы.",
           "type": "string"
         },
         {
-          "line": 145,
+          "line": 150,
           "text": "Двухэтажный дом с мастерской — слышно, как точат.",
           "type": "string"
         },
         {
-          "line": 146,
+          "line": 151,
           "text": "Дом ближе к храму: отсюда слышен колокол.",
           "type": "string"
         },
         {
-          "line": 147,
+          "line": 152,
           "text": "Дом у поля. Ветер пахнет скошенной травой.",
           "type": "string"
         },
         {
-          "line": 148,
+          "line": 153,
           "text": "Дом на южной окраине, за трактиром. Тишина.",
           "type": "string"
         },
         {
-          "line": 149,
+          "line": 154,
           "text": "Дом у дальнего пруда: слышно, как плещется вода.",
           "type": "string"
         },
         {
-          "line": 150,
-          "text": "Твой дом у скалы: за порогом — лес и камень, под которым что-то дышит.",
+          "line": 155,
+          "text": "Твой дом у опушки: слева уходит тропа в скалу, где под камнем что-то дышит.",
           "type": "string"
         },
         {
-          "line": 151,
+          "line": 156,
           "text": "Дом у мельницы: слышно, как скрипят жернова.",
           "type": "string"
         }
@@ -2301,12 +2301,12 @@
       "kind": "file",
       "items": [
         {
-          "line": 380,
+          "line": 382,
           "text": "удочка на причале",
           "type": "string"
         },
         {
-          "line": 381,
+          "line": 383,
           "text": "удочка на берегу",
           "type": "string"
         }
@@ -2403,382 +2403,382 @@
       "kind": "file",
       "items": [
         {
-          "line": 256,
+          "line": 257,
           "text": "таверна",
           "type": "string"
         },
         {
-          "line": 267,
+          "line": 268,
           "text": "Войти в таверну «Уставший вепрь»",
           "type": "string"
         },
         {
-          "line": 275,
+          "line": 276,
           "text": "кузня",
           "type": "string"
         },
         {
-          "line": 295,
+          "line": 296,
           "text": "Подуть на горн",
           "type": "string"
         },
         {
-          "line": 296,
+          "line": 297,
           "text": "Горн разгорелся — жар пошёл!",
           "type": "string"
         },
         {
-          "line": 313,
+          "line": 314,
           "text": "Торн",
           "type": "string"
         },
         {
-          "line": 338,
+          "line": 339,
           "text": "Поговорить с кузнецом",
           "type": "string"
         },
         {
-          "line": 347,
+          "line": 348,
           "text": "Купить смолу и фитиль — 12 зол.",
           "type": "string"
         },
         {
-          "line": 351,
+          "line": 352,
           "text": "Факел полон — нечего заправлять.",
           "type": "string"
         },
         {
-          "line": 352,
+          "line": 353,
           "text": "Не хватает монет.",
           "type": "string"
         },
         {
-          "line": 354,
+          "line": 355,
           "text": "Кузнец набил фитиль смолой. Факел горит на полную.",
           "type": "string"
         },
         {
-          "line": 362,
+          "line": 363,
           "text": "храм",
           "type": "string"
         },
         {
-          "line": 365,
+          "line": 366,
           "text": "колокольня",
           "type": "string"
         },
         {
-          "line": 366,
+          "line": 367,
           "text": "крыльцо храма",
           "type": "string"
         },
         {
-          "line": 369,
+          "line": 370,
           "text": "Войти в храм",
           "type": "string"
         },
         {
-          "line": 382,
+          "line": 383,
           "text": "Войти в колокольню",
           "type": "string"
         },
         {
-          "line": 398,
+          "line": 399,
           "text": "Погасить фонарь",
           "type": "string"
         },
         {
-          "line": 399,
+          "line": 400,
           "text": "Фонарь снова горит.",
           "type": "string"
         },
         {
-          "line": 399,
+          "line": 400,
           "text": "Фонарь погашен.",
           "type": "string"
         },
         {
-          "line": 416,
+          "line": 417,
           "text": "амбар",
           "type": "string"
         },
         {
-          "line": 420,
+          "line": 421,
           "text": "Войти в амбар",
           "type": "string"
         },
         {
-          "line": 429,
+          "line": 430,
           "text": "мельница",
           "type": "string"
         },
         {
-          "line": 443,
+          "line": 444,
           "text": "Войти в мельницу",
           "type": "string"
         },
         {
-          "line": 444,
+          "line": 445,
           "text": "Внутри винтовая лестница — наверх, к площадке на крыше.",
           "type": "string"
         },
         {
-          "line": 450,
+          "line": 451,
           "text": "колодец",
           "type": "string"
         },
         {
-          "line": 452,
+          "line": 453,
           "text": "Набрать воды",
           "type": "string"
         },
         {
-          "line": 453,
+          "line": 454,
           "text": "Вода из колодца — ледяная и чистая. Ведро полно.",
           "type": "string"
         },
         {
-          "line": 526,
+          "line": 528,
           "text": "дом ${i}",
           "type": "template"
         },
         {
-          "line": 535,
+          "line": 537,
           "text": "Войти в свой дом",
           "type": "string"
         },
         {
-          "line": 536,
+          "line": 538,
           "text": "Запертая дверь дома",
           "type": "string"
         },
         {
-          "line": 536,
+          "line": 538,
           "text": "Войти в дом",
           "type": "string"
         },
         {
-          "line": 544,
+          "line": 546,
           "text": "Дом заперт на ключ: хозяева не жалуют гостей.",
           "type": "string"
         },
         {
-          "line": 554,
+          "line": 556,
           "text": "Дверь заперта: хозяева спят. В дом пускают утром и днём.",
           "type": "string"
         },
         {
-          "line": 555,
+          "line": 557,
           "text": "Дом уже заперт на ночь. Заходите утром или днём.",
           "type": "string"
         },
         {
-          "line": 587,
+          "line": 598,
           "text": "На прилавке — мед, репа и кусок сыра.",
           "type": "string"
         },
         {
-          "line": 588,
+          "line": 599,
           "text": "Ткани, ленты и пряжа. Торговец здоровается кивком.",
           "type": "string"
         },
         {
-          "line": 589,
+          "line": 600,
           "text": "Кувшин с квасом и свежие лепёшки.",
           "type": "string"
         },
         {
-          "line": 590,
+          "line": 601,
           "text": "Здесь продают дичь, мёд и всё, что поймали за ночь.",
           "type": "string"
         },
         {
-          "line": 595,
+          "line": 606,
           "text": "прилавок",
           "type": "string"
         },
         {
-          "line": 597,
+          "line": 608,
           "text": "Осмотреть прилавок",
           "type": "string"
         },
         {
-          "line": 608,
+          "line": 619,
           "text": "стог",
           "type": "string"
         },
         {
-          "line": 610,
+          "line": 621,
           "text": "Забраться на стог",
           "type": "string"
         },
         {
-          "line": 611,
+          "line": 622,
           "text": "Сено тёплое и шуршащее. Отсюда видно всю долину.",
           "type": "string"
         },
         {
-          "line": 717,
+          "line": 728,
           "text": "курятник",
           "type": "string"
         },
         {
-          "line": 761,
+          "line": 772,
           "text": "пень",
           "type": "string"
         },
         {
-          "line": 769,
+          "line": 780,
           "text": "телега",
           "type": "string"
         },
         {
-          "line": 777,
+          "line": 788,
           "text": "лесная делянка",
           "type": "string"
         },
         {
-          "line": 789,
+          "line": 800,
           "text": "фонарь",
           "type": "string"
         },
         {
-          "line": 792,
+          "line": 803,
           "text": "Погасить фонарь",
           "type": "string"
         },
         {
-          "line": 792,
+          "line": 803,
           "text": "Зажечь фонарь",
           "type": "string"
         },
         {
-          "line": 793,
+          "line": 804,
           "text": "Фонарь снова горит.",
           "type": "string"
         },
         {
-          "line": 793,
+          "line": 804,
           "text": "Фонарь погашен.",
           "type": "string"
         },
         {
-          "line": 799,
+          "line": 810,
           "text": "Осмотреть поленницу",
           "type": "string"
         },
         {
-          "line": 800,
+          "line": 811,
           "text": "Дрова сухие, хвойные. На зиму хватит — лесоруб складывал всю зиму.",
           "type": "string"
         },
         {
-          "line": 818,
+          "line": 829,
           "text": "доска",
           "type": "string"
         },
         {
-          "line": 836,
+          "line": 847,
           "text": "написано углём",
           "type": "string"
         },
         {
-          "line": 842,
+          "line": 853,
           "text": "Прочитать записку",
           "type": "string"
         },
         {
-          "line": 842,
+          "line": 853,
           "text": "Написать на доске",
           "type": "string"
         },
         {
-          "line": 845,
+          "line": 856,
           "text": "На доске: «${ctx.boardNote}»",
           "type": "template"
         },
         {
-          "line": 869,
+          "line": 880,
           "text": "Пустая доска. Ладно, в следующий раз.",
           "type": "string"
         },
         {
-          "line": 871,
+          "line": 882,
           "text": "написано углём",
           "type": "string"
         },
         {
-          "line": 873,
+          "line": 884,
           "text": "Уголь кончился. Больше написать не получится.",
           "type": "string"
         },
         {
-          "line": 905,
+          "line": 916,
           "text": "фонарь",
           "type": "string"
         },
         {
-          "line": 909,
+          "line": 920,
           "text": "Погасить фонарь",
           "type": "string"
         },
         {
-          "line": 909,
+          "line": 920,
           "text": "Зажечь фонарь",
           "type": "string"
         },
         {
-          "line": 910,
+          "line": 921,
           "text": "Фонарь снова горит.",
           "type": "string"
         },
         {
-          "line": 910,
+          "line": 921,
           "text": "Фонарь погашен.",
           "type": "string"
         },
         {
-          "line": 930,
+          "line": 941,
           "text": "фонарь",
           "type": "string"
         },
         {
-          "line": 936,
+          "line": 947,
           "text": "Погасить фонарь",
           "type": "string"
         },
         {
-          "line": 936,
+          "line": 947,
           "text": "Зажечь фонарь",
           "type": "string"
         },
         {
-          "line": 937,
+          "line": 948,
           "text": "Фонарь снова горит.",
           "type": "string"
         },
         {
-          "line": 937,
+          "line": 948,
           "text": "Фонарь погашен.",
           "type": "string"
         },
         {
-          "line": 953,
+          "line": 964,
           "text": "Подбросить дрова",
           "type": "string"
         },
         {
-          "line": 954,
+          "line": 965,
           "text": "Огонь разгорелся — тепло до ушей.",
           "type": "string"
         },
         {
-          "line": 1016,
+          "line": 1027,
           "text": "поилка",
           "type": "string"
         },
         {
-          "line": 1017,
+          "line": 1028,
           "text": "указатель",
           "type": "string"
         }
@@ -3655,7 +3655,7 @@
         },
         {
           "line": 29,
-          "text": "Твой дом у скалы",
+          "text": "Твой дом у дороги",
           "type": "string"
         },
         {
