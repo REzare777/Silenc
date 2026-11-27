@@ -78,6 +78,8 @@ function allIndexes(src, needle) {
  * @returns {{index: number, quote: string}|null} найденное место
  */
 function findLiteral(src, oldText, lineHint) {
+  // в HTML текст лежит прямо в разметке, без кавычек
+  if (/\.html?$/.test(currentFile)) return findHtmlText(src, oldText, lineHint);
   let best = null;
   for (const q of ['\'', '"', '`']) {
     const needle = q + oldText + q;
@@ -95,6 +97,40 @@ function findLiteral(src, oldText, lineHint) {
 }
 
 /**
+ * Найти видимый текст в разметке: он лежит без кавычек — между «>» и «<»
+ * либо в начале строки перед закрывающим тегом.
+ *
+ * @param {string} src разметка
+ * @param {string} oldText прежнее содержимое
+ * @param {number} lineHint строка, на которой текст стоял при выгрузке
+ * @returns {{index: number, quote: string, line: number}|null}
+ */
+function findHtmlText(src, oldText, lineHint) {
+  let best = null;
+  const tryHit = (index) => {
+    if (index < 0) return;
+    const ln = lineAt(src, index);
+    const score = Math.abs(ln - lineHint);
+    if (!best || score < best.score) best = { index, quote: '', score, line: ln };
+  };
+  // текст между тегами: >Текст<
+  const between = `>${oldText}<`;
+  for (const i of allIndexes(src, between)) tryHit(i + 1);
+  // хвост многострочного элемента: в начале строки перед </тег>
+  const tail = new RegExp(`^\\s*${escapeRegExp(oldText)}<\\/`, 'm');
+  const tm = tail.exec(src);
+  if (tm) tryHit(tm.index + tm[0].indexOf(oldText));
+  if (!best) return null;
+  if (best.score > 40) return null;
+  return { index: best.index, quote: best.quote, line: best.line };
+}
+
+/** Экранировать текст для регулярного выражения. */
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * Подготовить новый текст к записи в исходник.
  *
  * `⏎` — реальный перенос строки, который выгрузка заменила; в исходнике он
@@ -106,11 +142,14 @@ function findLiteral(src, oldText, lineHint) {
  * @returns {string} готовый к записи текст
  */
 function escapeFor(text, quote) {
-  let s = text.replace(/⏎/g, quote === '`' ? '\n' : '\\n');
+  let s = text.replace(/⏎/g, quote === '`' || quote === '' ? '\n' : '\\n');
   if (quote === '\'') s = s.replace(/'/g, "\\'");
   else if (quote === '"') s = s.replace(/"/g, '\\"');
   return s;
 }
+
+/** Файл, который правим сейчас — от него зависит способ поиска текста. */
+let currentFile = '';
 
 if (!fs.existsSync(SNAPSHOT)) {
   console.error('Нет снимка текста docs/ТЕКСТ-ИГРЫ.json — сначала запустите dev/text-dump.mjs');
@@ -203,6 +242,7 @@ for (const [file, list] of byFile) {
   let src = fs.readFileSync(full, 'utf8');
   // сначала ищем во всём файле, потом правим от последнего к первому
   const found = [];
+  currentFile = file;
   for (const c of list) {
     const hit = findLiteral(src, c.oldText, c.line);
     if (!hit) { failed.push({ ...c, why: 'строка не найдена в исходнике' }); continue; }

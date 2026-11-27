@@ -124,7 +124,15 @@ function walk(dir, acc = []) {
 function extractHtml(html) {
   const out = [];
   const lines = html.split('\n');
+  // внутри <script> кода нет — выкусываем эти куски, чтобы в выгрузку
+  // не попал мусор из встроенных скриптов
+  let inScript = false;
   lines.forEach((ln, idx) => {
+    if (/<script/i.test(ln)) inScript = true;
+    if (inScript) {
+      if (/<\/script/i.test(ln)) inScript = false;
+      return;
+    }
     // атрибуты title, placeholder, aria-label
     const attrs = ln.match(/(?:title|placeholder|aria-label)="([^"]*[А-Яа-яЁё][^"]*)"/g) || [];
     for (const a of attrs) {
@@ -135,6 +143,13 @@ function extractHtml(html) {
     const inner = ln.match(/>([^<>]*[А-Яа-яЁё][^<>]*)</g) || [];
     for (const t of inner) {
       const v = t.replace(/^>/, '').replace(/</, '').trim();
+      if (v && !/^&/.test(v)) out.push({ line: idx + 1, text: v, kind: 'html' });
+    }
+    // хвост многострочного элемента: текст строки, закрывающий тег.
+    // раньше такие строки выпадали из выгрузки, и их нельзя было править
+    const tail = ln.match(/^\s*([^<>]*[А-Яа-яЁё][^<>]*)<\/[a-zA-Z]/);
+    if (tail) {
+      const v = tail[1].trim();
       if (v && !/^&/.test(v)) out.push({ line: idx + 1, text: v, kind: 'html' });
     }
   });
