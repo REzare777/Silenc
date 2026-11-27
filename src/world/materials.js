@@ -37,6 +37,12 @@ export function buildMaterials(T) {
     bone: std(T.bone, { color: 0xe8e0c8, roughness: 0.75 }),
     cave: two(T.cave),
     caveWall: std(T.caveWall, { roughness: 1.0 }),
+    // глыба, в которой открыт вход в пещеру: тёплый светлый камень вместо
+    // щебня — иначе скала читалась чёрной кляксой. Лёгкое собственное
+    // свечение: фасад глыбы смотрит на северо-восток, а на закате солнце
+    // там за горизонтом — без подсветки порода тонет в тени.
+    cliff: two(T.cliff, { color: 0xe4dccc, roughness: 1.0, emissive: 0x3f382e, emissiveIntensity: 0.62 }),
+    cliffDark: two(T.cliff, { color: 0xb5ac9c, roughness: 1.0, emissive: 0x2c2822, emissiveIntensity: 0.62 }),
     stoneDark: two(T.stone, { color: 0x9a958c }),
     fabric: std(T.fabric, { side: THREE.DoubleSide, roughness: 0.85, emissive: 0x2a1a10, emissiveIntensity: 0.5 }),
     fabric2: std(T.fabric2, { side: THREE.DoubleSide, roughness: 0.85, emissive: 0x2a1a10, emissiveIntensity: 0.5 }),

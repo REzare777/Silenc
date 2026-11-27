@@ -26,7 +26,7 @@ import { buildHomeInterior, HOME_NAMES } from '../world/homes.js';
 import { buildChurchInterior, CHURCH_NAME } from '../world/church.js';
 import { barkeep } from '../world/npc.js';
 import { createNpc } from './npc.js';
-import { tavernDoor, barnExitPoint, dungeonGate } from './layout.js';
+import { tavernDoor, barnExitPoint, dungeonGate, PLAYER_HOME, HOME_LINES } from './layout.js';
 
 /**
  * Создаёт подсистему локаций.
@@ -216,7 +216,7 @@ export function createLocations(ctx) {
           : inChurch
             ? `${CHURCH_NAME}. Холодный свет витражей, ладан и полная тишина.`
             : inHome
-              ? `${homeLocs[homeIdx].name}. Внутри пахнет дымом и сушёными травами.`
+              ? `${homeLocs[homeIdx].name}. ${HOME_LINES[homeIdx] || ''}`.trim()
               : 'Амбар. Тут пахнет сеном и зерном.', 2600);
     } else {
       // назад — к той двери, откуда вошли
@@ -389,6 +389,35 @@ export function createLocations(ctx) {
   add(new THREE.Vector3(dungeonLoc.exit.x, dungeonLoc.exit.y, dungeonLoc.exit.z), 3.0,
     'Подняться на поверхность', () => setLocation('village'), 'dungeon');
 
+  /* ---- переход между ярусами: лестницы нет, спуск мгновенный ---- */
+  // Спуск в зал Врат: у края шахты. Пока печать шахты держит — не спустишься.
+  add(new THREE.Vector3(dungeonLoc.shaftTop.x, dungeonLoc.shaftTop.y + 1.0, dungeonLoc.shaftTop.z), 2.8,
+    'Спуститься в зал Врат', () => {
+      const seal = (dungeonLoc.seals || []).find((s) => s.id === 'crystal');
+      if (seal && !seal.open) {
+        const m = ctx.systems.monsters;
+        const counts = m && m.zoneCounts ? m.zoneCounts() : null;
+        const left = counts && counts.crystal ? counts.crystal.alive : 0;
+        ctx.ui.toast(left > 0
+          ? `Печать шахты держит путь: в кристальном зале живы ещё ${left}.`
+          : 'Печать шахты слабеет… ещё минуту.', 3200);
+        return;
+      }
+      ctx.player.teleport(dungeonLoc.spawnDeep.x, dungeonLoc.spawnDeep.z, dungeonLoc.spawnDeep.yaw);
+      ctx.player.y = 0; ctx.player.vy = 0; ctx.player.camY = null;
+      ctx.player.keys.clear();
+      ctx.ui.toast('Зал Врат. Внизу холоднее, и откуда-то тянет дыханием.', 3000);
+    }, 'dungeon');
+
+  // Подъём обратно: из ниши шахты, со стороны зала Врат.
+  add(new THREE.Vector3(dungeonLoc.shaftBottom.x, dungeonLoc.shaftBottom.y + 1.0, dungeonLoc.shaftBottom.z), 2.8,
+    'Подняться на верхний ярус', () => {
+      ctx.player.teleport(dungeonLoc.spawnTop.x, dungeonLoc.spawnTop.z, dungeonLoc.spawnTop.yaw);
+      ctx.player.y = 0; ctx.player.vy = 0; ctx.player.camY = null;
+      ctx.player.keys.clear();
+      ctx.ui.toast('Кристальный зал. Снова холодный свет и тишина.', 2600);
+    }, 'dungeon');
+
   const dungeonLines = [
     'Кристаллы растут прямо из камня и холодят ладонь. Таких в долине не водится.',
     'Врата в глубине: огромный синий самоцвет, в котором будто движется туман.',
@@ -460,6 +489,38 @@ export function createLocations(ctx) {
     'Тёплая постель, и сон приходит сразу — как будто ждали.',
     'Вы засыпаете под тихое скрипание половиц. Утро начнётся с колокола.',
   ];
+
+  /**
+   * Переночевать: восстановить силы, сменить время на утро, сдвинуть
+   * календарь на день и сохранить игру.
+   *
+   * @param {string} line что сказать игроку перед сном
+   */
+  function sleepThroughNight(line) {
+    if (line) ctx.ui.toast(line, 4200);
+    // ночь восстанавливает силы: раны заживают, отдохнувшие руки крепнут
+    if (ctx.stats) {
+      ctx.stats.hp = ctx.stats.maxHp;
+      ctx.stats.restoreStamina(ctx.stats.maxStamina);
+      ctx.stats.restoreMana(ctx.stats.maxMana);
+      ctx.stats._changed();
+    }
+    if (ctx.systems.combat) ctx.systems.combat.state.fuel = 100;
+    // ночь сменяется утром — и в доме, и на улице
+    if (ctx.env) {
+      ctx.env.setTimeOfDay('morning', true);
+      ctx.ui.setTime('morning');
+    }
+    // переночевали — значит наступил новый день: двигаем календарь
+    if (ctx.calendar) {
+      ctx.calendar.nextDay();
+      if (ctx.ui) ctx.ui.setDate(ctx.calendar.label());
+      if (ctx.ui) ctx.ui.toast(ctx.calendar.info.note, 4200);
+    }
+    // и сохраняемся: это самое безопасное место в игре
+    if (ctx.saveGame) ctx.saveGame(true);
+  }
+
   (tavernLoc.rooms || []).forEach((room, i) => {
     add(new THREE.Vector3(room.bedX, room.bedY, room.bedZ), 1.7,
       `Переночевать — комната ${room.name}`,
@@ -470,30 +531,22 @@ export function createLocations(ctx) {
           ctx.ui.toast('Сначала поднимитесь на второй этаж — по лестнице у очага.');
           return;
         }
-        ctx.ui.toast(nightLines[i % nightLines.length], 4200);
-        // ночь восстанавливает силы: раны заживают, отдохнувшие руки крепнут
-        if (ctx.stats) {
-          ctx.stats.hp = ctx.stats.maxHp;
-          ctx.stats.restoreStamina(ctx.stats.maxStamina);
-          ctx.stats.restoreMana(ctx.stats.maxMana);
-          ctx.stats._changed();
-        }
-        if (ctx.systems.combat) ctx.systems.combat.state.fuel = 100;
-        // ночь сменяется утром — и в доме, и на улице
-        if (ctx.env) {
-          ctx.env.setTimeOfDay('morning', true);
-          ctx.ui.setTime('morning');
-        }
-        // переночевали — значит наступил новый день: двигаем календарь
-        if (ctx.calendar) {
-          ctx.calendar.nextDay();
-          if (ctx.ui) ctx.ui.setDate(ctx.calendar.label());
-          if (ctx.ui) ctx.ui.toast(ctx.calendar.info.note, 4200);
-        }
-        // и сохраняемся: это самое безопасное место в игре
-        if (ctx.saveGame) ctx.saveGame(true);
+        sleepThroughNight(nightLines[i % nightLines.length]);
       }, 'tavern');
   });
+
+  /* ---- дом игрока: кровать, в которой можно переночевать ---- */
+  // Свой дом открыт всегда, хоть днём, хоть ночью, — и это единственное
+  // место в округе, где можно спокойно дождаться утра.
+  {
+    const loc = homeLocs[PLAYER_HOME.index];
+    if (loc && loc.bed) {
+      add(loc.bed.clone(), 2.0, 'Лечь и поспать', () => {
+        sleepThroughNight('Ты ложишься на сухую постель. Сон приходит сразу — '
+          + 'и утро встречают петухи.');
+      }, `home${PLAYER_HOME.index}`);
+    }
+  }
 
   return {
     setLocation,

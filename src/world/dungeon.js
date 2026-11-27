@@ -582,45 +582,47 @@ export function buildDungeon(M, glowTex) {
   group.add(ceil.build({ rockDark, rock }, null, { name: 'dungeonCeiling' }));
 
   /* ================================================================
-   *  ЛЕСТНИЦА В ШАХТЕ — спуск на нижний ярус
+   *  ШАХТА — спуск на нижний ярус
    *
-   *  Каменные ступени идут вдоль оси Z: от верхнего края (y = 0)
-   *  ко дну шахты (y = -4.6). Шаг ступени — 0.38 м, поэтому на них
-   *  можно и спуститься, и подняться пешком.
+   *  Раньше в шахте шла каменная лестница из тринадцати ступеней. Спуститься
+   *  можно было, но ноги цеплялись за камень, а на узкой площадке легко было
+   *  сорваться в темноту — и «ввалиться» в лестницу можно было нечаянно.
+   *
+   *  Теперь лестницы нет. У края шахты стоит каменный парапет: в шахту не
+   *  зайти и не свалиться. Переход вниз — мгновенный: подошёл к парапету,
+   *  нажал E — и ты на ровном полу зала Врат. Обратно — такой же переход
+   *  из ниши шахты.
+   *
+   *  Сама шахта осталась: глубокая ниша с кристаллами и синим светом.
    * ================================================================ */
-  const STEPS = 13;
-  const stepY = (Y_TOP - Y_DEEP) / STEPS;
-  const stepZ = (SH.z1 - SH.z0 - 1.2) / STEPS;
-  const stair = new Builder();
-  for (let i = 0; i < STEPS; i++) {
-    const y = Y_TOP - stepY * (i + 1);
-    // верхняя ступень перекрывает сам край обрыва — иначе на границе
-    // уровней пола получается щель, в которую игрок проваливается
-    const z = SH.z0 - 0.35 + stepZ * (i + 0.5);
-    stair.add(box(SH.x1 - SH.x0 - 0.6, 0.34, stepZ + 0.1, 1.2), 'rockDark', mat(0, y + 0.17, z));
-    stair.add(box(SH.x1 - SH.x0 - 0.6, 0.12, 0.2, 1.2), 'rock', mat(0, y + 0.36, z - stepZ * 0.42));
-    // площадка-ступень: ровно под этим камнем
-    platforms.push({
-      cx: 0, cz: z, hx: (SH.x1 - SH.x0 - 0.6) / 2, hz: stepZ / 2 + 0.12,
-      ang: 0, y: y + 0.34,
-    });
-  }
-  // перила вдоль лестницы — видно, куда идти, и не свалиться вбок
-  for (const sx of [-1, 1]) {
-    for (let i = 0; i < STEPS; i++) {
-      const y = Y_TOP - stepY * (i + 1);
-      const z = SH.z0 - 0.35 + stepZ * (i + 0.5);
-      stair.add(box(0.22, 1.0, 0.22, 1.2), 'rock', mat(sx * (SH.x1 - 0.35), y + 0.8, z));
+  const shaft = new Builder();
+  const PARAPET_H = 1.05;
+  {
+    // парапет по всему краю проёма: за него не заглянуть и не пройти
+    const n = 9;
+    const w = (SH.x1 - SH.x0) / n;
+    for (let i = 0; i < n; i++) {
+      const px = SH.x0 + w * (i + 0.5);
+      shaft.add(box(w + 0.04, PARAPET_H, 0.5, 1.2), 'rockDark',
+        mat(px, Y_TOP + PARAPET_H / 2, SH.z0 + 0.32));
+      shaft.add(box(w + 0.12, 0.16, 0.72, 1.2), 'rock',
+        mat(px, Y_TOP + PARAPET_H + 0.08, SH.z0 + 0.32));
     }
-    const rx = sx * (SH.x1 - 0.35);
-    stair.add(box(0.16, 0.16, (SH.z1 - SH.z0 - 1.0), 1.2), 'rockDark',
-      mat(rx, Y_DEEP + 1.3, (SH.z0 + SH.z1) / 2, 0, -0.3, 0));
     colliders.boxes.push({
-      cx: rx, cz: (SH.z0 + SH.z1) / 2, hx: 0.16, hz: (SH.z1 - SH.z0 - 1.0) / 2,
-      ang: 0, y0: Y_DEEP, y1: Y_TOP,
+      cx: 0, cz: SH.z0 + 0.32, hx: (SH.x1 - SH.x0) / 2, hz: 0.28,
+      ang: 0, y0: Y_TOP, y1: Y_TOP + PARAPET_H + 0.2,
     });
+    // и парапет по краю ниши, с которой поднимаются обратно
+    for (const sx of [-1, 1]) {
+      shaft.add(box(0.4, PARAPET_H, 1.6, 1.2), 'rockDark',
+        mat(sx * (SH.x1 - 0.25), Y_DEEP + PARAPET_H / 2, SH.z1 - 1.2));
+      colliders.boxes.push({
+        cx: sx * (SH.x1 - 0.25), cz: SH.z1 - 1.2, hx: 0.22, hz: 0.8,
+        ang: 0, y0: Y_DEEP, y1: Y_DEEP + PARAPET_H + 0.2,
+      });
+    }
   }
-  group.add(stair.build({ rock, rockDark }, null, { name: 'dungeonStairs' }));
+  group.add(shaft.build({ rock, rockDark }, null, { name: 'dungeonShaftParapet' }));
 
   // наверху шахты — кристаллы и мягкий синий свет: проём вниз должен
   // читаться как спуск, а не как чёрный прямоугольник
@@ -1682,6 +1684,14 @@ export function buildDungeon(M, glowTex) {
   const spawn = { x: 0, z: -26.5, yaw: Math.PI };
   /** Точка выхода — верхняя площадка портала. */
   const exit = { x: 0, z: EXIT_Z, y: PORTAL_Y };
+  /** Точка спуска в зал Врат — ровный пол нижнего яруса, лицом к алтарю. */
+  const spawnDeep = { x: 0, z: 17.6, yaw: Math.PI };
+  /** Точка подъёма — верхний ярус у края шахты, лицом в кристальный зал. */
+  const spawnTop = { x: 0, z: 3.4, yaw: 0 };
+  /** Место действия «спуститься» — у парапета на краю шахты. */
+  const shaftTop = { x: 0, y: Y_TOP, z: 5.3 };
+  /** Место действия «подняться» — в нише шахты, со стороны зала Врат. */
+  const shaftBottom = { x: 0, y: Y_DEEP, z: 13.2 };
 
   /**
    * Анимация локации: туман ползёт, кристаллы пульсируют, огни горят.
@@ -1801,6 +1811,11 @@ export function buildDungeon(M, glowTex) {
     lights,
     spawn,
     exit,
+    /** Точки перехода между ярусами (лестницы больше нет — переход мгновенный). */
+    spawnDeep,
+    spawnTop,
+    shaftTop,
+    shaftBottom,
     spots,
     /** Печати между ярусами: барьеры и запечатанные Врата. */
     seals,

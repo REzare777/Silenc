@@ -651,12 +651,16 @@ export function gardenBed(M, opts = {}) {
   }
   // земля и кустики
   B.add(box(w - 0.3, 0.16, d - 0.3, 1), 'dirt', mat(0, wallH - 0.08, 0));
-  const n = Math.max(3, Math.round(w / 0.75));
+  // Кустики идут вдоль длинной стороны грядки. Раньше они шли поперёк,
+  // и грядка выглядела пустым ящиком с двумя кочанами.
+  const long = Math.max(w, d);
+  const n = Math.max(3, Math.round(long / 0.6));
   for (let i = 0; i < n; i++) {
-    const x = -w / 2 + 0.45 + (i * (w - 0.9)) / Math.max(1, n - 1);
-    for (const sz of [-1, 1]) {
-      B.add(sphere(0.17, 6, 5), 'leaf',
-        mat(x, wallH + 0.12, sz * (d / 2 - 0.3), 0, 0, 0, 0.85));
+    const t = -long / 2 + 0.38 + (i * (long - 0.76)) / Math.max(1, n - 1);
+    for (const s of [-1, 1]) {
+      const px = w >= d ? t : s * (w / 2 - 0.28);
+      const pz = w >= d ? s * (d / 2 - 0.28) : t;
+      B.add(sphere(0.17, 6, 5), 'leaf', mat(px, wallH + 0.14, pz, 0, 0, 0, 0.85));
     }
   }
   return B.build(M, null, { name: 'gardenBed' });

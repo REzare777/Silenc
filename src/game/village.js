@@ -36,6 +36,7 @@ import { Embers } from '../world/particles.js';
 import { Builder, box, cyl, sphere, cone, mat } from '../world/geo.js';
 import {
   LAYOUT, ryToFace, facadePos, tavernDoor, dungeonGate, dungeonTrail, distToDungeonTrail,
+  PLAYER_HOME,
 } from './layout.js';
 import { distToTrails, TRAIL_W } from './roads.js';
 import { blacksmith as blacksmithNpcModel } from '../world/blacksmith.js';
@@ -129,6 +130,8 @@ const BUILDING_CLEARINGS = [
   [LAYOUT.well.x, LAYOUT.well.z, 6],
   [PASTURE.x, PASTURE.z, 16],          // овечье пастбище — лес вырублен
   [WOODS.x, WOODS.z, 12],              // лесная делянка на опушке — лес вырублен
+  // дом игрока у скалы: полянка вокруг него, иначе ели заходят под стены
+  [PLAYER_HOME.x, PLAYER_HOME.z, 13],
 ];
 
 /**
@@ -480,31 +483,24 @@ export function createVillage(ctx) {
       [26, 29, { w: 6, d: 5, h: 3.45, roof: 'thatch', floors: 1 }],
       [-40, -8, { w: 6, d: 5, h: 3.35, roof: 'thatch', floors: 1 }],
       [29, -22, { w: 6, d: 5, h: 3.35, roof: 'thatch', floors: 1 }],
-      // дом на отшибе: раньше стоял прямо на дороге к скале (−19, −34) и
-      // перекрывал её — оттуда его перенесли к западной окраине
-      [-34, -16, { w: 5.5, d: 4.6, h: 3.25, roof: 'thatch', floors: 1 }],
+      // Дом игрока. Раньше он стоял на отшибе у трактира (−34, −16) и был
+      // просто одним из двенадцати. Теперь он стоит у скалы, справа от
+      // дороги к пещере, и стал «твоим»: фасадом к дороге, дверь открыта.
+      [PLAYER_HOME.x, PLAYER_HOME.z, { w: 5.5, d: 4.6, h: 3.25, roof: 'thatch', floors: 1 }],
       [19, -34, { w: 5.5, d: 4.6, h: 3.25, roof: 'thatch', floors: 1 }],
     ];
     const wallKinds = ['plaster', 'plasterWarm', 'plasterGrey'];
-    const houseLines = [
-      'Дом у костра: свет в окнах горит до полуночи.',
-      'Дом напротив костра. На крыльце — закопчённая грядка.',
-      'Дом в глубине улицы. Дверь выкрашена в синий.',
-      'Дом с большим огородом за ним.',
-      'Двухэтажный дом: внизу печь, наверху сушатся травы.',
-      'Двухэтажный дом с мастерской — слышно, как точат.',
-      'Дом ближе к храму: отсюда слышен колокол.',
-      'Дом у поля. Ветер пахнет скошенной травой.',
-      'Дом на южной окраине, за трактиром. Тишина.',
-      'Дом у дальнего пруда: слышно, как плещется вода.',
-      'Дом на отшибе: забор, поле и тишина.',
-      'Дом у мельницы: слышно, как скрипят жернова.',
-    ];
     homes.forEach((h, i) => {
-      const hry = ryToFace([h[0], h[1]], [0, 0]);
+      const isPlayerHome = i === PLAYER_HOME.index;
+      // Фасад дома игрока смотрит на дорогу к скале, а не на площадь:
+      // к нему подходят пешком по ответвку от дороги.
+      const hry = isPlayerHome
+        ? ryToFace([h[0], h[1]], PLAYER_HOME.look)
+        : ryToFace([h[0], h[1]], [0, 0]);
       const c = cottage(ctx.M, {
         ...h[2], wall: wallKinds[i % 3], lit: true, variant: i,
-        doorOpen: !HOUSES_LOCKED,
+        // свой дом открыт всегда, остальные — по общему правилу
+        doorOpen: isPlayerHome ? true : !HOUSES_LOCKED,
       });
       const placed = place(c, h[0], h[1], hry);
       // свет из окон внутрь дома
@@ -536,8 +532,14 @@ export function createVillage(ctx) {
       addInteract(
         facadePos(h[0], h[1], hry, 0, -h[2].d / 2 - 0.4),
         2.0,
-        HOUSES_LOCKED ? 'Запертая дверь дома' : 'Войти в дом',
+        isPlayerHome ? 'Войти в свой дом'
+          : (HOUSES_LOCKED ? 'Запертая дверь дома' : 'Войти в дом'),
         () => {
+          // свой дом открыт всегда: хоть днём, хоть ночью
+          if (isPlayerHome) {
+            ctx.systems.locations.setLocation(`home${i}`);
+            return;
+          }
           if (HOUSES_LOCKED) {
             ctx.ui.toast('Дом заперт на ключ: хозяева не жалуют гостей.', 3600);
             return;
@@ -800,7 +802,14 @@ export function createVillage(ctx) {
   }
 
   function buildNoticeBoard() {
-    const BX = -23.8, BZ = -29.2, BRY = 0.79;   // у дороги к скале, лицом к деревне
+    // Доска стоит у дома игрока — на полянке перед крыльцом, лицом к дороге.
+    // Раньше она была у дороги к скале, но посреди леса: её никто не
+    // находил, и пёс, который ждёт у дома «с табличкой», тоже уезжал
+    // в дальний конец дороги.
+    const hry = ryToFace([PLAYER_HOME.x, PLAYER_HOME.z], PLAYER_HOME.look);
+    const bp = facadePos(PLAYER_HOME.x, PLAYER_HOME.z, hry, -2.4, -4.9);
+    const BX = bp.x, BZ = bp.z;
+    const BRY = hry + Math.PI;          // лицевая сторона доски — к дороге
     const board = noticeBoard(ctx.M, { w: 1.9, h: 1.2, postH: 1.35 });
     board.group.position.set(BX, 0, BZ);
     board.group.rotation.y = BRY;
@@ -901,6 +910,32 @@ export function createVillage(ctx) {
           act: () => { l.setLit(!l.lit); ctx.ui.toast(l.lit ? 'Фонарь снова горит.' : 'Фонарь погашен.'); },
         });
       }
+    }
+
+    /* --- фонарь у двери дома игрока ---
+     *
+     * У распахнутой двери встроенного фонаря нет (он ставится только к
+     * запертой), а дом стоит в лесу под скалой — без огня крыльцо тонет
+     * в темноте, и дом не видно даже с дороги.
+     */
+    {
+      const hry = ryToFace([PLAYER_HOME.x, PLAYER_HOME.z], PLAYER_HOME.look);
+      const lp = facadePos(PLAYER_HOME.x, PLAYER_HOME.z, hry, 2.3, -3.9);
+      const l = lantern(ctx.M, ctx.glowTex, {
+        x: lp.x, z: lp.z, height: 2.9, lit: true, intensity: 2.4, distance: 13,
+      });
+      ctx.scene.add(l.group);
+      l.place(lp.x, lp.z);
+      ctx.lanterns.push(l);
+      ctx.propSpots.push({ name: 'фонарь', x: lp.x, z: lp.z, r: 0.25 });
+      ctx.roomLights.push({
+        pos: l.pos.clone(), lit: true, power: 1, flicker: 3, baseIntensity: 2.2, distance: 9,
+      });
+      ctx.interactables.push({
+        pos: l.pos.clone(), radius: 2.1,
+        labelFn: () => (l.lit ? 'Погасить фонарь' : 'Зажечь фонарь'),
+        act: () => { l.setLit(!l.lit); ctx.ui.toast(l.lit ? 'Фонарь снова горит.' : 'Фонарь погашен.'); },
+      });
     }
 
     /* --- костёр «за город»: поляна у пруда --- */
@@ -1268,6 +1303,15 @@ export function createVillage(ctx) {
         });
       }
     }
+    // За порогом тоннель уходит в скалу. Войти туда нельзя: в подземелье
+    // ведут ступени снаружи, а раньше игрок, поднявшись на площадку, просто
+    // сваливался в тоннель и оказывался внутри камня.
+    {
+      const w = facadePos(gate.x, gate.z, gate.ry, 0, 0.78, 1.4);
+      ctx.colliders.boxes.push({
+        cx: w.x, cz: w.z, hx: PROEM_HW, hz: 0.22, ang: gate.ry, y0: 0, y1: 3.2,
+      });
+    }
     // косяки проёма
     for (const sx of [-1, 1]) {
       B.put('timber', 0.34, PROEM_H + 0.2, 0.5, sx * (PROEM_HW + 0.1), (PROEM_H + 0.2) / 2, 0.1, 1.2);
@@ -1300,13 +1344,25 @@ export function createVillage(ctx) {
     }
 
     // скала — из той же породы, что и стены пещеры
-    const caveDark = new THREE.MeshStandardMaterial({
-      map: M.cave.map, color: 0x9a9ab2, roughness: 1.0, metalness: 0.0,
-    });
-    const group = B.build({ ...M, cave: M.cave, caveDark }, null, { name: 'dungeonGate' });
+    const group = B.build({ ...M, cave: M.cliff, caveDark: M.cliffDark },
+      null, { name: 'dungeonGate' });
     group.position.set(gate.x, 0, gate.z);
     group.rotation.y = gate.ry;
     ctx.scene.add(group);
+
+    /* --- подсветка глыбы ---
+     *
+     * Фасад скалы смотрит на северо-восток, а солнце на закате — на
+     * северо-запад: весь камень в тени и читается чёрной кляксой. Мягкий
+     * холодный свет сверху-сбоку подсвечивает породу — видно и грани, и
+     * трещины, и мох в ложбинах.
+     */
+    {
+      const p = facadePos(gate.x, gate.z, gate.ry, 0, -6, 8.5);
+      const fill = new THREE.PointLight(0xa8c0e0, 3.4, 28, 1.05);
+      fill.position.copy(p);
+      ctx.scene.add(fill);
+    }
 
     /* ---------------- фонари по сторонам лестницы ---------------- */
     for (const sx of [-1, 1]) {
@@ -1337,10 +1393,8 @@ export function createVillage(ctx) {
      *  — и приходит к подножию лестницы.
      * ================================================================ */
     const trailPts = dungeonTrail();
-    const trail = new Builder();
     const trailGroup = new THREE.Group();
     trailGroup.name = 'dungeonTrail';
-    const stones = [];
     // сплошное полотно: одна мягкая лента со скруглёнными поворотами
     // (раньше здесь лежали отдельные прямоугольные куски, и в лесу тропа
     // читалась как набор разрозненных камней)
@@ -1354,60 +1408,25 @@ export function createVillage(ctx) {
         vertexColors: true, transparent: true, depthWrite: false,
         polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6,
       });
+      // полотно чуть шире и с меньшей растушёвкой: с расстояния дорога
+      // читается как ровная лента, а не как узкая тропка в траве
       const road = new THREE.Mesh(
-        ribbonGeometry(line, 3.0, 0.045, { uScale: 0.36, vScale: 0.2, feather: 0.24, taper: 1.4 }),
+        ribbonGeometry(line, 3.6, 0.045, { uScale: 0.36, vScale: 0.2, feather: 0.18, taper: 1.4 }),
         matRoad,
       );
       road.receiveShadow = true;
       road.renderOrder = 2;
       trailGroup.add(road);
     }
-    for (let i = 0; i < trailPts.length - 1; i++) {
-      const [ax, az] = trailPts[i];
-      const [bx, bz] = trailPts[i + 1];
-      const dx = bx - ax, dz = bz - az;
-      const len = Math.hypot(dx, dz);
-      const n = Math.max(2, Math.round(len / 1.5));
-      const ang = Math.atan2(dx, dz);
-      // редкие плоские камни, утопленные в полотно (не лежат поверх)
-      for (let k = 0; k < n; k++) {
-        const t = (k + 0.5) / n;
-        const px = ax + dx * t + (ctx.rng() - 0.5) * 0.5;
-        const pz = az + dz * t + (ctx.rng() - 0.5) * 0.5;
-        trail.add(box(0.85 + ctx.rng() * 0.5, 0.06, 0.6 + ctx.rng() * 0.3), 'stoneDark',
-          mat(px, 0.038, pz, ang + (ctx.rng() - 0.5) * 0.3));
-        stones.push([px, pz]);
-      }
-      // бордюр по краям дороги
-      for (let k = 0; k <= n; k += 2) {
-        const t = k / n;
-        const px = ax + dx * t, pz = az + dz * t;
-        const nx = -dz / len, nz = dx / len;
-        for (const s of [-1, 1]) {
-          trail.add(box(0.5, 0.22, 0.5), 'stone',
-            mat(px + nx * s * 1.5, 0.1, pz + nz * s * 1.5, ang));
-        }
-      }
-    }
-    // пни-указатели вдоль дороги — с доской, смотрящей в сторону скалы
-    for (let i = 1; i < trailPts.length - 1; i += 2) {
-      const [px, pz] = trailPts[i];
-      const side = ctx.rng() > 0.5 ? 1 : -1;
-      const ox = px + 2.1 * side, oz = pz + 0.8;
-      trail.add(cyl(0.24, 0.28, 1.05, 6), 'timber', mat(ox, 0.52, oz));
-      const [nx, nz] = trailPts[i + 1] || trailPts[i];
-      const a = Math.atan2(nx - px, nz - pz);
-      trail.add(box(0.12, 0.44, 0.56), 'plank', mat(ox, 1.02, oz, a));
-    }
-    ctx.scene.add(trail.build(M, null, { name: 'dungeonTrailStones' }));
+    // Раньше вдоль полотна лежали отдельные камни-плиты, бордюрные блоки и
+    // пни-указатели с досками. Издалека дорога читалась как набор разбросанных
+    // пластин, а не как дорога, и вблизи камни торчали из-под полотна.
+    // Теперь полотно одно и сплошное — его видно с любого расстояния.
     ctx.scene.add(trailGroup);
 
-    // указатель на выезде из села — «в скалу» показывает на северо-запад
-    {
-      const a = trailPts[1], b = trailPts[2];
-      const ry = Math.atan2(-(b[0] - a[0]), -(b[1] - a[1]));
-      ctx.scene.add(signpost(M, { x: -4.8, z: -14.2, ry }));
-    }
+    // Указатель «в скалу» на выезде из села тоже убрали: это был ещё один
+    // столб посреди дороги. Куда идти, показывает сама дорога, а у подножия
+    // лестницы стоит щит с оленьим черепом.
 
     /* ================================================================
      *  КОЛЛАЙДЕРЫ СКАЛЫ

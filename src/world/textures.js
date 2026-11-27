@@ -439,6 +439,115 @@ function boneCanvas(size = 64) {
 }
 
 /**
+ * Скала — порода глыбы, в которой открыт вход в подземелье.
+ *
+ * Раньше глыба красилась текстурой «породы пещеры» — щебнем, которым засыпают
+ * пол. На каменных валунах она читалась чёрной кляксой: скала выглядела
+ * вырезанной из ночи, а не камнем. Теперь это настоящая порода: крупные
+ * угловатые грани, тёмные трещины между ними, мох в ложбинах и свет на
+ * верхних кромках.
+ *
+ * @param {number} size размер текстуры в пикселях
+ * @returns {HTMLCanvasElement} готовая текстура
+ */
+function cliffRockCanvas(size = 256) {
+  const c = makeCanvas(size), g = c.getContext('2d');
+  // общий тон породы — светлый тёплый серый. Раньше глыба была тёмной,
+  // и в сумерках (а игра начинается на закате) скала читалась чёрной
+  // кляксой: фасад, трещины и мох на ней были не видны.
+  g.fillStyle = '#8d867a';
+  g.fillRect(0, 0, size, size);
+
+  // крупные грани: сетка ячеек, у каждой свои смещённые углы
+  const cols = 4, rows = 4;
+  const cw = size / cols, ch = size / rows;
+  for (let r = -1; r <= rows; r++) {
+    for (let i = -1; i <= cols; i++) {
+      const seed = 1300 + r * 37 + i * 91;
+      const jx = (hash2(i, r, seed) - 0.5) * cw * 0.36;
+      const jy = (hash2(i, r, seed + 7) - 0.5) * ch * 0.36;
+      const x = i * cw + jx, y = r * ch + jy;
+      const w = cw * (0.92 + hash2(i, r, seed + 11) * 0.24);
+      const h = ch * (0.92 + hash2(i, r, seed + 13) * 0.24);
+      const v = 128 + hash2(i, r, seed + 17) * 58;      // светлота грани
+      const warm = hash2(i, r, seed + 19);              // тёплый или холодный камень
+      const rr = (v * (1.0 + warm * 0.06)) | 0;
+      const gg = (v * 0.98) | 0;
+      const bb = (v * (0.94 - warm * 0.08)) | 0;
+
+      // трещина-тень под гранью
+      g.fillStyle = 'rgba(38,34,29,0.5)';
+      g.beginPath();
+      g.moveTo(x + 3, y + 4);
+      g.lineTo(x + w + 3, y + 4);
+      g.lineTo(x + w + 3, y + h + 4);
+      g.lineTo(x + 3, y + h + 4);
+      g.closePath();
+      g.fill();
+
+      // сама грань
+      g.fillStyle = `rgb(${rr},${gg},${bb})`;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo(x + w, y + (hash2(i, r, seed + 23) - 0.5) * 6);
+      g.lineTo(x + w + (hash2(i, r, seed + 29) - 0.5) * 6, y + h);
+      g.lineTo(x, y + h);
+      g.closePath();
+      g.fill();
+
+      // свет на верхней кромке — сразу видно, где грань выходит наружу
+      g.strokeStyle = 'rgba(246,240,226,0.45)';
+      g.lineWidth = 2.4;
+      g.beginPath();
+      g.moveTo(x + 2, y + 1.6);
+      g.lineTo(x + w - 2, y + 1.6);
+      g.stroke();
+      // и тень по нижней кромке
+      g.strokeStyle = 'rgba(28,25,21,0.4)';
+      g.lineWidth = 2.6;
+      g.beginPath();
+      g.moveTo(x + 2, y + h - 1.4);
+      g.lineTo(x + w - 2, y + h - 1.4);
+      g.stroke();
+    }
+  }
+
+  // мох в ложбинах — зелёные пятна по швам
+  for (let i = 0; i < 26; i++) {
+    const x = hash2(i, 401, 3) * size, y = hash2(i, 409, 5) * size;
+    const r = 5 + hash2(i, 419, 7) * 13;
+    g.fillStyle = `rgba(74,94,52,${0.16 + hash2(i, 421, 11) * 0.2})`;
+    g.beginPath();
+    g.ellipse(x, y, r, r * (0.5 + hash2(i, 431, 13) * 0.5), hash2(i, 433, 17) * 3, 0, 6.3);
+    g.fill();
+  }
+
+  // мелкая крупа и сколы
+  for (let i = 0; i < 900; i++) {
+    const x = hash2(i, 443, 19) * size, y = hash2(i, 449, 23) * size;
+    const v = hash2(i, 457, 29);
+    g.fillStyle = v > 0.5
+      ? `rgba(226,216,192,${0.06 + v * 0.12})`
+      : `rgba(22,20,18,${0.08 + v * 0.14})`;
+    g.fillRect(x, y, 1 + v * 2, 1 + v * 2);
+  }
+
+  // мягкие пятна — чтобы глыба не читалась как ровная плитка
+  for (let i = 0; i < 10; i++) {
+    const x = hash2(i, 461, 31) * size, y = hash2(i, 463, 37) * size;
+    const r = 18 + hash2(i, 467, 41) * 40;
+    const grd = g.createRadialGradient(x, y, 0, x, y, r);
+    const dark = hash2(i, 479, 43) > 0.5;
+    grd.addColorStop(0, dark ? 'rgba(20,18,16,0.22)' : 'rgba(224,214,190,0.16)');
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grd;
+    g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+
+  return c;
+}
+
+/**
  * Скала для СТЕН подземелья.
  *
  * Стена должна читаться как стена, а не как растр с рисунком: поэтому
@@ -867,6 +976,8 @@ export function buildTextures() {
     stone: tex(stoneCanvas(256), 1),
     cave: tex(caveRockCanvas(256), 1),
     caveWall: tex(caveWallCanvas(256), 1),
+    // порода глыбы, в которой открыт вход в пещеру
+    cliff: tex(cliffRockCanvas(256), 1),
     bone: tex(boneCanvas(64), 1),
     windowLit: tex(windowCanvas(128, true), 1),
     windowDark: tex(windowCanvas(128, false), 1),
