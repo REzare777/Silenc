@@ -280,6 +280,11 @@
   #bestClose{appearance:none;background:none;border:1px solid rgba(255,255,255,.14);color:var(--ink-dim);
     width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:12px;line-height:1;transition:.2s}
   #bestClose:hover{color:var(--ink);border-color:rgba(255,255,255,.32);background:rgba(255,255,255,.07)}
+  .dlgTrade{appearance:none;border:1px solid rgba(232,177,99,.4);background:rgba(232,177,99,.12);
+    color:var(--gold);font-family:inherit;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+    padding:6px 14px;border-radius:20px;cursor:pointer;transition:.2s}
+  .dlgTrade:hover{background:rgba(232,177,99,.22);border-color:rgba(232,177,99,.7)}
+  .dlgTrade[hidden]{display:none}
   #dmg{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s;
     background:radial-gradient(110% 80% at 50% 50%,rgba(120,10,10,0) 28%,rgba(150,20,20,.8) 100%)}
   #dmg.on{opacity:1}
@@ -485,7 +490,8 @@
   .dlgTopics button:hover{border-color:rgba(232,177,99,.55);
     background:linear-gradient(180deg,rgba(232,177,99,.16),rgba(232,177,99,.05))}
   .dlgTopics button.dlgBye{color:var(--ink-dim);border-color:rgba(255,255,255,.12)}
-  .dlgFoot{font-size:10.5px;color:var(--ink-dim);opacity:.7;margin-top:2px}
+  .dlgFoot{font-size:10.5px;color:var(--ink-dim);opacity:.7;margin-top:2px;
+    display:flex;align-items:center;gap:12px}
   .dogCard{background:linear-gradient(180deg,rgba(34,27,20,.98),rgba(20,16,12,.98));
     border:1px solid rgba(232,177,99,.22);border-radius:16px;padding:20px 22px 16px;min-width:330px;
     box-shadow:0 30px 80px rgba(0,0,0,.72);display:flex;flex-direction:column;gap:12px}
@@ -628,7 +634,7 @@
     #viewCanvas{width:100%;height:180px}
   }
 </style>
-  <script type="module" crossorigin src="./assets/index-0kQA0rPU.js"></script>
+  <script type="module" crossorigin src="./assets/index-B7gkpHie.js"></script>
 </head>
 <body>
 <script>
@@ -777,7 +783,10 @@
         <div class="dlgHead"><b id="dlgName">Хорт</b><i id="dlgTitle">трактирщик</i></div>
         <p class="dlgText" id="dlgText"></p>
         <div class="dlgTopics" id="dlgTopics"></div>
-        <div class="dlgFoot"><span><kbd>Esc</kbd> — закончить разговор</span></div>
+        <div class="dlgFoot">
+          <button id="dlgTrade" class="dlgTrade">Торговать</button>
+          <span><kbd>Esc</kbd> — закончить разговор</span>
+        </div>
       </div>
     </div>
   </div>
