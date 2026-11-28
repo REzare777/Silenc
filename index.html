@@ -228,53 +228,6 @@
   #questClose{appearance:none;background:none;border:1px solid rgba(255,255,255,.14);color:var(--ink-dim);
     width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:12px;line-height:1;transition:.2s}
   #questClose:hover{color:var(--ink);border-color:rgba(255,255,255,.32);background:rgba(255,255,255,.07)}
-  /* ---------- зверинец ---------- */
-  #bestiary{position:fixed;inset:0;z-index:26;display:none;align-items:center;justify-content:center;
-    background:rgba(8,6,4,.62);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
-  #bestiary.on{display:flex}
-  #bestiary .bCard{width:min(760px,94vw);max-height:86vh;overflow:auto;padding:24px 26px 20px}
-  #bestiary .bHead{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px}
-  #bestiary .bHead h2{font-family:"Cormorant Garamond",Georgia,serif;font-size:24px;
-    font-weight:600;letter-spacing:.04em;margin:0;color:#e9c9a2}
-  #bestiary .bSub{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:14px}
-  #bestiary .bTierHead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
-    margin:20px 0 6px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.08)}
-  #bestiary .bTierHead:first-child{margin-top:6px}
-  #bestiary .bTierHead b{font-family:"Cormorant Garamond",Georgia,serif;font-size:18px;
-    font-weight:600;color:#e9c9a2;letter-spacing:.03em}
-  #bestiary .bTierHead i{font-style:normal;font-size:11px;color:#9b8e7d;flex:1 1 260px;line-height:1.5}
-  #bestiary .bItem{border-top:1px solid rgba(255,255,255,.07);padding:12px 0 11px}
-  #bestiary .bItem:first-child{border-top:0}
-  #bestiary .bTop{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-  #bestiary .bTop b{font-family:"Cormorant Garamond",Georgia,serif;font-size:17px;
-    font-weight:600;color:#e9c9a2;letter-spacing:.02em}
-  #bestiary .bTop .bWhere{font-style:normal;font-size:10px;letter-spacing:.16em;
-    text-transform:uppercase;color:var(--ink-dim)}
-  #bestiary .bTop .bState{margin-left:auto;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
-    padding:3px 9px;border-radius:20px;border:1px solid rgba(255,255,255,.16);color:#a99c8b}
-  #bestiary .bItem.trash .bTop .bState{border-color:rgba(150,190,160,.3);color:#9dc0a8}
-  #bestiary .bItem.normal .bTop .bState{border-color:rgba(232,177,99,.32);color:var(--gold)}
-  #bestiary .bItem.elite .bTop .bState{border-color:rgba(214,120,90,.38);color:#e0896a}
-  #bestiary .bItem.boss .bTop .bState{border-color:rgba(190,70,70,.45);color:#e2685f;
-    background:rgba(190,70,70,.12)}
-  #bestiary .bDesc{font-size:12px;line-height:1.65;color:#a99c8b;margin:6px 0 8px;font-style:italic}
-  #bestiary .bStats{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 8px}
-  #bestiary .bStats span{font-size:11px;color:#bfb09c;font-variant-numeric:tabular-nums}
-  #bestiary .bStats u{text-decoration:none;color:var(--ink-dim);letter-spacing:.06em;margin-right:4px}
-  #bestiary .bStats b{color:#e9c9a2;font-weight:600}
-  #bestiary .bTip{font-size:11.5px;line-height:1.6;color:#9fb7a0;margin:0 0 6px}
-  #bestiary .bTip u{text-decoration:none;color:#7d8f7e;letter-spacing:.08em;
-    text-transform:uppercase;font-size:10px;margin-right:5px}
-  #bestiary .bLoot{font-size:11px;color:var(--ink-dim);line-height:1.55}
-  #bestiary .bLoot u{text-decoration:none;letter-spacing:.08em;text-transform:uppercase;
-    font-size:10px;margin-right:5px;color:#7d7466}
-  #bestiary .bFoot{margin-top:18px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);
-    font-size:11px;color:var(--ink-dim);display:flex;justify-content:space-between;align-items:center;gap:12px}
-  #bestiary .bFoot kbd{font:inherit;font-size:10px;font-weight:600;color:var(--gold);
-    background:rgba(232,177,99,.13);border:1px solid rgba(232,177,99,.25);border-radius:4px;padding:1px 5px}
-  #bestClose{appearance:none;background:none;border:1px solid rgba(255,255,255,.14);color:var(--ink-dim);
-    width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:12px;line-height:1;transition:.2s}
-  #bestClose:hover{color:var(--ink);border-color:rgba(255,255,255,.32);background:rgba(255,255,255,.07)}
   #dmg{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s;
     background:radial-gradient(110% 80% at 50% 50%,rgba(120,10,10,0) 28%,rgba(150,20,20,.8) 100%)}
   #dmg.on{opacity:1}
@@ -623,7 +576,7 @@
     #viewCanvas{width:100%;height:180px}
   }
 </style>
-  <script type="module" crossorigin src="./assets/index-VoLSMA-D.js"></script>
+  <script type="module" crossorigin src="./assets/index-u-f0ZJ2Q.js"></script>
 </head>
 <body>
 <script>
@@ -683,7 +636,6 @@
     <div><kbd>O</kbd> настройки</div>
     <div><kbd>I</kbd> инвентарь</div>
     <div><kbd>J</kbd> журнал дел</div>
-    <div><kbd>B</kbd> зверинец</div>
     <div><kbd>P</kbd> фото-режим</div>
     <div><kbd>Q</kbd> убрать из рук</div>
     <div><kbd>1</kbd>–<kbd>9</kbd> пояс</div>
@@ -816,7 +768,6 @@
         <button id="saveBtn">Сохранить</button>
         <button id="loadInMenu">Загрузить…</button>
         <button id="slotsBtn">Слоты…</button>
-        <button id="bestBtn">Зверинец…</button>
         <button id="resume">Продолжить</button>
       </div>
       <div id="settings" class="panel">
@@ -951,21 +902,6 @@
     </div>
     <div id="questList"></div>
     <div class="qFoot"><span><kbd>J</kbd> или <kbd>Esc</kbd> — закрыть</span><span>Дела Хорта и Торна</span></div>
-  </div>
-</div>
-
-<!-- ---------- зверинец ---------- -->
-<div id="bestiary">
-  <div class="bCard panel">
-    <div class="bHead">
-      <div>
-        <h2>Зверинец</h2>
-        <div class="bSub">Кто водится в подземелье под скалой</div>
-      </div>
-      <button id="bestClose" title="Закрыть">✕</button>
-    </div>
-    <div id="bestList"></div>
-    <div class="bFoot"><span><kbd>B</kbd> или <kbd>Esc</kbd> — закрыть</span><span>Печать держит, пока в зале живы звери</span></div>
   </div>
 </div>
 
