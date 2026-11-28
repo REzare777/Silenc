@@ -641,6 +641,10 @@ function openBestiary() {
   bestiaryReturn = ctx.mode === 'menu' ? 'menu' : 'play';
   ctx.mode = 'bestiary';
   ui.renderBestiary(ctx.systems.bestiary ? ctx.systems.bestiary.entries() : buildBestiary(), buildTiers());
+  // Из паузы справочник открывается поверх неё — но саму карточку паузы
+  // прячем: иначе под «Зверинцем» просвечивает размытое меню, и две
+  // полупрозрачные панели друг на друге выглядят неопрятно.
+  if (bestiaryReturn === 'menu') ui.closeMenu();
   ui.openBestiary();
   player.acceptInput = false;
   player.keys.clear();

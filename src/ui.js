@@ -12,6 +12,19 @@ export function plural(n, one, few, many) {
   if (b === 1) return one;
   return many;
 }
+
+/**
+ * Цвета ступеней силы — ими помечены карточки в «Зверинце».
+ * От слабой ступени к сильной: зелень → золото → терракота → багрянец.
+ *
+ * @type {Record<string, string>}
+ */
+const TIER_COLOR = {
+  trash: '#7f9078',
+  normal: '#e0a95f',
+  elite: '#d98a63',
+  boss: '#cf5f57',
+};
 /* ------------------------------------------------------------------ *
  *  Связь с DOM: HUD, меню, компас, подсказки
  * ------------------------------------------------------------------ */
@@ -928,6 +941,7 @@ export class UI {
 
       const head = document.createElement('div');
       head.className = 'bTierHead';
+      head.style.setProperty('--tier', TIER_COLOR[tier.id] || '#8a8172');
       const name = document.createElement('b');
       name.textContent = tier.name;
       const desc = document.createElement('i');
@@ -936,11 +950,15 @@ export class UI {
       head.appendChild(desc);
       this.el.bestList.appendChild(head);
 
+      // карточки пород — сеткой в две колонки на широком экране
+      const grid = document.createElement('div');
+      grid.className = 'bGrid';
       for (const r of inTier) {
-        this.el.bestList.appendChild(r.known
+        grid.appendChild(r.known
           ? this._bestiaryItem(r)
           : this._bestiaryLocked(r));
       }
+      this.el.bestList.appendChild(grid);
     }
   }
 
@@ -954,6 +972,16 @@ export class UI {
     const item = document.createElement('div');
     item.className = 'bItem ' + (r.tier || 'trash');
     item.dataset.monster = r.id;
+
+    // эмблема породы: буква названия в круге цвета ступени силы
+    const med = document.createElement('div');
+    med.className = 'bMedallion';
+    med.textContent = (r.name || '?').trim().charAt(0).toUpperCase();
+    item.appendChild(med);
+
+    const body = document.createElement('div');
+    body.className = 'bBody';
+    item.appendChild(body);
 
     // --- заголовок: имя, где водится, ступень ---
     const top = document.createElement('div');
@@ -969,14 +997,14 @@ export class UI {
     top.appendChild(b);
     top.appendChild(where);
     top.appendChild(state);
-    item.appendChild(top);
+    body.appendChild(top);
 
     // --- описание породы ---
     if (r.desc) {
       const d = document.createElement('p');
       d.className = 'bDesc';
       d.textContent = r.desc;
-      item.appendChild(d);
+      body.appendChild(d);
     }
 
     // --- характеристики ---
@@ -1002,7 +1030,7 @@ export class UI {
     if (r.guard) stat('щит', Math.round(r.guard * 100) + '%');
     stat('стая', String(r.sp));
     stat('вес', String(r.exp));
-    item.appendChild(stats);
+    body.appendChild(stats);
 
     // --- как бороться ---
     if (r.tip) {
@@ -1012,7 +1040,7 @@ export class UI {
       u.textContent = 'как бить';
       tip.appendChild(u);
       tip.appendChild(document.createTextNode(r.tip));
-      item.appendChild(tip);
+      body.appendChild(tip);
     }
 
     // --- добыча ---
@@ -1023,7 +1051,7 @@ export class UI {
       u.textContent = 'добыча';
       loot.appendChild(u);
       loot.appendChild(document.createTextNode(r.drops.join(' · ')));
-      item.appendChild(loot);
+      body.appendChild(loot);
     }
 
     return item;
@@ -1043,6 +1071,15 @@ export class UI {
     item.className = 'bItem locked ' + (r.tier || 'trash');
     item.dataset.monster = r.id;
 
+    const med = document.createElement('div');
+    med.className = 'bMedallion';
+    med.textContent = (r.name || '?').trim().charAt(0).toUpperCase();
+    item.appendChild(med);
+
+    const body = document.createElement('div');
+    body.className = 'bBody';
+    item.appendChild(body);
+
     const top = document.createElement('div');
     top.className = 'bTop';
     const b = document.createElement('b');
@@ -1056,12 +1093,12 @@ export class UI {
     top.appendChild(b);
     top.appendChild(where);
     top.appendChild(state);
-    item.appendChild(top);
+    body.appendChild(top);
 
     const desc = document.createElement('p');
     desc.className = 'bDesc';
     desc.textContent = 'Характеристики неизвестны: этого зверя вы ещё не встречали.';
-    item.appendChild(desc);
+    body.appendChild(desc);
 
     const how = document.createElement('p');
     how.className = 'bTip';
@@ -1069,9 +1106,8 @@ export class UI {
     u.textContent = 'как узнать';
     how.appendChild(u);
     how.appendChild(document.createTextNode(
-      'Убейте одного такого — запись появится в зверинце. '
-      + `Или купите запись у Хорта в трактире за ${r.price} зол.`));
-    item.appendChild(how);
+      `Убейте одного такого — или купите запись у Хорта за ${r.price} зол.`));
+    body.appendChild(how);
 
     return item;
   }

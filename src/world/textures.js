@@ -210,13 +210,15 @@ function plasterCanvas(size = 256, base = 0xd9c9ac, seed = 3) {
     }
   }
   g.putImageData(img, 0, 0);
-  // трещины
-  g.strokeStyle = 'rgba(90,72,54,0.20)'; g.lineWidth = 1;
-  for (let i = 0; i < 26; i++) {
+  // трещины: их было 26 длинных ломаных — на растянутой стене они
+  // читались как «паутина» и дыры в штукатурке. Теперь их мало,
+  // они короче и бледнее.
+  g.strokeStyle = 'rgba(90,72,54,0.13)'; g.lineWidth = 1;
+  for (let i = 0; i < 9; i++) {
     let x = hash2(i, 61, 3) * size, y = hash2(i, 67, 5) * size;
     g.beginPath(); g.moveTo(x, y);
-    for (let s = 0; s < 12; s++) {
-      x += (hash2(i, s, 7) - 0.5) * 26; y += (hash2(i, s, 9) - 0.5) * 26;
+    for (let s = 0; s < 8; s++) {
+      x += (hash2(i, s, 7) - 0.5) * 15; y += (hash2(i, s, 9) - 0.5) * 15;
       g.lineTo(x, y);
     }
     g.stroke();

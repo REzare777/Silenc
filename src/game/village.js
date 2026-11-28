@@ -817,8 +817,12 @@ export function createVillage(ctx) {
     // Раньше она была у дороги к скале, но посреди леса: её никто не
     // находил, и пёс, который ждёт у дома «с табличкой», тоже уезжал
     // в дальний конец дороги.
+    //
+    // Отступ по фасаду (-4.8) и вперёд по дороге (-3.2) выбраны так, чтобы
+    // доска целиком стояла снаружи дома: раньше она примыкала к торцу и её
+    // край заходил внутрь здания — выглядело, будто табличка торчит из стены.
     const hry = ryToFace([PLAYER_HOME.x, PLAYER_HOME.z], PLAYER_HOME.look);
-    const bp = facadePos(PLAYER_HOME.x, PLAYER_HOME.z, hry, -3.6, -2.0);
+    const bp = facadePos(PLAYER_HOME.x, PLAYER_HOME.z, hry, -4.8, -3.2);
     const BX = bp.x, BZ = bp.z;
     const BRY = hry + Math.PI;          // лицевая сторона доски — к дороге
     const board = noticeBoard(ctx.M, { w: 1.9, h: 1.2, postH: 1.35 });
