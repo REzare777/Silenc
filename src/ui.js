@@ -89,6 +89,7 @@ export class UI {
       questLog: document.getElementById('questLog'),
       questList: document.getElementById('questList'),
       questClose: document.getElementById('questClose'),
+      dlgTrade: document.getElementById('dlgTrade'),
       bestiary: document.getElementById('bestiary'),
       bestList: document.getElementById('bestList'),
       bestCount: document.getElementById('bestCount'),
@@ -140,6 +141,13 @@ export class UI {
     };
     this.onDialogTopic = null;
     this.onDialogClose = null;
+    this.onDialogTrade = null;       // нажата кнопка «Торговать» в диалоге
+    if (this.el.dlgTrade) {
+      this.el.dlgTrade.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.onDialogTrade) this.onDialogTrade();
+      });
+    }
     this.onStart = null;
     this.onLoadGame = null;      // «Загрузить игру» на титульном экране
     this.onSlotLoad = null;      // загрузить выбранный слот
@@ -1400,6 +1408,11 @@ export class UI {
     if (d.portrait) this.el.dlgPic.appendChild(d.portrait);
     // темы для разговора
     this.setDialogTopics(d.topics);
+    // кнопка торговли — только если этот персонаж торгует
+    if (this.el.dlgTrade) {
+      this.el.dlgTrade.hidden = !d.canTrade;
+      if (d.canTrade) this.el.dlgTrade.textContent = d.tradeLabel || 'Торговать';
+    }
     this.el.dialog.classList.add('on');
     document.body.classList.add('uiFocus');
   }

@@ -25,6 +25,8 @@ const SCRIPTS = {
   barkeep: {
     name: 'Хорт',
     title: 'трактирщик «Уставшего вепря»',
+    canTrade: true,      // в разговоре есть кнопка «Торговать»
+    tradeLabel: 'Торговать',
     greet: 'Заходи, гость, грейся. Эль в кружке, огонь в очаге, а на цены лучше не смотри — крепче спать будешь. С чем пожаловал?',
     topics: [
       {
@@ -66,6 +68,8 @@ const SCRIPTS = {
   blacksmith: {
     name: 'Торн',
     title: 'кузнец',
+    canTrade: true,
+    tradeLabel: 'Торговать',
     greet: 'Ну? Опять с пустыми руками? У меня сталь, у тебя пустая сумка. Чего надо?',
     topics: [
       {
@@ -151,6 +155,8 @@ export function createDialog(ctx) {
       text: s.greet,
       portrait: portraits[id] || null,
       topics: buildTopics(id),
+      canTrade: !!s.canTrade,
+      tradeLabel: s.tradeLabel || 'Торговать',
     });
     return true;
   }
@@ -168,15 +174,37 @@ export function createDialog(ctx) {
     ctx.player.requestLock();
   }
 
+  /**
+   * Открыть торговлю из разговора.
+   *
+   * Окно разговора на время закрывается, а когда торговля закрыта —
+   * разговор возвращается: поговорил, потом поторговал, потом договорил.
+   *
+   * @param {string} who идентификатор торговца
+   */
+  function openTrade(who) {
+    if (!ctx.systems.trade) return;
+    close();
+    ctx.systems.trade.open(who, {
+      onClose: () => {
+        // вернуться к разговору, если персонаж всё ещё на месте
+        if (openId || SCRIPTS[who]) open(who);
+      },
+    });
+  }
+
   // кнопки внутри окна
+  ctx.ui.onDialogTrade = () => {
+    if (!openId) return;
+    openTrade(openId);
+  };
   ctx.ui.onDialogTopic = (topic) => {
     if (!openId) return;
     ctx.ui.setDialogText(topic.text);
     // тема «показать товар» открывает торговлю с этим же торговцем
     if (topic.trade) {
       const who = openId;
-      close();
-      if (ctx.systems.trade) ctx.systems.trade.open(who);
+      openTrade(who);
       return;
     }
     // тема сюжета: взять или сдать дело

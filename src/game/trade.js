@@ -76,6 +76,8 @@ export const TRADERS = {
  */
 export function createTrade(ctx) {
   let openId = null;
+  /** Что сделать после закрытия окна торговли. */
+  let onClose = null;
 
   /**
    * Открыть торговлю с торговцем.
@@ -83,10 +85,12 @@ export function createTrade(ctx) {
    * @param {string} id идентификатор торговца
    * @returns {boolean}
    */
-  function open(id) {
+  function open(id, opts = {}) {
     const t = TRADERS[id];
     if (!t) return false;
     openId = id;
+    // что сделать после закрытия торговли (например — вернуться в разговор)
+    onClose = opts.onClose || null;
 
     // игра встаёт на паузу
     ctx.mode = 'trade';
@@ -140,6 +144,12 @@ export function createTrade(ctx) {
     ctx.player.acceptInput = true;
     ctx.player.keys.clear();
     ctx.player.requestLock();
+    // после торговли — вернуться в разговор, если просили
+    if (onClose) {
+      const cb = onClose;
+      onClose = null;
+      cb();
+    }
   }
 
   /**
