@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-27T21:11:21.462Z",
-  "total": 915,
+  "generated": "2026-11-27T23:33:54.555Z",
+  "total": 1005,
   "files": [
     {
       "file": "src/game/animals.js",
@@ -89,6 +89,22 @@
         {
           "line": 587,
           "text": "Пёс прыгнул — гляньте, как летит!",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "file": "src/game/bestiary.js",
+      "kind": "file",
+      "items": [
+        {
+          "line": 53,
+          "text": "Зал Врат",
+          "type": "string"
+        },
+        {
+          "line": 77,
+          "text": " и ",
           "type": "string"
         }
       ]
@@ -1664,112 +1680,432 @@
           "type": "string"
         },
         {
-          "line": 88,
-          "text": "Гоблин с мечом",
+          "line": 89,
+          "text": "Мелочь",
+          "type": "string"
+        },
+        {
+          "line": 90,
+          "text": "Мелкие породы, которых в пещере много. Бьют слабо, но идут стаями.",
+          "type": "string"
+        },
+        {
+          "line": 93,
+          "text": "Обычные",
           "type": "string"
         },
         {
           "line": 94,
-          "text": "Гоблин-лучник",
+          "text": "Крепче мелочи. Один на один — терпимо, толпой — смертельно.",
           "type": "string"
         },
         {
-          "line": 100,
-          "text": "Гоблин-страж",
+          "line": 97,
+          "text": "Стража",
           "type": "string"
         },
         {
-          "line": 106,
-          "text": "Призрак",
+          "line": 98,
+          "text": "Стоят у Врат. Держат щит, бронированы и бьют сильно.",
           "type": "string"
         },
         {
-          "line": 112,
-          "text": "Паук",
+          "line": 101,
+          "text": "Владыка",
           "type": "string"
         },
         {
-          "line": 118,
-          "text": "Зелёный слизень",
-          "type": "string"
-        },
-        {
-          "line": 124,
-          "text": "Синий слизень",
-          "type": "string"
-        },
-        {
-          "line": 130,
-          "text": "Красный слизень",
+          "line": 102,
+          "text": "Орк-владыка Гримм. Хозяин зала Врат и виновник печати.",
           "type": "string"
         },
         {
           "line": 136,
-          "text": "Живой гриб",
+          "text": "Гоблин с мечом",
+          "type": "string"
+        },
+        {
+          "line": 140,
+          "text": "Тощий, зеленоватый, с кривым тесаком наперевес. Идёт первым в ",
+          "type": "string"
+        },
+        {
+          "line": 141,
+          "text": "свобой, орёт и рубит без разбора — только успевай отойти.",
           "type": "string"
         },
         {
           "line": 142,
+          "text": "Бьёт часто, но слабо: замах короткий, удар — через раз. ",
+          "type": "string"
+        },
+        {
+          "line": 143,
+          "text": "Держите дистанцию и бейте в спину, пока он размахивается.",
+          "type": "string"
+        },
+        {
+          "line": 146,
+          "text": "Гоблин-лучник",
+          "type": "string"
+        },
+        {
+          "line": 150,
+          "text": "Худой, в чужой кожаной накидке, с коротким луком. Увидел вас — ",
+          "type": "string"
+        },
+        {
+          "line": 151,
+          "text": "отбежал и встал навесом: стреляет через пол-пещеры.",
+          "type": "string"
+        },
+        {
+          "line": 152,
+          "text": "Самый опасный из мелочи: достаёт издалека. Следите за стрелами — ",
+          "type": "string"
+        },
+        {
+          "line": 153,
+          "text": "они летят по прямой, и от них достаточно уйти вбок.",
+          "type": "string"
+        },
+        {
+          "line": 156,
+          "text": "Паук",
+          "type": "string"
+        },
+        {
+          "line": 160,
+          "text": "Низкая тёмная тень на восьми ногах, ни одного глаза — только ",
+          "type": "string"
+        },
+        {
+          "line": 161,
+          "text": "ряды крючков. Бежит быстрее всех и прыгает на добычу с потолка.",
+          "type": "string"
+        },
+        {
+          "line": 162,
+          "text": "Очень быстрый, но хрупкий: двух ударов средним мечом — и он ",
+          "type": "string"
+        },
+        {
+          "line": 163,
+          "text": "рассыпается. Бейте, пока он не подпрыгнул.",
+          "type": "string"
+        },
+        {
+          "line": 166,
+          "text": "Зелёный слизень",
+          "type": "string"
+        },
+        {
+          "line": 170,
+          "text": "Кислотно-зелёный ком, который перекатывается по полу. Дышит ",
+          "type": "string"
+        },
+        {
+          "line": 171,
+          "text": "едким соком — от него щиплет глаза.",
+          "type": "string"
+        },
+        {
+          "line": 172,
+          "text": "Сам удар слабый, зато после него остаётся едкая лужа: она снимает ",
+          "type": "string"
+        },
+        {
+          "line": 173,
+          "text": "здоровье, пока вы в ней стоите. Не стойте в луже и не зажимайте ",
+          "type": "string"
+        },
+        {
+          "line": 174,
+          "text": "зверя в углу.",
+          "type": "string"
+        },
+        {
+          "line": 177,
+          "text": "Живой гриб",
+          "type": "string"
+        },
+        {
+          "line": 181,
+          "text": "Гриб на тонкой ножке, в шляпке — глаза. Плюётся споровым облаком ",
+          "type": "string"
+        },
+        {
+          "line": 182,
+          "text": "и еле ползёт — зато плевок сбивает с ног.",
+          "type": "string"
+        },
+        {
+          "line": 183,
+          "text": "Бьёт через десять шагов и очень медленно. Подойти можно, только ",
+          "type": "string"
+        },
+        {
+          "line": 184,
+          "text": "прикрывшись от спор: сбитый с ног бой идёт вполсилы.",
+          "type": "string"
+        },
+        {
+          "line": 187,
           "text": "Змея",
           "type": "string"
         },
         {
-          "line": 148,
+          "line": 191,
+          "text": "Тонкая змея без лап, вся в пёстрых кольцах. Ползёт по камню ",
+          "type": "string"
+        },
+        {
+          "line": 192,
+          "text": "бесшумно и кусает мгновенно — без подготовки, из-под земли.",
+          "type": "string"
+        },
+        {
+          "line": 193,
+          "text": "Самая низкая порода: ростом по колено. Укус короткий и злой, но ",
+          "type": "string"
+        },
+        {
+          "line": 194,
+          "text": "до того, кто ходит быстро, ей не дотянуться.",
+          "type": "string"
+        },
+        {
+          "line": 197,
+          "text": "Синий слизень",
+          "type": "string"
+        },
+        {
+          "line": 201,
+          "text": "Голубой, прохладный на вид, с тугим глянцевым боком. Бьёт ",
+          "type": "string"
+        },
+        {
+          "line": 202,
+          "text": "вдвое больнее зелёного слизня и оставляет после себя едкую лужу.",
+          "type": "string"
+        },
+        {
+          "line": 203,
+          "text": "Это уже не мелочь: двух-трёх ударов мало. Держите круг и не ",
+          "type": "string"
+        },
+        {
+          "line": 204,
+          "text": "давайте ему отступить — он медленный, и это его слабость.",
+          "type": "string"
+        },
+        {
+          "line": 207,
+          "text": "Красный слизень",
+          "type": "string"
+        },
+        {
+          "line": 211,
+          "text": "Тёмно-красный, в бурых прожилках, и тёплый — от него идёт пар. ",
+          "type": "string"
+        },
+        {
+          "line": 212,
+          "text": "Самый едкий из слизней: его лужа снимает здоровье быстро и много.",
+          "type": "string"
+        },
+        {
+          "line": 213,
+          "text": "Крепкий и ядовитый, гасить его брандом долго. Выбивайте первым и ",
+          "type": "string"
+        },
+        {
+          "line": 214,
+          "text": "не стойте в луже: после двух ударов он оставляет её даже в углу.",
+          "type": "string"
+        },
+        {
+          "line": 217,
           "text": "Каменный голем",
           "type": "string"
         },
         {
-          "line": 154,
+          "line": 221,
+          "text": "Невысокая, но широкая груда камня, сбитая в тесную фигуру: ",
+          "type": "string"
+        },
+        {
+          "line": 222,
+          "text": "вросшие в грудь кристаллы, покатые плечи. Идёт медленно, бьёт ",
+          "type": "string"
+        },
+        {
+          "line": 223,
+          "text": "тяжело, а стойкость у него как у брони.",
+          "type": "string"
+        },
+        {
+          "line": 224,
+          "text": "Медленный — успеете отойти и ударить в спину. Броня съедает пятую ",
+          "type": "string"
+        },
+        {
+          "line": 225,
+          "text": "часть урона, поэтому бейте длинным или двуручным мечом, а не ",
+          "type": "string"
+        },
+        {
+          "line": 226,
+          "text": "кинжалом.",
+          "type": "string"
+        },
+        {
+          "line": 229,
+          "text": "Призрак",
+          "type": "string"
+        },
+        {
+          "line": 233,
+          "text": "Высокая тёмная фигура в капюшоне, под ней — туман, а не ноги. ",
+          "type": "string"
+        },
+        {
+          "line": 234,
+          "text": "Идёт сквозь камни, и факел его не удерживает: он идёт прямо на свет.",
+          "type": "string"
+        },
+        {
+          "line": 235,
+          "text": "Единственный, кто не боится факела: жечь нельзя, только бить. ",
+          "type": "string"
+        },
+        {
+          "line": 236,
+          "text": "Ударяйте и сразу отходите — сквозь стены он достанет где угодно.",
+          "type": "string"
+        },
+        {
+          "line": 239,
+          "text": "Гоблин-страж",
+          "type": "string"
+        },
+        {
+          "line": 243,
+          "text": "В кольчужном нагруднике, с коротким мечом и широким щитом. Стоит ",
+          "type": "string"
+        },
+        {
+          "line": 244,
+          "text": "у Врат и держит строй: пока в зале живы звери, печать не рухнет.",
+          "type": "string"
+        },
+        {
+          "line": 245,
+          "text": "Щит отбивает треть ударов, броня съедает ещё пятую часть. Бейте ",
+          "type": "string"
+        },
+        {
+          "line": 246,
+          "text": "тяжёлым оружием в спину, пока он поднимает щит.",
+          "type": "string"
+        },
+        {
+          "line": 249,
           "text": "Орк-владыка Гримм",
           "type": "string"
         },
         {
-          "line": 685,
+          "line": 254,
+          "text": "Вдвое выше игрока, с оскаленной мордой и секирой, которой владеет ",
+          "type": "string"
+        },
+        {
+          "line": 255,
+          "text": "как пером. Держит зал Врат и рушит печать, когда сходит с места.",
+          "type": "string"
+        },
+        {
+          "line": 256,
+          "text": "Бьёт четырьмя ударами: обычный, с размаху, удар оземь и рёв — ",
+          "type": "string"
+        },
+        {
+          "line": 257,
+          "text": "рёв зовёт гоблинов и отталкивает. Сбивайте с расклада и бейте ",
+          "type": "string"
+        },
+        {
+          "line": 258,
+          "text": "спину: за два круга он не прикончит, но доведёт.",
+          "type": "string"
+        },
+        {
+          "line": 283,
+          "text": "Входной зал",
+          "type": "string"
+        },
+        {
+          "line": 284,
+          "text": "Кристальный зал",
+          "type": "string"
+        },
+        {
+          "line": 285,
+          "text": "Зал Врат",
+          "type": "string"
+        },
+        {
+          "line": 286,
+          "text": "Зал Врат",
+          "type": "string"
+        },
+        {
+          "line": 807,
           "text": "Подобрать добычу (${items.length})",
           "type": "template"
         },
         {
-          "line": 709,
+          "line": 831,
           "text": "Сумка полна — некуда положить добычу.",
           "type": "string"
         },
         {
-          "line": 716,
+          "line": 838,
           "text": "Подобрать добычу (${left.length})",
           "type": "template"
         },
         {
-          "line": 718,
+          "line": 840,
           "text": "Добыча: ${names.join(', ')}. Осталось в мешке: ${left.length}.",
           "type": "template"
         },
         {
-          "line": 729,
+          "line": 851,
           "text": "Добыча: ${names.join(', ')}.",
           "type": "template"
         },
         {
-          "line": 803,
+          "line": 925,
           "text": "${m.spec.name} — последнее, что вы увидели. Тьма сомкнулась.",
           "type": "template"
         },
         {
-          "line": 995,
+          "line": 1117,
           "text": "Орк-владыка Гримм рухнул. Пещера затихла.",
           "type": "string"
         },
         {
-          "line": 1115,
+          "line": 1237,
           "text": "Орк ревёт — из темноты лезут гоблины!",
           "type": "string"
         },
         {
-          "line": 1528,
+          "line": 1650,
           "text": "Стрела",
           "type": "string"
         },
         {
-          "line": 1546,
+          "line": 1668,
           "text": "Слизь",
           "type": "string"
         }
@@ -2789,117 +3125,117 @@
       "kind": "file",
       "items": [
         {
-          "line": 122,
+          "line": 123,
           "text": "нужна поддержка WebGL — включите аппаратное ускорение в браузере",
           "type": "string"
         },
         {
-          "line": 124,
+          "line": 125,
           "text": "WebGL не поддерживается",
           "type": "string"
         },
         {
-          "line": 194,
+          "line": 195,
           "text": "\n    uniform sampler2D tDiffuse; uniform float uTime, uVignette, uGrain, uWarm;\n    uniform vec2 uResolution; varying vec2 vUv;\n    void main(){\n      vec4 c = texture2D(tDiffuse, vUv);\n      vec2 uv = (vUv - 0.5);\n      float v = 1.0 - dot(uv, uv) * uVignette;\n      c.rgb *= clamp(v, 0.0, 1.0);\n      c.rgb *= vec3(1.0 + uWarm, 1.0, 1.0 - uWarm * 0.7);\n      float g = fract(sin(dot(vUv * uResolution + uTime, vec2(12.9898, 78.233))) * 43758.5453);\n      // зерно — только по светлым местам: в тёмном подземелье равномерный\n      // шум превращался в «телевизионную помеху»\n      float lum = dot(c.rgb, vec3(0.299, 0.587, 0.114));\n      c.rgb += (g - 0.5) * uGrain * smoothstep(0.02, 0.4, lum);\n      gl_FragColor = c;\n    }",
           "type": "template"
         },
         {
-          "line": 472,
+          "line": 473,
           "text": "День ${data.day}, ${(data.season || 'spring') === 'spring' ? 'весна'\n      : (data.season === 'summer' ? 'лето' : (data.season === 'autumn' ? 'осень' : 'зима'))}",
           "type": "template"
         },
         {
-          "line": 558,
+          "line": 562,
           "text": "Игра сохранена.",
           "type": "string"
         },
         {
-          "line": 558,
+          "line": 562,
           "text": "Не удалось сохранить игру.",
           "type": "string"
         },
         {
-          "line": 685,
+          "line": 725,
           "text": "Сохранение не найдено или повреждено.",
           "type": "string"
         },
         {
-          "line": 716,
+          "line": 756,
           "text": "Сохранено в слот ${index}.",
           "type": "template"
         },
         {
-          "line": 716,
+          "line": 756,
           "text": "Не удалось сохранить в слот.",
           "type": "string"
         },
         {
-          "line": 789,
+          "line": 839,
           "text": "Захват мыши недоступен — осматривайтесь, зажав левую кнопку.",
           "type": "string"
         },
         {
-          "line": 797,
+          "line": 847,
           "text": "Добро пожаловать в долину. Ступайте куда глаза глядят.",
           "type": "string"
         },
         {
-          "line": 804,
+          "line": 854,
           "text": "Сохранение не найдено или повреждено.",
           "type": "string"
         },
         {
-          "line": 808,
+          "line": 858,
           "text": "С возвращением. ${ctx.calendar.label()}.",
           "type": "template"
         },
         {
-          "line": 820,
+          "line": 870,
           "text": "Загружено. ${ctx.calendar.label()}.",
           "type": "template"
         },
         {
-          "line": 833,
+          "line": 883,
           "text": "Вы вернулись. ${ctx.calendar.label()}.",
           "type": "template"
         },
         {
-          "line": 946,
+          "line": 1002,
           "text": "Убрано в сумку.",
           "type": "string"
         },
         {
-          "line": 1050,
+          "line": 1111,
           "text": "Идёт к выбранному месту",
           "type": "string"
         },
         {
-          "line": 1051,
+          "line": 1112,
           "text": "Пёс бежит туда. Ладно, не бежит — шагает. Но решительно.",
           "type": "string"
         },
         {
-          "line": 1319,
+          "line": 1380,
           "text": "Подсекайте! Жмите E",
           "type": "string"
         },
         {
-          "line": 1321,
+          "line": 1382,
           "text": "Ждите поклёвки…",
           "type": "string"
         },
         {
-          "line": 1325,
+          "line": 1386,
           "text": "закинуть удочку",
           "type": "string"
         },
         {
-          "line": 1333,
+          "line": 1394,
           "text": "Посмотрите на удочку, чтобы её закинуть",
           "type": "string"
         },
         {
-          "line": 1496,
+          "line": 1557,
           "text": "долина готова",
           "type": "string"
         }
@@ -2931,307 +3267,387 @@
       "kind": "file",
       "items": [
         {
-          "line": 167,
+          "line": 173,
           "text": "С",
           "type": "string"
         },
         {
-          "line": 167,
+          "line": 173,
           "text": "СВ",
           "type": "string"
         },
         {
-          "line": 167,
+          "line": 173,
           "text": "В",
           "type": "string"
         },
         {
-          "line": 167,
+          "line": 173,
           "text": "ЮВ",
           "type": "string"
         },
         {
-          "line": 167,
+          "line": 173,
           "text": "Ю",
           "type": "string"
         },
         {
-          "line": 167,
+          "line": 173,
           "text": "ЮЗ",
           "type": "string"
         },
         {
-          "line": 167,
+          "line": 173,
           "text": "З",
           "type": "string"
         },
         {
-          "line": 167,
+          "line": 173,
           "text": "СЗ",
           "type": "string"
         },
         {
-          "line": 431,
+          "line": 459,
           "text": "· день ${day ?? 1}",
           "type": "template"
         },
         {
-          "line": 456,
+          "line": 484,
           "text": "Вы пали.",
           "type": "string"
         },
         {
-          "line": 459,
+          "line": 487,
           "text": "последнее сохранение — день ${meta.day}, ${meta.seasonName || meta.season} · ${meta.coins} зол.",
           "type": "template"
         },
         {
-          "line": 460,
+          "line": 488,
           "text": "сохранений нет",
           "type": "string"
         },
         {
-          "line": 526,
+          "line": 554,
           "text": "Нечего продавать.",
           "type": "string"
         },
         {
-          "line": 539,
+          "line": 567,
           "text": "даст ${m.price} зол.",
           "type": "template"
         },
         {
-          "line": 545,
+          "line": 573,
           "text": "Продать",
           "type": "string"
         },
         {
-          "line": 566,
+          "line": 594,
           "text": "урон ${g.dmg[0]}–${g.dmg[1]} · замах ${g.speed.toFixed(2)} с · ${g.price} зол.",
           "type": "template"
         },
         {
-          "line": 568,
+          "line": 596,
           "text": "${g.mana} маны за раз · ${g.price} зол.",
           "type": "template"
         },
         {
-          "line": 569,
+          "line": 597,
           "text": "${g.price} зол.",
           "type": "template"
         },
         {
-          "line": 575,
+          "line": 603,
           "text": "Купить",
           "type": "string"
         },
         {
-          "line": 586,
+          "line": 614,
           "text": "В кошельке: ${coins} зол.",
           "type": "template"
         },
         {
-          "line": 630,
+          "line": 658,
           "text": "весна",
           "type": "string"
         },
         {
-          "line": 630,
+          "line": 658,
           "text": "лето",
           "type": "string"
         },
         {
-          "line": 630,
+          "line": 658,
           "text": "осень",
           "type": "string"
         },
         {
-          "line": 630,
+          "line": 658,
           "text": "зима",
           "type": "string"
         },
         {
-          "line": 634,
+          "line": 662,
           "text": "День ${s.day}, ${seasonName[s.season] || s.season} · ${s.coins} зол.${s.at ? ' · ' + fmt(s.at) : ''}",
           "type": "template"
         },
         {
-          "line": 635,
+          "line": 663,
           "text": "пусто",
           "type": "string"
         },
         {
-          "line": 637,
+          "line": 665,
           "text": "<div class=\"slotRow ${isAuto ? 'auto' : ''} ${s.exists ? '' : 'empty'}\" data-key=\"${s.key}\" data-index=\"${s.index}\">\n        <div class=\"slotInfo\"><b>${s.title}</b><span>${meta}</span></div>\n        <div class=\"slotActs\">\n          <button data-act=\"load\"${s.exists ? '' : ' disabled'}>Загрузить</button>\n          ${isAuto ? '' : ",
           "type": "template"
         },
         {
-          "line": 665,
+          "line": 693,
           "text": "Утро",
           "type": "string"
         },
         {
-          "line": 665,
+          "line": 693,
           "text": "День",
           "type": "string"
         },
         {
-          "line": 665,
+          "line": 693,
           "text": "Золотой час",
           "type": "string"
         },
         {
-          "line": 666,
+          "line": 694,
           "text": "Сумерки",
           "type": "string"
         },
         {
-          "line": 666,
+          "line": 694,
           "text": "Ночь",
           "type": "string"
         },
         {
-          "line": 670,
+          "line": 698,
           "text": "<b>${names[phase] || phase}</b> · до смены ${m}:${String(sec).padStart(2, '0')}",
           "type": "template"
         },
         {
-          "line": 772,
+          "line": 800,
           "text": "Пока никаких дел. Загляните к Хорту в трактир ",
           "type": "string"
         },
         {
-          "line": 773,
+          "line": 801,
           "text": "или к Торну в кузню — там всегда найдётся работа.",
           "type": "string"
         },
         {
-          "line": 792,
+          "line": 820,
           "text": "Готово к сдаче",
           "type": "string"
         },
         {
-          "line": 821,
+          "line": 849,
           "text": "Награда: <b></b>",
           "type": "string"
         },
         {
-          "line": 1184,
+          "line": 897,
+          "text": "Мелочь",
+          "type": "string"
+        },
+        {
+          "line": 903,
+          "text": "Пока никто не описан. Загляните в подземелье под скалой.",
+          "type": "string"
+        },
+        {
+          "line": 976,
+          "text": "здоровье",
+          "type": "string"
+        },
+        {
+          "line": 977,
+          "text": "урон",
+          "type": "string"
+        },
+        {
+          "line": 978,
+          "text": "скорость",
+          "type": "string"
+        },
+        {
+          "line": 979,
+          "text": "дальность",
+          "type": "string"
+        },
+        {
+          "line": 979,
+          "text": " м",
+          "type": "string"
+        },
+        {
+          "line": 980,
+          "text": "замах",
+          "type": "string"
+        },
+        {
+          "line": 980,
+          "text": " с",
+          "type": "string"
+        },
+        {
+          "line": 981,
+          "text": "стойкость",
+          "type": "string"
+        },
+        {
+          "line": 982,
+          "text": "броня",
+          "type": "string"
+        },
+        {
+          "line": 983,
+          "text": "щит",
+          "type": "string"
+        },
+        {
+          "line": 984,
+          "text": "стая",
+          "type": "string"
+        },
+        {
+          "line": 985,
+          "text": "вес",
+          "type": "string"
+        },
+        {
+          "line": 993,
+          "text": "как бить",
+          "type": "string"
+        },
+        {
+          "line": 1004,
+          "text": "добыча",
+          "type": "string"
+        },
+        {
+          "line": 1367,
           "text": "Покинуть",
           "type": "string"
         },
         {
-          "line": 1215,
+          "line": 1398,
           "text": "${st.total} ${plural(st.total, 'предмет', 'предмета', 'предметов')} · ${st.kinds} ${plural(st.kinds, 'вид', 'вида', 'видов')}",
           "type": "template"
         },
         {
-          "line": 1216,
+          "line": 1399,
           "text": "пусто",
           "type": "string"
         },
         {
-          "line": 1306,
+          "line": 1489,
           "text": "В стаке: ${s.count} шт.",
           "type": "template"
         },
         {
-          "line": 1347,
+          "line": 1530,
           "text": "Вес",
           "type": "string"
         },
         {
-          "line": 1348,
+          "line": 1531,
           "text": "Длина",
           "type": "string"
         },
         {
-          "line": 1348,
+          "line": 1531,
           "text": "Длина",
           "type": "string"
         },
         {
-          "line": 1348,
+          "line": 1531,
           "text": "Урон",
           "type": "string"
         },
         {
-          "line": 1349,
+          "line": 1532,
           "text": "${spec.value ?? spec.price ?? 0} зол.",
           "type": "template"
         },
         {
-          "line": 1351,
+          "line": 1534,
           "text": "Вес",
           "type": "string"
         },
         {
-          "line": 1351,
+          "line": 1534,
           "text": "Длина",
           "type": "string"
         },
         {
-          "line": 1351,
+          "line": 1534,
           "text": "Цена",
           "type": "string"
         },
         {
-          "line": 1357,
+          "line": 1540,
           "text": "Урон",
           "type": "string"
         },
         {
-          "line": 1357,
+          "line": 1540,
           "text": "Замах",
           "type": "string"
         },
         {
-          "line": 1357,
+          "line": 1540,
           "text": "Цена",
           "type": "string"
         },
         {
-          "line": 1357,
+          "line": 1540,
           "text": "Особенности",
           "type": "string"
         },
         {
-          "line": 1359,
+          "line": 1542,
           "text": "Вес",
           "type": "string"
         },
         {
-          "line": 1359,
+          "line": 1542,
           "text": "Длина",
           "type": "string"
         },
         {
-          "line": 1359,
+          "line": 1542,
           "text": "Цена",
           "type": "string"
         },
         {
-          "line": 1359,
+          "line": 1542,
           "text": "Где водится",
           "type": "string"
         },
         {
-          "line": 1360,
+          "line": 1543,
           "text": "Вес",
           "type": "string"
         },
         {
-          "line": 1360,
+          "line": 1543,
           "text": "Цена",
           "type": "string"
         },
         {
-          "line": 1360,
+          "line": 1543,
           "text": "Куда",
           "type": "string"
         },
         {
-          "line": 1360,
+          "line": 1543,
           "text": "Описание",
           "type": "string"
         }
@@ -4092,702 +4508,742 @@
           "type": "html"
         },
         {
-          "line": 590,
+          "line": 637,
           "text": "Описание игры",
           "type": "attr"
         },
         {
-          "line": 591,
+          "line": 638,
           "text": "Шёпот-Долина — средневековая деревня в браузере",
           "type": "html"
         },
         {
-          "line": 595,
+          "line": 642,
           "text": "котик и мрачное подземелье в скале в ста метрах от деревни.",
           "type": "html"
         },
         {
-          "line": 597,
+          "line": 644,
           "text": "E — взаимодействие, I — инвентарь, Esc — меню и настройки.",
           "type": "html"
         },
         {
-          "line": 598,
+          "line": 645,
           "text": "Игра работает на Three.js и WebGL, ничего не требует устанавливать.",
           "type": "html"
         },
         {
-          "line": 604,
+          "line": 651,
           "text": "Шёпот-Долина",
           "type": "html"
         },
         {
-          "line": 606,
+          "line": 653,
           "text": "и обновите страницу.",
           "type": "html"
         },
         {
-          "line": 612,
+          "line": 659,
           "text": "Шёпот-Долина",
-          "type": "html"
-        },
-        {
-          "line": 618,
-          "text": "Утро",
-          "type": "html"
-        },
-        {
-          "line": 619,
-          "text": "День",
-          "type": "html"
-        },
-        {
-          "line": 620,
-          "text": "Золотой час",
-          "type": "html"
-        },
-        {
-          "line": 621,
-          "text": "Сумерки",
-          "type": "html"
-        },
-        {
-          "line": 622,
-          "text": "Ночь",
-          "type": "html"
-        },
-        {
-          "line": 624,
-          "text": "День 1, весна",
-          "type": "html"
-        },
-        {
-          "line": 629,
-          "text": "идти",
-          "type": "html"
-        },
-        {
-          "line": 630,
-          "text": "бежать",
-          "type": "html"
-        },
-        {
-          "line": 631,
-          "text": "прыжок",
-          "type": "html"
-        },
-        {
-          "line": 632,
-          "text": "Мышь",
-          "type": "html"
-        },
-        {
-          "line": 632,
-          "text": "смотреть",
-          "type": "html"
-        },
-        {
-          "line": 633,
-          "text": "взаимодействовать",
-          "type": "html"
-        },
-        {
-          "line": 634,
-          "text": "время суток",
-          "type": "html"
-        },
-        {
-          "line": 635,
-          "text": "настройки",
-          "type": "html"
-        },
-        {
-          "line": 636,
-          "text": "инвентарь",
-          "type": "html"
-        },
-        {
-          "line": 637,
-          "text": "журнал дел",
-          "type": "html"
-        },
-        {
-          "line": 638,
-          "text": "фото-режим",
-          "type": "html"
-        },
-        {
-          "line": 639,
-          "text": "убрать из рук",
-          "type": "html"
-        },
-        {
-          "line": 640,
-          "text": "пояс",
-          "type": "html"
-        },
-        {
-          "line": 641,
-          "text": "взять факел",
-          "type": "html"
-        },
-        {
-          "line": 642,
-          "text": "зажечь факел",
-          "type": "html"
-        },
-        {
-          "line": 647,
-          "text": "Инвентарь",
-          "type": "html"
-        },
-        {
-          "line": 648,
-          "text": "зол.",
-          "type": "html"
-        },
-        {
-          "line": 649,
-          "text": "пусто",
-          "type": "html"
-        },
-        {
-          "line": 654,
-          "text": "Пояс",
-          "type": "html"
-        },
-        {
-          "line": 664,
-          "text": "Вес",
           "type": "html"
         },
         {
           "line": 665,
-          "text": "Длина",
-          "type": "html"
-        },
-        {
-          "line": 666,
-          "text": "Цена",
-          "type": "html"
-        },
-        {
-          "line": 667,
-          "text": "Где водится",
-          "type": "html"
-        },
-        {
-          "line": 674,
-          "text": "ЛКМ",
-          "type": "html"
-        },
-        {
-          "line": 674,
-          "text": "взять / положить",
-          "type": "html"
-        },
-        {
-          "line": 675,
-          "text": "ПКМ",
-          "type": "html"
-        },
-        {
-          "line": 675,
-          "text": "половина / одна",
-          "type": "html"
-        },
-        {
-          "line": 676,
-          "text": "ЛКМ",
-          "type": "html"
-        },
-        {
-          "line": 676,
-          "text": "в пояс",
-          "type": "html"
-        },
-        {
-          "line": 677,
-          "text": "взять из пояса в руки",
-          "type": "html"
-        },
-        {
-          "line": 678,
-          "text": "или",
-          "type": "html"
-        },
-        {
-          "line": 678,
-          "text": "— закрыть",
-          "type": "html"
-        },
-        {
-          "line": 687,
-          "text": "Пёс ждёт команды",
-          "type": "html"
-        },
-        {
-          "line": 688,
-          "text": "Что скажете хвостатому?",
-          "type": "html"
-        },
-        {
-          "line": 690,
-          "text": "Стой тут",
-          "type": "html"
-        },
-        {
-          "line": 690,
-          "text": "остаться на месте",
-          "type": "html"
-        },
-        {
-          "line": 691,
-          "text": "Иди туда",
-          "type": "html"
-        },
-        {
-          "line": 691,
-          "text": "щёлкните по земле",
-          "type": "html"
-        },
-        {
-          "line": 692,
-          "text": "За мной",
-          "type": "html"
-        },
-        {
-          "line": 692,
-          "text": "следовать за хозяином",
-          "type": "html"
-        },
-        {
-          "line": 693,
-          "text": "Прыжок",
-          "type": "html"
-        },
-        {
-          "line": 693,
-          "text": "прыгнуть через голову",
-          "type": "html"
-        },
-        {
-          "line": 695,
-          "text": "— закрыть",
-          "type": "html"
-        },
-        {
-          "line": 701,
-          "text": "Доска у дороги",
-          "type": "html"
-        },
-        {
-          "line": 702,
-          "text": "Написать можно только раз. Что напишете — останется навсегда.",
-          "type": "html"
-        },
-        {
-          "line": 703,
-          "text": "Например: не ходите к скале после заката",
-          "type": "attr"
-        },
-        {
-          "line": 705,
-          "text": "Отойти",
-          "type": "html"
-        },
-        {
-          "line": 706,
-          "text": "Написать",
-          "type": "html"
-        },
-        {
-          "line": 708,
-          "text": "— закрыть",
-          "type": "html"
-        },
-        {
-          "line": 713,
-          "text": "Клюёт!",
-          "type": "html"
-        },
-        {
-          "line": 716,
-          "text": "Нажмите",
-          "type": "html"
-        },
-        {
-          "line": 716,
-          "text": ", когда метка в зелёной зоне",
-          "type": "html"
-        },
-        {
-          "line": 723,
-          "text": "Хорт",
-          "type": "html"
-        },
-        {
-          "line": 723,
-          "text": "трактирщик",
-          "type": "html"
-        },
-        {
-          "line": 726,
-          "text": "— закончить разговор",
-          "type": "html"
-        },
-        {
-          "line": 738,
-          "text": "Печать держит путь",
-          "type": "html"
-        },
-        {
-          "line": 742,
-          "text": "Дело",
-          "type": "html"
-        },
-        {
-          "line": 749,
-          "text": "Орк-владыка Гримм",
-          "type": "html"
-        },
-        {
-          "line": 758,
-          "text": "зол.",
-          "type": "html"
-        },
-        {
-          "line": 764,
-          "text": "Пауза",
-          "type": "html"
-        },
-        {
-          "line": 765,
-          "text": "Шёпот-Долина",
-          "type": "html"
-        },
-        {
-          "line": 767,
-          "text": "Сохранить",
-          "type": "html"
-        },
-        {
-          "line": 768,
-          "text": "Загрузить…",
-          "type": "html"
-        },
-        {
-          "line": 769,
-          "text": "Слоты…",
-          "type": "html"
-        },
-        {
-          "line": 770,
-          "text": "Продолжить",
-          "type": "html"
-        },
-        {
-          "line": 773,
-          "text": "Настройки",
-          "type": "html"
-        },
-        {
-          "line": 774,
-          "text": "Качество",
-          "type": "html"
-        },
-        {
-          "line": 776,
-          "text": "Низкое",
-          "type": "html"
-        },
-        {
-          "line": 776,
-          "text": "Среднее",
-          "type": "html"
-        },
-        {
-          "line": 776,
-          "text": "Высокое",
-          "type": "html"
-        },
-        {
-          "line": 779,
-          "text": "Сложность",
-          "type": "html"
-        },
-        {
-          "line": 781,
-          "text": "Легко",
-          "type": "html"
-        },
-        {
-          "line": 781,
-          "text": "Обычно",
-          "type": "html"
-        },
-        {
-          "line": 781,
-          "text": "Трудно",
-          "type": "html"
-        },
-        {
-          "line": 781,
-          "text": "Кошмар",
-          "type": "html"
-        },
-        {
-          "line": 784,
-          "text": "Свечение (bloom)",
-          "type": "html"
-        },
-        {
-          "line": 785,
-          "text": "Звук",
-          "type": "html"
-        },
-        {
-          "line": 786,
-          "text": "Громкость",
-          "type": "html"
-        },
-        {
-          "line": 789,
-          "text": "Музыка",
-          "type": "html"
-        },
-        {
-          "line": 792,
-          "text": "Чувствительность",
-          "type": "html"
-        },
-        {
-          "line": 793,
-          "text": "Качество картинки",
-          "type": "html"
-        },
-        {
-          "line": 794,
-          "text": "Покачивание камеры",
-          "type": "html"
-        },
-        {
-          "line": 795,
-          "text": "Время суток",
-          "type": "html"
-        },
-        {
-          "line": 797,
           "text": "Утро",
           "type": "html"
         },
         {
-          "line": 797,
+          "line": 666,
           "text": "День",
           "type": "html"
         },
         {
-          "line": 797,
+          "line": 667,
           "text": "Золотой час",
           "type": "html"
         },
         {
-          "line": 797,
+          "line": 668,
           "text": "Сумерки",
           "type": "html"
         },
         {
-          "line": 797,
+          "line": 669,
           "text": "Ночь",
           "type": "html"
         },
         {
-          "line": 801,
-          "text": "«Сохранить» — быстрое сохранение · «Слоты…» — отдельные ячейки",
+          "line": 671,
+          "text": "День 1, весна",
           "type": "html"
         },
         {
-          "line": 803,
-          "text": "Esc — это меню · кликните по сцене, чтобы вернуть управление · C — показать границы столкновений",
+          "line": 676,
+          "text": "идти",
           "type": "html"
         },
         {
-          "line": 817,
-          "text": "Шёпот-Долина",
+          "line": 677,
+          "text": "бежать",
           "type": "html"
         },
         {
-          "line": 818,
-          "text": "интерактивная прогулка",
-          "type": "html"
-        },
-        {
-          "line": 819,
-          "text": "Тёплые окна, колокол над селом и тень под скалой.",
-          "type": "html"
-        },
-        {
-          "line": 822,
-          "text": "Начать игру",
-          "type": "html"
-        },
-        {
-          "line": 824,
-          "text": "Продолжить",
-          "type": "html"
-        },
-        {
-          "line": 825,
-          "text": "Загрузить игру",
-          "type": "html"
-        },
-        {
-          "line": 830,
-          "text": "движение",
-          "type": "html"
-        },
-        {
-          "line": 831,
-          "text": "бег",
-          "type": "html"
-        },
-        {
-          "line": 832,
+          "line": 678,
           "text": "прыжок",
           "type": "html"
         },
         {
-          "line": 833,
+          "line": 679,
           "text": "Мышь",
           "type": "html"
         },
         {
-          "line": 833,
-          "text": "обзор",
+          "line": 679,
+          "text": "смотреть",
           "type": "html"
         },
         {
-          "line": 834,
-          "text": "действие",
+          "line": 680,
+          "text": "взаимодействовать",
           "type": "html"
         },
         {
-          "line": 835,
+          "line": 681,
           "text": "время суток",
           "type": "html"
         },
         {
-          "line": 836,
+          "line": 682,
+          "text": "настройки",
+          "type": "html"
+        },
+        {
+          "line": 683,
           "text": "инвентарь",
           "type": "html"
         },
         {
-          "line": 837,
+          "line": 684,
+          "text": "журнал дел",
+          "type": "html"
+        },
+        {
+          "line": 685,
+          "text": "зверинец",
+          "type": "html"
+        },
+        {
+          "line": 686,
+          "text": "фото-режим",
+          "type": "html"
+        },
+        {
+          "line": 687,
+          "text": "убрать из рук",
+          "type": "html"
+        },
+        {
+          "line": 688,
           "text": "пояс",
           "type": "html"
         },
         {
-          "line": 838,
-          "text": "меню",
+          "line": 689,
+          "text": "взять факел",
           "type": "html"
         },
         {
-          "line": 840,
-          "text": "подготовка долины…",
+          "line": 690,
+          "text": "зажечь факел",
           "type": "html"
         },
         {
-          "line": 854,
-          "text": "Погиб",
+          "line": 695,
+          "text": "Инвентарь",
           "type": "html"
         },
         {
-          "line": 855,
-          "text": "Вы пали.",
+          "line": 696,
+          "text": "зол.",
           "type": "html"
         },
         {
-          "line": 858,
-          "text": "Загрузить последнее сохранение",
+          "line": 697,
+          "text": "пусто",
           "type": "html"
         },
         {
-          "line": 860,
-          "text": "Загрузить",
+          "line": 702,
+          "text": "Пояс",
           "type": "html"
         },
         {
-          "line": 861,
-          "text": "В начало",
+          "line": 712,
+          "text": "Вес",
           "type": "html"
         },
         {
-          "line": 872,
-          "text": "Хорт",
+          "line": 713,
+          "text": "Длина",
           "type": "html"
         },
         {
-          "line": 873,
-          "text": "трактирщик",
+          "line": 714,
+          "text": "Цена",
           "type": "html"
         },
         {
-          "line": 875,
-          "text": "Закрыть",
-          "type": "attr"
-        },
-        {
-          "line": 880,
-          "text": "Ваши вещи",
+          "line": 715,
+          "text": "Где водится",
           "type": "html"
         },
         {
-          "line": 884,
-          "text": "Его товары",
+          "line": 722,
+          "text": "ЛКМ",
           "type": "html"
         },
         {
-          "line": 897,
-          "text": "Журнал дел",
+          "line": 722,
+          "text": "взять / положить",
           "type": "html"
         },
         {
-          "line": 898,
-          "text": "Что обещали — и что за это дадут",
+          "line": 723,
+          "text": "ПКМ",
           "type": "html"
         },
         {
-          "line": 900,
-          "text": "Закрыть",
-          "type": "attr"
+          "line": 723,
+          "text": "половина / одна",
+          "type": "html"
         },
         {
-          "line": 903,
+          "line": 724,
+          "text": "ЛКМ",
+          "type": "html"
+        },
+        {
+          "line": 724,
+          "text": "в пояс",
+          "type": "html"
+        },
+        {
+          "line": 725,
+          "text": "взять из пояса в руки",
+          "type": "html"
+        },
+        {
+          "line": 726,
           "text": "или",
           "type": "html"
         },
         {
-          "line": 903,
+          "line": 726,
           "text": "— закрыть",
           "type": "html"
         },
         {
+          "line": 735,
+          "text": "Пёс ждёт команды",
+          "type": "html"
+        },
+        {
+          "line": 736,
+          "text": "Что скажете хвостатому?",
+          "type": "html"
+        },
+        {
+          "line": 738,
+          "text": "Стой тут",
+          "type": "html"
+        },
+        {
+          "line": 738,
+          "text": "остаться на месте",
+          "type": "html"
+        },
+        {
+          "line": 739,
+          "text": "Иди туда",
+          "type": "html"
+        },
+        {
+          "line": 739,
+          "text": "щёлкните по земле",
+          "type": "html"
+        },
+        {
+          "line": 740,
+          "text": "За мной",
+          "type": "html"
+        },
+        {
+          "line": 740,
+          "text": "следовать за хозяином",
+          "type": "html"
+        },
+        {
+          "line": 741,
+          "text": "Прыжок",
+          "type": "html"
+        },
+        {
+          "line": 741,
+          "text": "прыгнуть через голову",
+          "type": "html"
+        },
+        {
+          "line": 743,
+          "text": "— закрыть",
+          "type": "html"
+        },
+        {
+          "line": 749,
+          "text": "Доска у дороги",
+          "type": "html"
+        },
+        {
+          "line": 750,
+          "text": "Написать можно только раз. Что напишете — останется навсегда.",
+          "type": "html"
+        },
+        {
+          "line": 751,
+          "text": "Например: не ходите к скале после заката",
+          "type": "attr"
+        },
+        {
+          "line": 753,
+          "text": "Отойти",
+          "type": "html"
+        },
+        {
+          "line": 754,
+          "text": "Написать",
+          "type": "html"
+        },
+        {
+          "line": 756,
+          "text": "— закрыть",
+          "type": "html"
+        },
+        {
+          "line": 761,
+          "text": "Клюёт!",
+          "type": "html"
+        },
+        {
+          "line": 764,
+          "text": "Нажмите",
+          "type": "html"
+        },
+        {
+          "line": 764,
+          "text": ", когда метка в зелёной зоне",
+          "type": "html"
+        },
+        {
+          "line": 771,
+          "text": "Хорт",
+          "type": "html"
+        },
+        {
+          "line": 771,
+          "text": "трактирщик",
+          "type": "html"
+        },
+        {
+          "line": 774,
+          "text": "— закончить разговор",
+          "type": "html"
+        },
+        {
+          "line": 786,
+          "text": "Печать держит путь",
+          "type": "html"
+        },
+        {
+          "line": 790,
+          "text": "Дело",
+          "type": "html"
+        },
+        {
+          "line": 797,
+          "text": "Орк-владыка Гримм",
+          "type": "html"
+        },
+        {
+          "line": 806,
+          "text": "зол.",
+          "type": "html"
+        },
+        {
+          "line": 812,
+          "text": "Пауза",
+          "type": "html"
+        },
+        {
+          "line": 813,
+          "text": "Шёпот-Долина",
+          "type": "html"
+        },
+        {
+          "line": 815,
+          "text": "Сохранить",
+          "type": "html"
+        },
+        {
+          "line": 816,
+          "text": "Загрузить…",
+          "type": "html"
+        },
+        {
+          "line": 817,
+          "text": "Слоты…",
+          "type": "html"
+        },
+        {
+          "line": 818,
+          "text": "Зверинец…",
+          "type": "html"
+        },
+        {
+          "line": 819,
+          "text": "Продолжить",
+          "type": "html"
+        },
+        {
+          "line": 822,
+          "text": "Настройки",
+          "type": "html"
+        },
+        {
+          "line": 823,
+          "text": "Качество",
+          "type": "html"
+        },
+        {
+          "line": 825,
+          "text": "Низкое",
+          "type": "html"
+        },
+        {
+          "line": 825,
+          "text": "Среднее",
+          "type": "html"
+        },
+        {
+          "line": 825,
+          "text": "Высокое",
+          "type": "html"
+        },
+        {
+          "line": 828,
+          "text": "Сложность",
+          "type": "html"
+        },
+        {
+          "line": 830,
+          "text": "Легко",
+          "type": "html"
+        },
+        {
+          "line": 830,
+          "text": "Обычно",
+          "type": "html"
+        },
+        {
+          "line": 830,
+          "text": "Трудно",
+          "type": "html"
+        },
+        {
+          "line": 830,
+          "text": "Кошмар",
+          "type": "html"
+        },
+        {
+          "line": 833,
+          "text": "Свечение (bloom)",
+          "type": "html"
+        },
+        {
+          "line": 834,
+          "text": "Звук",
+          "type": "html"
+        },
+        {
+          "line": 835,
+          "text": "Громкость",
+          "type": "html"
+        },
+        {
+          "line": 838,
+          "text": "Музыка",
+          "type": "html"
+        },
+        {
+          "line": 841,
+          "text": "Чувствительность",
+          "type": "html"
+        },
+        {
+          "line": 842,
+          "text": "Качество картинки",
+          "type": "html"
+        },
+        {
+          "line": 843,
+          "text": "Покачивание камеры",
+          "type": "html"
+        },
+        {
+          "line": 844,
+          "text": "Время суток",
+          "type": "html"
+        },
+        {
+          "line": 846,
+          "text": "Утро",
+          "type": "html"
+        },
+        {
+          "line": 846,
+          "text": "День",
+          "type": "html"
+        },
+        {
+          "line": 846,
+          "text": "Золотой час",
+          "type": "html"
+        },
+        {
+          "line": 846,
+          "text": "Сумерки",
+          "type": "html"
+        },
+        {
+          "line": 846,
+          "text": "Ночь",
+          "type": "html"
+        },
+        {
+          "line": 850,
+          "text": "«Сохранить» — быстрое сохранение · «Слоты…» — отдельные ячейки",
+          "type": "html"
+        },
+        {
+          "line": 852,
+          "text": "Esc — это меню · кликните по сцене, чтобы вернуть управление · C — показать границы столкновений",
+          "type": "html"
+        },
+        {
+          "line": 866,
+          "text": "Шёпот-Долина",
+          "type": "html"
+        },
+        {
+          "line": 867,
+          "text": "интерактивная прогулка",
+          "type": "html"
+        },
+        {
+          "line": 868,
+          "text": "Тёплые окна, колокол над селом и тень под скалой.",
+          "type": "html"
+        },
+        {
+          "line": 871,
+          "text": "Начать игру",
+          "type": "html"
+        },
+        {
+          "line": 873,
+          "text": "Продолжить",
+          "type": "html"
+        },
+        {
+          "line": 874,
+          "text": "Загрузить игру",
+          "type": "html"
+        },
+        {
+          "line": 879,
+          "text": "движение",
+          "type": "html"
+        },
+        {
+          "line": 880,
+          "text": "бег",
+          "type": "html"
+        },
+        {
+          "line": 881,
+          "text": "прыжок",
+          "type": "html"
+        },
+        {
+          "line": 882,
+          "text": "Мышь",
+          "type": "html"
+        },
+        {
+          "line": 882,
+          "text": "обзор",
+          "type": "html"
+        },
+        {
+          "line": 883,
+          "text": "действие",
+          "type": "html"
+        },
+        {
+          "line": 884,
+          "text": "время суток",
+          "type": "html"
+        },
+        {
+          "line": 885,
+          "text": "инвентарь",
+          "type": "html"
+        },
+        {
+          "line": 886,
+          "text": "пояс",
+          "type": "html"
+        },
+        {
+          "line": 887,
+          "text": "меню",
+          "type": "html"
+        },
+        {
+          "line": 889,
+          "text": "подготовка долины…",
+          "type": "html"
+        },
+        {
           "line": 903,
-          "text": "Дела Хорта и Торна",
+          "text": "Погиб",
           "type": "html"
         },
         {
-          "line": 911,
-          "text": "Загрузка игры",
+          "line": 904,
+          "text": "Вы пали.",
           "type": "html"
         },
         {
-          "line": 912,
+          "line": 907,
+          "text": "Загрузить последнее сохранение",
+          "type": "html"
+        },
+        {
+          "line": 909,
+          "text": "Загрузить",
+          "type": "html"
+        },
+        {
+          "line": 910,
+          "text": "В начало",
+          "type": "html"
+        },
+        {
+          "line": 921,
+          "text": "Хорт",
+          "type": "html"
+        },
+        {
+          "line": 922,
+          "text": "трактирщик",
+          "type": "html"
+        },
+        {
+          "line": 924,
           "text": "Закрыть",
           "type": "attr"
         },
         {
-          "line": 915,
+          "line": 929,
+          "text": "Ваши вещи",
+          "type": "html"
+        },
+        {
+          "line": 933,
+          "text": "Его товары",
+          "type": "html"
+        },
+        {
+          "line": 946,
+          "text": "Журнал дел",
+          "type": "html"
+        },
+        {
+          "line": 947,
+          "text": "Что обещали — и что за это дадут",
+          "type": "html"
+        },
+        {
+          "line": 949,
+          "text": "Закрыть",
+          "type": "attr"
+        },
+        {
+          "line": 952,
+          "text": "или",
+          "type": "html"
+        },
+        {
+          "line": 952,
+          "text": "— закрыть",
+          "type": "html"
+        },
+        {
+          "line": 952,
+          "text": "Дела Хорта и Торна",
+          "type": "html"
+        },
+        {
+          "line": 961,
+          "text": "Зверинец",
+          "type": "html"
+        },
+        {
+          "line": 962,
+          "text": "Кто водится в подземелье под скалой",
+          "type": "html"
+        },
+        {
+          "line": 964,
+          "text": "Закрыть",
+          "type": "attr"
+        },
+        {
+          "line": 967,
+          "text": "или",
+          "type": "html"
+        },
+        {
+          "line": 967,
+          "text": "— закрыть",
+          "type": "html"
+        },
+        {
+          "line": 967,
+          "text": "Печать держит, пока в зале живы звери",
+          "type": "html"
+        },
+        {
+          "line": 975,
+          "text": "Загрузка игры",
+          "type": "html"
+        },
+        {
+          "line": 976,
+          "text": "Закрыть",
+          "type": "attr"
+        },
+        {
+          "line": 979,
           "text": "Автосохранение не затирает ручные слоты.",
           "type": "html"
         }

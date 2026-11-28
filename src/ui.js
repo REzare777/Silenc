@@ -89,6 +89,10 @@ export class UI {
       questLog: document.getElementById('questLog'),
       questList: document.getElementById('questList'),
       questClose: document.getElementById('questClose'),
+      bestiary: document.getElementById('bestiary'),
+      bestList: document.getElementById('bestList'),
+      bestClose: document.getElementById('bestClose'),
+      bestBtn: document.getElementById('bestBtn'),
       numHp: document.getElementById('numHp'),
       numSt: document.getElementById('numSt'),
       numMp: document.getElementById('numMp'),
@@ -144,6 +148,8 @@ export class UI {
     this.onDeathTitle = null;    // «В начало» — на титульный экран
     this.onSlotsClose = null;
     this.onQuestClose = null;      // журнал дел закрыт (крестик или клик мимо)
+    this.onBestClose = null;       // зверинец закрыт (крестик или клик мимо)
+    this.onBestOpen = null;        // зверинец открыт (кнопка в меню)
     this.onTradeSell = null;      // игрок продаёт предмет
     this.onTradeBuy = null;       // игрок покупает предмет
     this.onTradeClose = null;
@@ -265,6 +271,28 @@ export class UI {
           this.closeQuestLog();
           if (this.onQuestClose) this.onQuestClose();
         }
+      });
+    }
+    // зверинец: крестик и клик мимо карточки
+    if (this.el.bestClose) {
+      this.el.bestClose.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.closeBestiary();
+        if (this.onBestClose) this.onBestClose();
+      });
+    }
+    if (this.el.bestiary) {
+      this.el.bestiary.addEventListener('click', (e) => {
+        if (e.target === this.el.bestiary) {
+          this.closeBestiary();
+          if (this.onBestClose) this.onBestClose();
+        }
+      });
+    }
+    if (this.el.bestBtn) {
+      this.el.bestBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.onBestOpen) this.onBestOpen();
       });
     }
     this.el.timebar.querySelectorAll('button').forEach((b) => {
@@ -848,6 +876,161 @@ export class UI {
   /** Открыт ли журнал дел. */
   get questLogOpen() {
     return !!(this.el.questLog && this.el.questLog.classList.contains('on'));
+  }
+
+  /* ---------------- зверинец ---------------- */
+
+  /**
+   * Нарисовать «Зверинец» — список пород с полными характеристиками.
+   *
+   * Породы идут по ступеням силы: мелочь, обычные, стража, владыка.
+   * Внутри ступени — сначала самые опасные.
+   *
+   * @param {object[]} list породы (из `src/game/bestiary.js`)
+   * @param {object[]} tiers ступени силы с названиями
+   */
+  renderBestiary(list, tiers) {
+    if (!this.el.bestList) return;
+    const rows = Array.isArray(list) ? list : [];
+    const steps = Array.isArray(tiers) && tiers.length
+      ? tiers
+      : [{ id: 'trash', name: 'Мелочь', desc: '' }];
+    this.el.bestList.innerHTML = '';
+
+    if (!rows.length) {
+      const p = document.createElement('p');
+      p.className = 'qLogEmpty';
+      p.textContent = 'Пока никто не описан. Загляните в подземелье под скалой.';
+      this.el.bestList.appendChild(p);
+      return;
+    }
+
+    for (const tier of steps) {
+      const inTier = rows.filter((r) => r.tier === tier.id);
+      if (!inTier.length) continue;
+
+      const head = document.createElement('div');
+      head.className = 'bTierHead';
+      const name = document.createElement('b');
+      name.textContent = tier.name;
+      const desc = document.createElement('i');
+      desc.textContent = tier.desc || '';
+      head.appendChild(name);
+      head.appendChild(desc);
+      this.el.bestList.appendChild(head);
+
+      for (const r of inTier) {
+        this.el.bestList.appendChild(this._bestiaryItem(r));
+      }
+    }
+  }
+
+  /**
+   * Карточка одной породы.
+   *
+   * @param {object} r порода (из `src/game/bestiary.js`)
+   * @returns {HTMLElement} элемент карточки
+   */
+  _bestiaryItem(r) {
+    const item = document.createElement('div');
+    item.className = 'bItem ' + (r.tier || 'trash');
+    item.dataset.monster = r.id;
+
+    // --- заголовок: имя, где водится, ступень ---
+    const top = document.createElement('div');
+    top.className = 'bTop';
+    const b = document.createElement('b');
+    b.textContent = r.name;
+    const where = document.createElement('i');
+    where.className = 'bWhere';
+    where.textContent = r.where || '';
+    const state = document.createElement('span');
+    state.className = 'bState';
+    state.textContent = r.tierName || '';
+    top.appendChild(b);
+    top.appendChild(where);
+    top.appendChild(state);
+    item.appendChild(top);
+
+    // --- описание породы ---
+    if (r.desc) {
+      const d = document.createElement('p');
+      d.className = 'bDesc';
+      d.textContent = r.desc;
+      item.appendChild(d);
+    }
+
+    // --- характеристики ---
+    const stats = document.createElement('div');
+    stats.className = 'bStats';
+    const stat = (label, value) => {
+      const s = document.createElement('span');
+      const u = document.createElement('u');
+      u.textContent = label;
+      const v = document.createElement('b');
+      v.textContent = value;
+      s.appendChild(u);
+      s.appendChild(v);
+      stats.appendChild(s);
+    };
+    stat('здоровье', String(r.hp));
+    stat('урон', String(r.dmg));
+    stat('скорость', r.speed.toFixed(1));
+    stat('дальность', r.reach + ' м');
+    stat('замах', r.cd.toFixed(1) + ' с');
+    stat('стойкость', String(r.veil));
+    if (r.armor) stat('броня', Math.round(r.armor * 100) + '%');
+    if (r.guard) stat('щит', Math.round(r.guard * 100) + '%');
+    stat('стая', String(r.sp));
+    stat('вес', String(r.exp));
+    item.appendChild(stats);
+
+    // --- как бороться ---
+    if (r.tip) {
+      const tip = document.createElement('p');
+      tip.className = 'bTip';
+      const u = document.createElement('u');
+      u.textContent = 'как бить';
+      tip.appendChild(u);
+      tip.appendChild(document.createTextNode(r.tip));
+      item.appendChild(tip);
+    }
+
+    // --- добыча ---
+    if (r.drops && r.drops.length) {
+      const loot = document.createElement('div');
+      loot.className = 'bLoot';
+      const u = document.createElement('u');
+      u.textContent = 'добыча';
+      loot.appendChild(u);
+      loot.appendChild(document.createTextNode(r.drops.join(' · ')));
+      item.appendChild(loot);
+    }
+
+    return item;
+  }
+
+  /**
+   * Открыть «Зверинец».
+   */
+  openBestiary() {
+    if (!this.el.bestiary) return;
+    this.el.bestiary.classList.add('on');
+    document.body.classList.add('uiFocus');
+  }
+
+  /**
+   * Закрыть «Зверинец».
+   */
+  closeBestiary() {
+    if (!this.el.bestiary) return;
+    this.el.bestiary.classList.remove('on');
+    if (!this.deathOpen) document.body.classList.remove('uiFocus');
+  }
+
+  /** Открыт ли «Зверинец». */
+  get bestiaryOpen() {
+    return !!(this.el.bestiary && this.el.bestiary.classList.contains('on'));
   }
 
   /**

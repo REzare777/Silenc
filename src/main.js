@@ -83,6 +83,7 @@ import { createFishingSystem } from './game/fishing.js';
 import { createLocations } from './game/locations.js';
 import { createCombat, COMBAT } from './game/combat.js';
 import { createMonsters } from './game/monsters.js';
+import { buildBestiary, buildTiers } from './game/bestiary.js';
 import { createProgression } from './game/progression.js';
 import { createQuests } from './game/quests.js';
 import { createDeath } from './game/death.js';
@@ -529,6 +530,9 @@ for (let i = 0; i < LIGHT_POOL; i++) {
  */
 let lastManualSave = 0;
 
+/** Куда возвращаться после «Зверинца»: в паузу или в игру. */
+let bestiaryReturn = 'play';
+
 /**
  * Открыть окно настроек (Esc или O).
  */
@@ -618,6 +622,42 @@ function openQuestLog() {
 function closeQuestLog() {
   ui.closeQuestLog();
   if (ctx.mode === 'quest') ctx.mode = 'play';
+  player.acceptInput = true;
+  player.keys.clear();
+  player.requestLock();
+}
+
+/**
+ * Открыть «Зверинец» — справочник пород подземелья.
+ *
+ * Как и журнал дел, это справка, а не меню: управление на время чтения
+ * отключается, захват мыши отпускается. Справочник можно открыть и из
+ * паузы — тогда после закрытия вернёмся в паузу, а не в игру.
+ */
+function openBestiary() {
+  bestiaryReturn = ctx.mode === 'menu' ? 'menu' : 'play';
+  ctx.mode = 'bestiary';
+  ui.renderBestiary(buildBestiary(), buildTiers());
+  ui.openBestiary();
+  player.acceptInput = false;
+  player.keys.clear();
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+
+/**
+ * Закрыть «Зверинец» и вернуть управление.
+ */
+function closeBestiary() {
+  ui.closeBestiary();
+  if (ctx.mode === 'bestiary') ctx.mode = bestiaryReturn === 'menu' ? 'menu' : 'play';
+  if (bestiaryReturn === 'menu') {
+    // возвращаемся в паузу: окно настроек всё ещё открыто
+    ui.openMenu();
+    player.enabled = false;
+    player.acceptInput = false;
+    player.keys.clear();
+    return;
+  }
   player.acceptInput = true;
   player.keys.clear();
   player.requestLock();
@@ -755,6 +795,16 @@ ui.onLoadInMenu = () => {
 // «Слоты…» в меню паузы: сохранить в ручной слот прямо из игры
 ui.onSlotsOpen = () => {
   ui.showSlots(listSlots());
+};
+// «Зверинец…» в меню паузы: справочник пород подземелья
+ui.onBestOpen = () => {
+  // справка открывается поверх паузы, а пауза остаётся: так можно
+  // посмотреть, кто водится в пещере, и вернуться в игру
+  openBestiary();
+};
+// крестик или клик мимо карточки — закрыть и вернуть управление
+ui.onBestClose = () => {
+  closeBestiary();
 };
 
 /** Войти в игру: общие шаги для «Начать», «Продолжить» и загрузки слота. */
@@ -899,6 +949,12 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
+  if (ctx.mode === 'bestiary') {
+    // в зверинце: Esc или B — закрыть
+    if (e.code === 'Escape' || e.code === 'KeyB') { e.preventDefault(); closeBestiary(); }
+    return;
+  }
+
   if (ctx.mode === 'aim') {
     if (e.code === 'Escape') {
       e.preventDefault();
@@ -971,6 +1027,11 @@ window.addEventListener('keydown', (e) => {
     // журнал дел: открывается поверх игры, но управление остаётся в игре
     if (ctx.mode === 'play') {
       openQuestLog();
+    }
+  } else if (e.code === 'KeyB') {
+    // зверинец: справочник пород подземелья
+    if (ctx.mode === 'play') {
+      openBestiary();
     }
   } else if (e.code.startsWith('Digit')) {
     const n = +e.code.slice(5);

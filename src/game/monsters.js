@@ -78,84 +78,184 @@ export function currentDifficulty() {
  * ------------------------------------------------------------------ */
 
 /**
+ * Ступени силы.
+ *
+ * `order` — порядок снизу вверх; `name` — как ступень называется в игре.
+ * Порядок ступеней держит порядок «зверинец слабее — зверинец сильнее»:
+ * мусор → обычные → стража → владыка.
+ */
+export const TIERS = [
+  {
+    id: 'trash', name: 'Мелочь', order: 0,
+    desc: 'Мелкие породы, которых в пещере много. Бьют слабо, но идут стаями.',
+  },
+  {
+    id: 'normal', name: 'Обычные', order: 1,
+    desc: 'Крепче мелочи. Один на один — терпимо, толпой — смертельно.',
+  },
+  {
+    id: 'elite', name: 'Стража', order: 2,
+    desc: 'Стоят у Врат. Держат щит, бронированы и бьют сильно.',
+  },
+  {
+    id: 'boss', name: 'Владыка', order: 3,
+    desc: 'Орк-владыка Гримм. Хозяин зала Врат и виновник печати.',
+  },
+];
+
+/**
  * Все породы подземелья.
  *
- * `tier` — ступень сложности породы; `attack` — тип атаки;
- * `sp` — «стая» (сколько особей этого вида появляется).
+ * `tier` — ступень силы породы; `attack` — тип атаки;
+ * `sp` — «стая» (сколько особей этого вида появляется);
+ * `veil` — стойкость (сколько раз бранд гасит её, прежде чем зверь сдохнет);
+ * `desc` — описание породы для «Зверинца»;
+ * `tip` — как с ней бороться (тоже для «Зверинца»).
+ *
+ * Кривая силы (сложность «Обычно» — множители сложности её не трогают):
+ *
+ *   | ступень | здоровье | урон       | стойкость | опыт |
+ *   |---------|----------|------------|-----------|------|
+ *   | мусор   | 22–30    | 4–9        | 2         | 6–8  |
+ *   | обычные | 46–115   | 8–15       | 2–3       | 10–22|
+ *   | стража  | 175      | 15         | 4         | 34   |
+ *   | владыка | 520      | 18 (+ рёв) | 7         | 130  |
+ *
+ * Правила, из которых кривая выведена:
+ *   • у игрока 100 здоровья, а лечиться приходится «Лечебным словом»
+ *     (35 здоровья за 20 маны) — значит, мелочь обязана бить слабо;
+ *   • один удар мелочи снимает не больше 9% здоровья, один удар стражи —
+ *     около 15%: за полную зачистку пещеры должно уйти треть, а не всё;
+ *   • крепкий зверь всегда медленнее хилого: скорость и здоровье — разные
+ *     монеты, иначе в одном звере прячется и tank, и снайпер;
+ *   • чем ступень выше, тем дольше бранд (стойкость) — элитный зверь
+ *     должен ощутимо нудеть под «пустым» ударом.
  */
 export const MONSTERS = [
   {
     id: 'goblin_sword', name: 'Гоблин с мечом', tier: 'trash',
-    hp: 34, dmg: 7, speed: 2.0, aggro: 16, reach: 1.5, cd: 1.5,
+    hp: 30, dmg: 6, speed: 2.0, aggro: 16, reach: 1.5, cd: 1.5,
     attack: 'melee', windup: 0.42, active: 0.18, radius: 0.42, height: 1.5,
-    sp: 4, scale: 1, exp: 6,
+    sp: 4, scale: 1, exp: 6, veil: 2,
+    desc: 'Тощий, зеленоватый, с кривым тесаком наперевес. Идёт первым в '
+      + 'свобой, орёт и рубит без разбора — только успевай отойти.',
+    tip: 'Бьёт часто, но слабо: замах короткий, удар — через раз. '
+      + 'Держите дистанцию и бейте в спину, пока он размахивается.',
   },
   {
     id: 'goblin_bow', name: 'Гоблин-лучник', tier: 'trash',
-    hp: 26, dmg: 9, speed: 1.8, aggro: 20, reach: 13, cd: 2.4,
+    hp: 26, dmg: 8, speed: 1.8, aggro: 20, reach: 13, cd: 2.4,
     attack: 'ranged', windup: 0.75, active: 0.2, radius: 0.4, height: 1.45,
-    sp: 3, scale: 1, exp: 7,
-  },
-  {
-    id: 'goblin_guard', name: 'Гоблин-страж', tier: 'elite',
-    hp: 78, dmg: 13, speed: 1.45, aggro: 15, reach: 1.8, cd: 1.9,
-    attack: 'melee', windup: 0.6, active: 0.2, radius: 0.5, height: 1.75,
-    sp: 2, scale: 1, exp: 18, guard: 0.35, armor: 0.1,
-  },
-  {
-    id: 'ghost', name: 'Призрак', tier: 'normal',
-    hp: 46, dmg: 12, speed: 1.75, aggro: 19, reach: 1.7, cd: 2.1,
-    attack: 'melee', windup: 0.7, active: 0.22, radius: 0.55, height: 2.7,
-    sp: 3, scale: 1, exp: 12, ghost: true,
+    sp: 3, scale: 1, exp: 7, veil: 2,
+    desc: 'Худой, в чужой кожаной накидке, с коротким луком. Увидел вас — '
+      + 'отбежал и встал навесом: стреляет через пол-пещеры.',
+    tip: 'Самый опасный из мелочи: достаёт издалека. Следите за стрелами — '
+      + 'они летят по прямой, и от них достаточно уйти вбок.',
   },
   {
     id: 'spider', name: 'Паук', tier: 'trash',
-    hp: 24, dmg: 8, speed: 3.0, aggro: 18, reach: 1.5, cd: 1.4,
+    hp: 24, dmg: 7, speed: 3.0, aggro: 18, reach: 1.5, cd: 1.4,
     attack: 'leap', windup: 0.45, active: 0.25, radius: 0.45, height: 0.9,
-    sp: 3, scale: 1, exp: 8,
+    sp: 3, scale: 1, exp: 8, veil: 2,
+    desc: 'Низкая тёмная тень на восьми ногах, ни одного глаза — только '
+      + 'ряды крючков. Бежит быстрее всех и прыгает на добычу с потолка.',
+    tip: 'Очень быстрый, но хрупкий: двух ударов средним мечом — и он '
+      + 'рассыпается. Бейте, пока он не подпрыгнул.',
   },
   {
     id: 'slime_green', name: 'Зелёный слизень', tier: 'trash',
     hp: 30, dmg: 5, speed: 1.55, aggro: 14, reach: 1.6, cd: 2.0,
     attack: 'splash', windup: 0.6, active: 0.2, radius: 0.5, height: 0.9,
-    sp: 3, scale: 1, exp: 7, color: 0x6fbf4a,
-  },
-  {
-    id: 'slime_blue', name: 'Синий слизень', tier: 'trash',
-    hp: 38, dmg: 6, speed: 1.35, aggro: 14, reach: 1.6, cd: 2.2,
-    attack: 'splash', windup: 0.65, active: 0.2, radius: 0.55, height: 1.0,
-    sp: 2, scale: 1, exp: 9, color: 0x4a9fbf,
-  },
-  {
-    id: 'slime_red', name: 'Красный слизень', tier: 'normal',
-    hp: 52, dmg: 11, speed: 1.65, aggro: 15, reach: 1.6, cd: 2.0,
-    attack: 'splash', windup: 0.55, active: 0.2, radius: 0.55, height: 1.05,
-    sp: 2, scale: 1, exp: 13, color: 0xc25a4a,
+    sp: 3, scale: 1, exp: 7, veil: 2, color: 0x6fbf4a,
+    desc: 'Кислотно-зелёный ком, который перекатывается по полу. Дышит '
+      + 'едким соком — от него щиплет глаза.',
+    tip: 'Сам удар слабый, зато после него остаётся едкая лужа: она снимает '
+      + 'здоровье, пока вы в ней стоите. Не стойте в луже и не зажимайте '
+      + 'зверя в углу.',
   },
   {
     id: 'shroom', name: 'Живой гриб', tier: 'trash',
     hp: 28, dmg: 4, speed: 1.1, aggro: 15, reach: 10, cd: 2.8,
     attack: 'spore', windup: 0.8, active: 0.2, radius: 0.45, height: 1.25,
-    sp: 3, scale: 1, exp: 7,
+    sp: 3, scale: 1, exp: 7, veil: 2,
+    desc: 'Гриб на тонкой ножке, в шляпке — глаза. Плюётся споровым облаком '
+      + 'и еле ползёт — зато плевок сбивает с ног.',
+    tip: 'Бьёт через десять шагов и очень медленно. Подойти можно, только '
+      + 'прикрывшись от спор: сбитый с ног бой идёт вполсилы.',
   },
   {
     id: 'snake', name: 'Змея', tier: 'trash',
-    hp: 22, dmg: 10, speed: 2.4, aggro: 15, reach: 1.4, cd: 1.6,
+    hp: 22, dmg: 9, speed: 2.4, aggro: 15, reach: 1.4, cd: 1.6,
     attack: 'bite', windup: 0.38, active: 0.16, radius: 0.35, height: 0.5,
-    sp: 3, scale: 1, exp: 8,
+    sp: 3, scale: 1, exp: 8, veil: 2,
+    desc: 'Тонкая змея без лап, вся в пёстрых кольцах. Ползёт по камню '
+      + 'бесшумно и кусает мгновенно — без подготовки, из-под земли.',
+    tip: 'Самая низкая порода: ростом по колено. Укус короткий и злой, но '
+      + 'до того, кто ходит быстро, ей не дотянуться.',
+  },
+  {
+    id: 'slime_blue', name: 'Синий слизень', tier: 'normal',
+    hp: 46, dmg: 10, speed: 1.35, aggro: 14, reach: 1.6, cd: 2.2,
+    attack: 'splash', windup: 0.65, active: 0.2, radius: 0.55, height: 1.0,
+    sp: 2, scale: 1, exp: 10, veil: 2, color: 0x4a9fbf,
+    desc: 'Голубой, прохладный на вид, с тугим глянцевым боком. Бьёт '
+      + 'вдвое больнее зелёного слизня и оставляет после себя едкую лужу.',
+    tip: 'Это уже не мелочь: двух-трёх ударов мало. Держите круг и не '
+      + 'давайте ему отступить — он медленный, и это его слабость.',
+  },
+  {
+    id: 'slime_red', name: 'Красный слизень', tier: 'normal',
+    hp: 64, dmg: 11, speed: 1.65, aggro: 15, reach: 1.6, cd: 2.0,
+    attack: 'splash', windup: 0.55, active: 0.2, radius: 0.55, height: 1.05,
+    sp: 2, scale: 1, exp: 14, veil: 3, color: 0xc25a4a,
+    desc: 'Тёмно-красный, в бурых прожилках, и тёплый — от него идёт пар. '
+      + 'Самый едкий из слизней: его лужа снимает здоровье быстро и много.',
+    tip: 'Крепкий и ядовитый, гасить его брандом долго. Выбивайте первым и '
+      + 'не стойте в луже: после двух ударов он оставляет её даже в углу.',
   },
   {
     id: 'golem_small', name: 'Каменный голем', tier: 'normal',
-    hp: 96, dmg: 16, speed: 1.2, aggro: 14, reach: 1.9, cd: 2.3,
+    hp: 115, dmg: 15, speed: 1.2, aggro: 14, reach: 1.9, cd: 2.3,
     attack: 'slam', windup: 0.85, active: 0.24, radius: 0.6, height: 1.25,
-    sp: 2, scale: 0.72, exp: 16, armor: 0.2,
+    sp: 2, scale: 0.72, exp: 22, veil: 3, armor: 0.22,
+    desc: 'Невысокая, но широкая груда камня, сбитая в тесную фигуру: '
+      + 'вросшие в грудь кристаллы, покатые плечи. Идёт медленно, бьёт '
+      + 'тяжело, а стойкость у него как у брони.',
+    tip: 'Медленный — успеете отойти и ударить в спину. Броня съедает пятую '
+      + 'часть урона, поэтому бейте длинным или двуручным мечом, а не '
+      + 'кинжалом.',
+  },
+  {
+    id: 'ghost', name: 'Призрак', tier: 'normal',
+    hp: 46, dmg: 12, speed: 1.75, aggro: 19, reach: 1.7, cd: 2.1,
+    attack: 'melee', windup: 0.7, active: 0.22, radius: 0.55, height: 2.7,
+    sp: 3, scale: 1, exp: 12, veil: 2, ghost: true,
+    desc: 'Высокая тёмная фигура в капюшоне, под ней — туман, а не ноги. '
+      + 'Идёт сквозь камни, и факел его не удерживает: он идёт прямо на свет.',
+    tip: 'Единственный, кто не боится факела: жечь нельзя, только бить. '
+      + 'Ударяйте и сразу отходите — сквозь стены он достанет где угодно.',
+  },
+  {
+    id: 'goblin_guard', name: 'Гоблин-страж', tier: 'elite',
+    hp: 175, dmg: 16, speed: 1.45, aggro: 15, reach: 1.8, cd: 1.9,
+    attack: 'melee', windup: 0.6, active: 0.2, radius: 0.5, height: 1.75,
+    sp: 2, scale: 1, exp: 34, veil: 4, guard: 0.35, armor: 0.22,
+    desc: 'В кольчужном нагруднике, с коротким мечом и широким щитом. Стоит '
+      + 'у Врат и держит строй: пока в зале живы звери, печать не рухнет.',
+    tip: 'Щит отбивает треть ударов, броня съедает ещё пятую часть. Бейте '
+      + 'тяжёлым оружием в спину, пока он поднимает щит.',
   },
   {
     id: 'orc_boss', name: 'Орк-владыка Гримм', tier: 'boss',
-    hp: 420, dmg: 17, speed: 2.1, aggro: 26, reach: 2.6, cd: 1.6,
+    hp: 520, dmg: 18, speed: 2.1, aggro: 26, reach: 2.6, cd: 1.6,
     attack: 'boss', windup: 0.7, active: 0.26, radius: 0.85, height: 3.2,
     engage: 9,          // босс начинает атаку издалека: наскок и рёв
-    sp: 1, scale: 1, exp: 90, boss: true, armor: 0.15,
+    sp: 1, scale: 1, exp: 130, veil: 7, boss: true, armor: 0.15,
+    desc: 'Вдвое выше игрока, с оскаленной мордой и секирой, которой владеет '
+      + 'как пером. Держит зал Врат и рушит печать, когда сходит с места.',
+    tip: 'Бьёт четырьмя ударами: обычный, с размаху, удар оземь и рёв — '
+      + 'рёв зовёт гоблинов и отталкивает. Сбивайте с расклада и бейте '
+      + 'спину: за два круга он не прикончит, но доведёт.',
   },
 ];
 
@@ -176,13 +276,14 @@ export function monsterSpec(id) {
 /**
  * Зоны пещеры, где водятся монстры.
  *
- * `tier` — какие породы там живут; `y` — высота пола.
+ * `tier` — какие породы там живут; `y` — высота пола;
+ * `name` — как зона называется в «Зверинце».
  */
-const ZONES = [
-  { id: 'hall', x0: -11, x1: 11, z0: -32, z1: -21, y: 0, tier: 'trash', weight: 2 },
-  { id: 'crystal', x0: -13, x1: 13, z0: -18, z1: 4, y: 0, tier: 'normal', weight: 3 },
-  { id: 'gate', x0: -12, x1: 12, z0: 16, z1: 34, y: -4.6, tier: 'normal', weight: 3 },
-  { id: 'gateElite', x0: -12, x1: 12, z0: 16, z1: 34, y: -4.6, tier: 'elite', weight: 1.4 },
+export const ZONES = [
+  { id: 'hall', name: 'Входной зал', x0: -11, x1: 11, z0: -32, z1: -21, y: 0, tier: 'trash', weight: 2 },
+  { id: 'crystal', name: 'Кристальный зал', x0: -13, x1: 13, z0: -18, z1: 4, y: 0, tier: 'normal', weight: 3 },
+  { id: 'gate', name: 'Зал Врат', x0: -12, x1: 12, z0: 16, z1: 34, y: -4.6, tier: 'normal', weight: 3 },
+  { id: 'gateElite', name: 'Зал Врат', x0: -12, x1: 12, z0: 16, z1: 34, y: -4.6, tier: 'elite', weight: 1.4 },
 ];
 
 /** Где стоит босс. */
@@ -191,6 +292,52 @@ const BOSS_SPOT = { x: 0, y: -4.6, z: 30 };
 /* ------------------------------------------------------------------
  *  Система
  * ------------------------------------------------------------------ */
+
+/**
+ * Таблица добычи по породам.
+ *
+ * Сейчас лут только для продажи, но у каждого предмета есть
+ * `craft` — заготовка под будущий крафт.
+ */
+export const LOOT_TABLE = {
+  trash: [
+    { id: 'goblin_ear', rarity: 'common', weight: 5 },
+    { id: 'goblin_tooth', rarity: 'common', weight: 4 },
+    { id: 'slime_jelly', rarity: 'common', weight: 4 },
+    { id: 'spider_web', rarity: 'common', weight: 3 },
+    { id: 'shroom_cap', rarity: 'common', weight: 3 },
+    { id: 'cave_rat_tail', rarity: 'common', weight: 2 },
+    { id: 'moss_lump', rarity: 'common', weight: 2 },
+  ],
+  normal: [
+    { id: 'goblin_ear', rarity: 'common', weight: 3 },
+    { id: 'slime_jelly', rarity: 'common', weight: 2 },
+    { id: 'shroom_cap', rarity: 'common', weight: 2 },
+    { id: 'ghost_dust', rarity: 'uncommon', weight: 3 },
+    { id: 'snake_fang', rarity: 'uncommon', weight: 3 },
+    { id: 'golem_core', rarity: 'rare', weight: 2 },
+    { id: 'cave_rat_tail', rarity: 'common', weight: 2 },
+    { id: 'glow_cap', rarity: 'uncommon', weight: 2 },
+    { id: 'bat_wing', rarity: 'uncommon', weight: 2 },
+    { id: 'spore_powder', rarity: 'uncommon', weight: 2 },
+  ],
+  elite: [
+    { id: 'guard_badge', rarity: 'uncommon', weight: 3 },
+    { id: 'ghost_dust', rarity: 'uncommon', weight: 2 },
+    { id: 'golem_core', rarity: 'rare', weight: 3 },
+    { id: 'warden_seal', rarity: 'epic', weight: 1 },
+    { id: 'glow_cap', rarity: 'uncommon', weight: 2 },
+    { id: 'spore_powder', rarity: 'uncommon', weight: 2 },
+    { id: 'obsidian_shard', rarity: 'rare', weight: 2 },
+  ],
+  boss: [
+    { id: 'orc_tusk', rarity: 'rare', weight: 4 },
+    { id: 'warden_seal', rarity: 'epic', weight: 3 },
+    { id: 'grim_crown', rarity: 'legendary', weight: 2 },
+    { id: 'obsidian_shard', rarity: 'rare', weight: 3 },
+    { id: 'goblin_tooth', rarity: 'common', weight: 2 },
+  ],
+};
 
 /**
  * Создать систему монстров.
@@ -344,8 +491,8 @@ export function createMonsters(ctx) {
       zone: zone || null,
       hp,
       maxHp: hp,
-      veil: spec.tier === 'boss' ? 6 : spec.tier === 'elite' ? 3 : 2,
-      maxVeil: spec.tier === 'boss' ? 6 : spec.tier === 'elite' ? 3 : 2,
+      veil: spec.veil != null ? spec.veil : (spec.tier === 'boss' ? 6 : spec.tier === 'elite' ? 3 : 2),
+      maxVeil: spec.veil != null ? spec.veil : (spec.tier === 'boss' ? 6 : spec.tier === 'elite' ? 3 : 2),
       dmg: Math.round(spec.dmg * difficulty.dmg),
       state: 'sleep',
       stateT: 0,
@@ -581,51 +728,6 @@ export function createMonsters(ctx) {
 
   /* ---------------- лут ---------------- */
 
-  /**
-   * Таблица добычи по породам.
-   *
-   * Сейчас лут только для продажи, но у каждого предмета есть
-   * `craft` — заготовка под будущий крафт.
-   */
-  const LOOT_TABLE = {
-    trash: [
-      { id: 'goblin_ear', rarity: 'common', weight: 5 },
-      { id: 'goblin_tooth', rarity: 'common', weight: 4 },
-      { id: 'slime_jelly', rarity: 'common', weight: 4 },
-      { id: 'spider_web', rarity: 'common', weight: 3 },
-      { id: 'shroom_cap', rarity: 'common', weight: 3 },
-      { id: 'cave_rat_tail', rarity: 'common', weight: 2 },
-      { id: 'moss_lump', rarity: 'common', weight: 2 },
-    ],
-    normal: [
-      { id: 'goblin_ear', rarity: 'common', weight: 3 },
-      { id: 'slime_jelly', rarity: 'common', weight: 2 },
-      { id: 'shroom_cap', rarity: 'common', weight: 2 },
-      { id: 'ghost_dust', rarity: 'uncommon', weight: 3 },
-      { id: 'snake_fang', rarity: 'uncommon', weight: 3 },
-      { id: 'golem_core', rarity: 'rare', weight: 2 },
-      { id: 'cave_rat_tail', rarity: 'common', weight: 2 },
-      { id: 'glow_cap', rarity: 'uncommon', weight: 2 },
-      { id: 'bat_wing', rarity: 'uncommon', weight: 2 },
-      { id: 'spore_powder', rarity: 'uncommon', weight: 2 },
-    ],
-    elite: [
-      { id: 'guard_badge', rarity: 'uncommon', weight: 3 },
-      { id: 'ghost_dust', rarity: 'uncommon', weight: 2 },
-      { id: 'golem_core', rarity: 'rare', weight: 3 },
-      { id: 'warden_seal', rarity: 'epic', weight: 1 },
-      { id: 'glow_cap', rarity: 'uncommon', weight: 2 },
-      { id: 'spore_powder', rarity: 'uncommon', weight: 2 },
-      { id: 'obsidian_shard', rarity: 'rare', weight: 2 },
-    ],
-    boss: [
-      { id: 'orc_tusk', rarity: 'rare', weight: 4 },
-      { id: 'warden_seal', rarity: 'epic', weight: 3 },
-      { id: 'grim_crown', rarity: 'legendary', weight: 2 },
-      { id: 'obsidian_shard', rarity: 'rare', weight: 3 },
-      { id: 'goblin_tooth', rarity: 'common', weight: 2 },
-    ],
-  };
 
   /**
    * Выбрать предмет добычи по ступени.
@@ -646,13 +748,33 @@ export function createMonsters(ctx) {
   }
 
   /**
+   * Сколько предметов выпадает с зверя.
+   *
+   * Число добычи — прямое следствие силы породы: с мелочи берут одно,
+   * с обычных и стражи — два, с владыки — три. На «Трудно» и «Кошмар»
+   * добавляется ещё: чем злее сложность, тем щедрее мёртвые.
+   *
+   * Поле `exp` у породы — это и есть «вес» зверя в общей таблице: по нему
+   * и считается добыча, поэтому у сильных пород оно заметно больше.
+   *
+   * @param {object} m убитый монстр
+   * @returns {number} сколько предметов в мешке
+   */
+  function lootCount(m) {
+    const bonus = difficulty.reward >= 2 ? 2 : difficulty.reward >= 1.5 ? 1 : 0;
+    if (m.boss) return 3 + bonus;
+    const base = m.spec.exp >= 9 ? 2 : (Math.random() < 0.3 ? 2 : 1);
+    return base + bonus;
+  }
+
+  /**
    * Выбросить мешок с добычей.
    *
    * @param {object} m убитый монстр
    */
   function dropLoot(m) {
     const tier = m.spec.tier;
-    const count = m.boss ? 3 : (Math.random() < 0.55 ? 2 : 1);
+    const count = lootCount(m);
     const items = [];
     for (let i = 0; i < count; i++) {
       const e = rollLoot(tier);
