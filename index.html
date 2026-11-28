@@ -230,50 +230,72 @@
   #questClose:hover{color:var(--ink);border-color:rgba(255,255,255,.32);background:rgba(255,255,255,.07)}
   /* ---------- зверинец ---------- */
   #bestiary{position:fixed;inset:0;z-index:26;display:none;align-items:center;justify-content:center;
-    background:rgba(8,6,4,.62);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+    background:rgba(8,6,4,.7);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
   #bestiary.on{display:flex}
-  #bestiary .bCard{width:min(760px,94vw);max-height:86vh;overflow:auto;padding:24px 26px 20px}
-  #bestiary .bHead{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px}
-  #bestiary .bHead h2{font-family:"Cormorant Garamond",Georgia,serif;font-size:24px;
-    font-weight:600;letter-spacing:.04em;margin:0;color:#e9c9a2}
-  #bestiary .bSub{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:14px}
+  #bestiary .bCard{width:min(1020px,95vw);max-height:88vh;overflow:auto;padding:20px 24px 16px;
+    background:linear-gradient(180deg,rgba(28,22,16,.94),rgba(18,14,10,.96));
+    border-color:rgba(232,177,99,.18)}
+  #bestiary .bHead{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding-bottom:12px;border-bottom:1px solid rgba(232,177,99,.2)}
+  #bestiary .bHead h2{font-family:"Cormorant Garamond",Georgia,serif;font-size:28px;
+    font-weight:600;letter-spacing:.05em;margin:0;color:#f0d3ab}
+  #bestiary .bSub{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-dim);margin-top:4px}
+  #bestiary .bHeadRight{display:flex;align-items:center;gap:12px}
+  #bestiary .bBadge{font-size:11px;letter-spacing:.08em;color:#e9c9a2;white-space:nowrap;
+    padding:5px 12px;border-radius:20px;border:1px solid rgba(232,177,99,.32);
+    background:rgba(232,177,99,.09)}
   #bestiary .bTierHead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
-    margin:20px 0 6px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.08)}
-  #bestiary .bTierHead:first-child{margin-top:6px}
-  #bestiary .bTierHead b{font-family:"Cormorant Garamond",Georgia,serif;font-size:18px;
-    font-weight:600;color:#e9c9a2;letter-spacing:.03em}
+    margin:18px 0 9px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.08)}
+  #bestiary .bTierHead:first-child{margin-top:12px}
+  #bestiary .bTierHead b{font-family:"Cormorant Garamond",Georgia,serif;font-size:19px;
+    font-weight:600;color:#e9c9a2;letter-spacing:.03em;display:flex;align-items:center;gap:8px}
+  #bestiary .bTierHead b::before{content:"";width:9px;height:9px;border-radius:50%;
+    background:var(--tier,#8a8172);box-shadow:0 0 10px var(--tier,#8a8172)}
   #bestiary .bTierHead i{font-style:normal;font-size:11px;color:#9b8e7d;flex:1 1 260px;line-height:1.5}
-  #bestiary .bItem{border-top:1px solid rgba(255,255,255,.07);padding:12px 0 11px}
-  #bestiary .bItem:first-child{border-top:0}
+  /* сетка карточек: на широком экране — в две колонки */
+  #bestiary .bGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px}
+  #bestiary .bItem{display:grid;grid-template-columns:36px 1fr;gap:11px;align-items:start;
+    background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);
+    border-left:3px solid var(--tier,#8a8172);border-radius:10px;padding:11px 13px 12px}
+  #bestiary .bItem.trash{--tier:#7f9078}
+  #bestiary .bItem.normal{--tier:#e0a95f}
+  #bestiary .bItem.elite{--tier:#d98a63}
+  #bestiary .bItem.boss{--tier:#cf5f57}
+  #bestiary .bMedallion{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-family:"Cormorant Garamond",Georgia,serif;font-size:19px;font-weight:600;
+    color:#f2dcb8;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.16),rgba(0,0,0,.35));
+    border:1px solid var(--tier,#8a8172);box-shadow:inset 0 0 10px rgba(0,0,0,.5)}
+  #bestiary .bBody{min-width:0}
   #bestiary .bTop{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-  #bestiary .bTop b{font-family:"Cormorant Garamond",Georgia,serif;font-size:17px;
-    font-weight:600;color:#e9c9a2;letter-spacing:.02em}
+  #bestiary .bTop b{font-family:"Cormorant Garamond",Georgia,serif;font-size:18px;
+    font-weight:600;color:#f0d3ab;letter-spacing:.02em}
   #bestiary .bTop .bWhere{font-style:normal;font-size:10px;letter-spacing:.16em;
     text-transform:uppercase;color:var(--ink-dim)}
-  #bestiary .bTop .bState{margin-left:auto;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
-    padding:3px 9px;border-radius:20px;border:1px solid rgba(255,255,255,.16);color:#a99c8b}
-  #bestiary .bItem.trash .bTop .bState{border-color:rgba(150,190,160,.3);color:#9dc0a8}
-  #bestiary .bItem.normal .bTop .bState{border-color:rgba(232,177,99,.32);color:var(--gold)}
-  #bestiary .bItem.elite .bTop .bState{border-color:rgba(214,120,90,.38);color:#e0896a}
-  #bestiary .bItem.boss .bTop .bState{border-color:rgba(190,70,70,.45);color:#e2685f;
-    background:rgba(190,70,70,.12)}
-  #bestiary .bDesc{font-size:12px;line-height:1.65;color:#a99c8b;margin:6px 0 8px;font-style:italic}
-  #bestiary .bStats{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 8px}
-  #bestiary .bStats span{font-size:11px;color:#bfb09c;font-variant-numeric:tabular-nums}
+  #bestiary .bTop .bState{margin-left:auto;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+    padding:3px 9px;border-radius:20px;border:1px solid var(--tier,#8a8172);color:var(--tier,#a99c8b);
+    background:rgba(0,0,0,.25);white-space:nowrap}
+  #bestiary .bItem.boss .bTop .bState{background:rgba(190,70,70,.16)}
+  #bestiary .bDesc{font-size:12px;line-height:1.6;color:#a99c8b;margin:5px 0 8px;font-style:italic}
+  #bestiary .bStats{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 8px}
+  #bestiary .bStats span{font-size:11px;color:#bfb09c;font-variant-numeric:tabular-nums;
+    padding:2px 7px;border-radius:6px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.055)}
   #bestiary .bStats u{text-decoration:none;color:var(--ink-dim);letter-spacing:.06em;margin-right:4px}
   #bestiary .bStats b{color:#e9c9a2;font-weight:600}
-  #bestiary .bTip{font-size:11.5px;line-height:1.6;color:#9fb7a0;margin:0 0 6px}
+  #bestiary .bTip{font-size:11.5px;line-height:1.6;color:#9fb7a0;margin:0 0 6px;
+    padding-left:8px;border-left:2px solid rgba(159,183,160,.3)}
   #bestiary .bTip u{text-decoration:none;color:#7d8f7e;letter-spacing:.08em;
     text-transform:uppercase;font-size:10px;margin-right:5px}
   #bestiary .bLoot{font-size:11px;color:var(--ink-dim);line-height:1.55}
   #bestiary .bLoot u{text-decoration:none;letter-spacing:.08em;text-transform:uppercase;
     font-size:10px;margin-right:5px;color:#7d7466}
   #bestiary .bCount{font-size:11px;color:var(--ink-dim);letter-spacing:.06em;margin-top:4px}
-  #bestiary .bItem.locked{opacity:.72}
+  #bestiary .bItem.locked{background:rgba(255,255,255,.018);border-style:dashed;border-left-style:solid;
+    border-left-color:rgba(255,255,255,.16)}
+  #bestiary .bItem.locked .bMedallion{color:#8d8171;border-color:rgba(255,255,255,.16)}
   #bestiary .bItem.locked .bTop b{color:#a2957f;font-style:italic}
   #bestiary .bItem.locked .bTop .bState{border-color:rgba(255,255,255,.14);color:#8d8171}
   #bestiary .bItem.locked .bDesc{color:#8d8171}
-  #bestiary .bFoot{margin-top:18px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);
+  #bestiary .bFoot{margin-top:16px;padding-top:11px;border-top:1px solid rgba(255,255,255,.08);
     font-size:11px;color:var(--ink-dim);display:flex;justify-content:space-between;align-items:center;gap:12px}
   #bestiary .bFoot kbd{font:inherit;font-size:10px;font-weight:600;color:var(--gold);
     background:rgba(232,177,99,.13);border:1px solid rgba(232,177,99,.25);border-radius:4px;padding:1px 5px}
@@ -634,7 +656,7 @@
     #viewCanvas{width:100%;height:180px}
   }
 </style>
-  <script type="module" crossorigin src="./assets/index-B7gkpHie.js"></script>
+  <script type="module" crossorigin src="./assets/index-DT0tRCgR.js"></script>
 </head>
 <body>
 <script>
@@ -975,9 +997,11 @@
       <div>
         <h2>Зверинец</h2>
         <div class="bSub">Кто водится в подземелье под скалой</div>
-        <div class="bCount" id="bestCount">Изучено 0 из 12</div>
       </div>
-      <button id="bestClose" title="Закрыть">✕</button>
+      <div class="bHeadRight">
+        <div class="bBadge"><span id="bestCount">Изучено 0 из 12</span></div>
+        <button id="bestClose" title="Закрыть">✕</button>
+      </div>
     </div>
     <div id="bestList"></div>
     <div class="bFoot"><span><kbd>B</kbd> или <kbd>Esc</kbd> — закрыть</span><span>Записи о не изученных породах продаёт Хорт</span></div>
