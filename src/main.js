@@ -83,7 +83,7 @@ import { createFishingSystem } from './game/fishing.js';
 import { createLocations } from './game/locations.js';
 import { createCombat, COMBAT } from './game/combat.js';
 import { createMonsters } from './game/monsters.js';
-import { buildBestiary, buildTiers } from './game/bestiary.js';
+import { buildBestiary, buildTiers, createBestiary } from './game/bestiary.js';
 import { createProgression } from './game/progression.js';
 import { createQuests } from './game/quests.js';
 import { createDeath } from './game/death.js';
@@ -372,6 +372,9 @@ ctx.systems.locations = createLocations(ctx);
 // дела: Хорт и Торн дают задания. Система создаётся после локаций и деревни —
 // к этому моменту оба персонажа уже собраны и к ним можно привязать знаки.
 ctx.systems.quests = createQuests(ctx);
+// зверинец: какие породы изучены. Создаётся раньше боёвки — убитый зверь
+// сразу открывает свою породу, а Хорт продаёт записи о не изученных.
+ctx.systems.bestiary = createBestiary(ctx);
 
 // боёвка: факел в руке и тени в подземелье
 ctx.systems.combat = createCombat(ctx);
@@ -637,7 +640,7 @@ function closeQuestLog() {
 function openBestiary() {
   bestiaryReturn = ctx.mode === 'menu' ? 'menu' : 'play';
   ctx.mode = 'bestiary';
-  ui.renderBestiary(buildBestiary(), buildTiers());
+  ui.renderBestiary(ctx.systems.bestiary ? ctx.systems.bestiary.entries() : buildBestiary(), buildTiers());
   ui.openBestiary();
   player.acceptInput = false;
   player.keys.clear();

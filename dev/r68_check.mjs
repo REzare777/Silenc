@@ -194,6 +194,12 @@ await page.waitForFunction(() => window.__villageReady === true, null, { timeout
 await page.evaluate(() => document.getElementById('begin').click());
 await page.waitForTimeout(1500);
 
+// породы изучаются с раунда 69: чтобы увидеть полные карточки,
+// сначала «изучаем» их все
+await page.evaluate(() => {
+  const ctx = window.__dbg.ctx;
+  for (const e of ctx.systems.bestiary.entries()) ctx.systems.bestiary.unlock(e.id);
+});
 await page.keyboard.press('KeyB');
 await page.waitForTimeout(700);
 const open = await page.evaluate(() => document.getElementById('bestiary').classList.contains('on'));

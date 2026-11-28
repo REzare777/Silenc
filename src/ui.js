@@ -91,6 +91,7 @@ export class UI {
       questClose: document.getElementById('questClose'),
       bestiary: document.getElementById('bestiary'),
       bestList: document.getElementById('bestList'),
+      bestCount: document.getElementById('bestCount'),
       bestClose: document.getElementById('bestClose'),
       bestBtn: document.getElementById('bestBtn'),
       numHp: document.getElementById('numHp'),
@@ -590,11 +591,13 @@ export class UI {
       const b = document.createElement('b');
       b.textContent = g.name;
       const sp = document.createElement('span');
-      sp.textContent = g.dmg
-        ? `урон ${g.dmg[0]}–${g.dmg[1]} · замах ${g.speed.toFixed(2)} с · ${g.price} зол.`
-        : g.mana
-          ? `${g.mana} маны за раз · ${g.price} зол.`
-          : `${g.price} зол.`;
+      sp.textContent = g.kind === 'codex'
+        ? `запись о породе · ${g.price} зол.`
+        : g.dmg
+          ? `урон ${g.dmg[0]}–${g.dmg[1]} · замах ${g.speed.toFixed(2)} с · ${g.price} зол.`
+          : g.mana
+            ? `${g.mana} маны за раз · ${g.price} зол.`
+            : `${g.price} зол.`;
       info.appendChild(b);
       info.appendChild(sp);
       row.appendChild(info);
@@ -897,6 +900,12 @@ export class UI {
       : [{ id: 'trash', name: 'Мелочь', desc: '' }];
     this.el.bestList.innerHTML = '';
 
+    // счётчик: сколько пород изучено
+    const known = rows.filter((r) => r.known).length;
+    if (this.el.bestCount) {
+      this.el.bestCount.textContent = `Изучено ${known} из ${rows.length}`;
+    }
+
     if (!rows.length) {
       const p = document.createElement('p');
       p.className = 'qLogEmpty';
@@ -920,7 +929,9 @@ export class UI {
       this.el.bestList.appendChild(head);
 
       for (const r of inTier) {
-        this.el.bestList.appendChild(this._bestiaryItem(r));
+        this.el.bestList.appendChild(r.known
+          ? this._bestiaryItem(r)
+          : this._bestiaryLocked(r));
       }
     }
   }
@@ -1006,6 +1017,53 @@ export class UI {
       loot.appendChild(document.createTextNode(r.drops.join(' · ')));
       item.appendChild(loot);
     }
+
+    return item;
+  }
+
+  /**
+   * Карточка ещё не изученной породы.
+   *
+   * Имя и ступень видно — чтобы было кого искать, — но все характеристики
+   * скрыты: их либо узнать в бою, либо купить запись у Хорта.
+   *
+   * @param {object} r порода
+   * @returns {HTMLElement} элемент карточки
+   */
+  _bestiaryLocked(r) {
+    const item = document.createElement('div');
+    item.className = 'bItem locked ' + (r.tier || 'trash');
+    item.dataset.monster = r.id;
+
+    const top = document.createElement('div');
+    top.className = 'bTop';
+    const b = document.createElement('b');
+    b.textContent = r.name;
+    const where = document.createElement('i');
+    where.className = 'bWhere';
+    where.textContent = r.where || '';
+    const state = document.createElement('span');
+    state.className = 'bState';
+    state.textContent = 'не изучено';
+    top.appendChild(b);
+    top.appendChild(where);
+    top.appendChild(state);
+    item.appendChild(top);
+
+    const desc = document.createElement('p');
+    desc.className = 'bDesc';
+    desc.textContent = 'Характеристики неизвестны: этого зверя вы ещё не встречали.';
+    item.appendChild(desc);
+
+    const how = document.createElement('p');
+    how.className = 'bTip';
+    const u = document.createElement('u');
+    u.textContent = 'как узнать';
+    how.appendChild(u);
+    how.appendChild(document.createTextNode(
+      'Убейте одного такого — запись появится в зверинце. '
+      + `Или купите запись у Хорта в трактире за ${r.price} зол.`));
+    item.appendChild(how);
 
     return item;
   }

@@ -323,6 +323,8 @@ export function snapshot(ctx) {
     flags: ctx.flags ? { ...ctx.flags } : {},
     // дела: что взято, что сделано, что сдано
     quests: ctx.systems && ctx.systems.quests ? ctx.systems.quests.snapshot() : null,
+    // зверинец: какие породы изучены (убил или купил запись)
+    bestiary: ctx.systems && ctx.systems.bestiary ? ctx.systems.bestiary.snapshot() : null,
     // факел: сколько топлива осталось, горит ли он и взят ли в руку
     torch: combat ? {
       fuel: combat.state.fuel,
@@ -399,6 +401,11 @@ export function applySnapshot(ctx, data) {
   // дела: восстанавливаем состояние заданий
   if (data.quests && ctx.systems && ctx.systems.quests) {
     ctx.systems.quests.restore(data.quests);
+  }
+
+  // зверинец: изученные породы
+  if (data.bestiary && ctx.systems && ctx.systems.bestiary) {
+    ctx.systems.bestiary.restore(data.bestiary);
   }
 
   // факел: топливо, горение и то, взят ли он в руку

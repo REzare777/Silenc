@@ -30,6 +30,8 @@
  */
 
 import { GOODS, MATERIALS, SPELLS, GEAR, sellPrice, buyPrice, itemIcon, getItem } from './items.js';
+import { MONSTERS } from './monsters.js';
+import { entryPrice } from './bestiary.js';
 import { WEAPONS } from '../world/weapons.js';
 import { BELT_START, TOTAL_SLOTS } from '../inventory.js';
 
@@ -96,8 +98,35 @@ export function createTrade(ctx) {
       name: t.name,
       title: t.title,
       greet: t.greet,
-      goods: t.sells.map((s) => ({ ...s, price: buyPrice(s) })),
+      goods: goodsOf(t),
     });
+    refresh();
+    return true;
+  }
+
+  /**
+   * Купить запись о породе в зверинце.
+   *
+   * Запись открывает породу навсегда: она попадает в сохранение и
+   * переживает загрузку. Повторно купить нельзя — запись уже есть.
+   *
+   * @param {string} id идентификатор товара (`codex_<порода>`)
+   * @returns {boolean} получилось ли
+   */
+  function buyCodex(id) {
+    const sys = ctx.systems && ctx.systems.bestiary;
+    if (!sys) return false;
+    const speciesId = id.slice('codex_'.length);
+    const spec = MONSTERS.find((m) => m.id === speciesId);
+    if (!spec || sys.has(speciesId)) return false;
+    const price = entryPrice(spec);
+    if (!ctx.stats.spendCoins(price)) {
+      ctx.ui.toast('Не хватает монет.', 2600);
+      return false;
+    }
+    sys.unlock(speciesId);
+    ctx.ui.toast(`Куплена запись о породе «${spec.name}» за ${price} зол. `
+      + 'Теперь она изучена.', 3600);
     refresh();
     return true;
   }
@@ -131,7 +160,25 @@ export function createTrade(ctx) {
       const count = inv.countOf(s.id);
       mine.push({ id: s.id, spec: s.spec, count, price: sellPrice(s.spec) });
     }
-    ctx.ui.renderTrade({ mine, goods: t.sells.map((s) => ({ ...s, price: buyPrice(s) })) });
+    ctx.ui.renderTrade({ mine, goods: goodsOf(t) });
+  }
+
+  /**
+   * Товары торговца.
+   *
+   * К обычному товару у Хорта добавляются «записи в зверинце» — записи
+   * о породах, которых игрок ещё не изучил. Цена записи зависит от силы
+   * породы: чем злее зверь, тем дороже его запись.
+   *
+   * @param {object} t торговец
+   * @returns {object[]} товары с ценами
+   */
+  function goodsOf(t) {
+    const goods = t.sells.map((s) => ({ ...s, price: buyPrice(s) }));
+    if (t.id === 'barkeep' && ctx.systems && ctx.systems.bestiary) {
+      for (const g of ctx.systems.bestiary.forSale()) goods.push(g);
+    }
+    return goods;
   }
 
   /**
@@ -167,6 +214,8 @@ export function createTrade(ctx) {
   function buy(id) {
     const t = TRADERS[openId];
     if (!t) return false;
+    // запись в зверинце: покупаем знание, а не вещь — в сумку она не идёт
+    if (id.startsWith('codex_')) return buyCodex(id);
     const spec = t.sells.find((s) => s.id === id);
     if (!spec) return false;
     const price = buyPrice(spec);

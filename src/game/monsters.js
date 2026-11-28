@@ -1118,6 +1118,8 @@ export function createMonsters(ctx) {
     }
     // дела: убийство засчитывается в прогресс (гоблины, босс)
     if (ctx.systems && ctx.systems.quests) ctx.systems.quests.onKill(m.spec);
+    // зверинец: убитый зверь открывает свою породу — запись бесплатна
+    if (ctx.systems && ctx.systems.bestiary) ctx.systems.bestiary.unlock(m.spec.id);
     dropLoot(m);
     if (ctx.ambience) ctx.ambience.dissolve();
   }

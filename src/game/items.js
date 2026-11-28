@@ -633,6 +633,7 @@ export function itemIcon(spec, size = 96) {
   if (spec.kind === 'gear') drawTorchIcon(canvas.getContext('2d'), spec, px);
   else if (spec.kind === 'loot') drawLootIcon(canvas.getContext('2d'), spec, px);
   else if (spec.kind === 'spell') drawSpellIcon(canvas.getContext('2d'), spec, px);
+  else if (spec.kind === 'codex') drawCodexIcon(canvas.getContext('2d'), spec, px);
   else drawGoodsIcon(canvas.getContext('2d'), spec, px);
   iconCache.set(key, canvas);
   return copyCanvas(canvas);
@@ -1046,6 +1047,65 @@ function drawLootIcon(ctx, spec, px) {
       ctx.arc(c, c, px * 0.2, 0, Math.PI * 2);
       ctx.fill();
     }
+  }
+}
+
+/**
+ * Иконка записи в зверинце: раскрытая книга со следами когтей.
+ *
+ * @param {CanvasRenderingContext2D} ctx контекст
+ * @param {object} spec предмет
+ * @param {number} px размер
+ */
+function drawCodexIcon(ctx, spec, px) {
+  const g = ctx.createLinearGradient(0, 0, px, px);
+  g.addColorStop(0, '#2b2620');
+  g.addColorStop(1, '#15120e');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, px, px);
+  const c = px / 2;
+
+  // страницы
+  ctx.fillStyle = '#d8c9a4';
+  ctx.beginPath();
+  ctx.moveTo(c - px * 0.3, c - px * 0.2);
+  ctx.quadraticCurveTo(c - px * 0.16, c - px * 0.26, c, c - px * 0.2);
+  ctx.quadraticCurveTo(c + px * 0.16, c - px * 0.26, c + px * 0.3, c - px * 0.2);
+  ctx.lineTo(c + px * 0.3, c + px * 0.22);
+  ctx.quadraticCurveTo(c + px * 0.16, c + px * 0.16, c, c + px * 0.22);
+  ctx.quadraticCurveTo(c - px * 0.16, c + px * 0.16, c - px * 0.3, c + px * 0.22);
+  ctx.closePath();
+  ctx.fill();
+
+  // корешок
+  ctx.strokeStyle = '#6b5636';
+  ctx.lineWidth = px * 0.025;
+  ctx.beginPath();
+  ctx.moveTo(c, c - px * 0.2);
+  ctx.lineTo(c, c + px * 0.22);
+  ctx.stroke();
+
+  // строчки записей
+  ctx.strokeStyle = 'rgba(90,70,45,.55)';
+  ctx.lineWidth = px * 0.02;
+  for (let i = 0; i < 3; i++) {
+    const y = c - px * 0.06 + i * px * 0.09;
+    ctx.beginPath();
+    ctx.moveTo(c - px * 0.25, y);
+    ctx.lineTo(c - px * 0.06, y);
+    ctx.moveTo(c + px * 0.06, y);
+    ctx.lineTo(c + px * 0.25, y);
+    ctx.stroke();
+  }
+
+  // след когтей на правой странице
+  ctx.strokeStyle = 'rgba(120,30,25,.8)';
+  ctx.lineWidth = px * 0.03;
+  for (let i = -1; i <= 1; i++) {
+    ctx.beginPath();
+    ctx.moveTo(c + px * 0.1 + i * px * 0.06, c - px * 0.02);
+    ctx.lineTo(c + px * 0.16 + i * px * 0.06, c + px * 0.15);
+    ctx.stroke();
   }
 }
 

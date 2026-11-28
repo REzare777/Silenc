@@ -97,3 +97,145 @@ export function buildBestiary() {
 export function buildTiers() {
   return TIERS.slice().sort((a, b) => a.order - b.order);
 }
+
+/* ------------------------------------------------------------------
+ *  Изучение пород
+ * ------------------------------------------------------------------ */
+
+/**
+ * Сколько стоит запись о породе.
+ *
+ * Цена пропорциональна силе породы — её весу в общей таблице (`exp`):
+ * мелочь стоит как пара рыб, владыка — как добрый час рыбалки. Считаем
+ * от вера, округляя до пяти золотых, чтобы цены были круглыми.
+ *
+ * @param {object} spec порода
+ * @returns {number} цена в золотых
+ */
+export function entryPrice(spec) {
+  return Math.max(5, Math.round((spec.exp * 5) / 5) * 5);
+}
+
+/**
+ * Товар для торговли: «запись в зверинце» о породе.
+ *
+ * Это не предмет, а услуга: купив запись, игрок навсегда узнаёт породу.
+ * Поэтому у такой «записи» нет веса и она не попадает в сумку.
+ *
+ * @param {object} spec порода
+ * @returns {object} товар для окна торговли
+ */
+export function entryGood(spec) {
+  return {
+    id: `codex_${spec.id}`,
+    name: `Запись в зверинце: ${spec.name}`,
+    kind: 'codex',
+    species: spec.id,
+    price: entryPrice(spec),
+    value: 0,
+    sell: 0,
+    weight: 0,
+    stackable: false,
+    desc: `Хорт записал, как берут такую породу: ${spec.desc || ''}`,
+  };
+}
+
+/**
+ * Создать систему «Зверинца»: кто изучен, кто ещё нет.
+ *
+ * Породы открываются двумя путями:
+ *   * убить зверя — запись бесплатна и появляется сразу;
+ *   * купить запись у Хорта — цена зависит от силы породы.
+ *
+ * Открытые породы помнятся навсегда и переживают загрузку сохранения.
+ *
+ * @param {object} ctx контекст игры
+ * @returns {object} система «Зверинца»
+ */
+export function createBestiary(ctx) {
+  /** @type {Set<string>} изученные породы */
+  const known = new Set();
+
+  /**
+   * Изучена ли порода.
+   *
+   * @param {string} id идентификатор породы
+   * @returns {boolean}
+   */
+  function has(id) {
+    return known.has(id);
+  }
+
+  /**
+   * Открыть породу. Возвращает true, если она была открыта именно сейчас.
+   *
+   * @param {string} id идентификатор породы
+   * @returns {boolean} открылась ли порода
+   */
+  function unlock(id) {
+    if (!id || known.has(id)) return false;
+    known.add(id);
+    const spec = MONSTERS.find((m) => m.id === id);
+    if (spec && ctx.ui && ctx.ui.toast) {
+      ctx.ui.toast(`Новая порода в зверинце: ${spec.name}.`, 3600);
+    }
+    return true;
+  }
+
+  /**
+   * Все породы с пометкой «изучено / нет» и ценой записи.
+   *
+   * @returns {object[]} породы
+   */
+  function entries() {
+    return buildBestiary().map((e) => {
+      const spec = MONSTERS.find((m) => m.id === e.id);
+      return {
+        ...e,
+        known: known.has(e.id),
+        price: spec ? entryPrice(spec) : 0,
+      };
+    });
+  }
+
+  /**
+   * Записи, которые Хорт ещё может продать.
+   *
+   * @returns {object[]} товары
+   */
+  function forSale() {
+    return MONSTERS
+      .filter((m) => !known.has(m.id))
+      .map((m) => entryGood(m));
+  }
+
+  /**
+   * Снимок состояния для сохранения.
+   *
+   * @returns {object} данные
+   */
+  function snapshot() {
+    return { known: [...known] };
+  }
+
+  /**
+   * Восстановить состояние из сохранения.
+   *
+   * @param {object} data данные
+   */
+  function restore(data) {
+    known.clear();
+    if (!data || !Array.isArray(data.known)) return;
+    for (const id of data.known) {
+      if (MONSTERS.some((m) => m.id === id)) known.add(id);
+    }
+  }
+
+  return {
+    has, unlock, entries, forSale, snapshot, restore,
+    /** Сколько пород изучено. */
+    get count() { return known.size; },
+    /** Сколько пород всего. */
+    get total() { return MONSTERS.length; },
+  };
+}
