@@ -242,7 +242,7 @@ ok('породы упорядочены по силе',
   order.join(' → '));
 ok('владыка в конце списка', order[order.length - 1] === 'orc_boss');
 
-await page.screenshot({ path: 'shots/r68-bestiary.png' });
+await page.screenshot({ path: path.join(ROOT, 'shots', 'r68-bestiary.png') });
 console.log('✓ снимок shots/r68-bestiary.png');
 // и нижняя часть — стража и владыка
 await page.evaluate(() => {
@@ -250,7 +250,7 @@ await page.evaluate(() => {
   if (card) card.scrollIntoView({ block: 'end' });
 });
 await page.waitForTimeout(400);
-await page.screenshot({ path: 'shots/r68-bestiary-boss.png' });
+await page.screenshot({ path: path.join(ROOT, 'shots', 'r68-bestiary-boss.png') });
 console.log('✓ снимок shots/r68-bestiary-boss.png');
 
 await page.keyboard.press('Escape');
