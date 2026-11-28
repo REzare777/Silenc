@@ -74,26 +74,29 @@ const res = await page.evaluate(() => {
   d.ctx.stats.damage(10);
   out.hpCanReachZero = d.ctx.stats.hp === 0;
 
-  // Настоящий удар тени: ставим игрока вплотную к тени и прокручиваем
-  // её логику — тень должна дотянуться и ударить.
+  // Настоящий удар зверя: ставим игрока вплотную к монстру и прокручиваем
+  // его логику — зверь должен дотянуться и ударить.
+  //
+  // Раньше здесь была «тень» (ctx.systems.shadows), но с раунда 61 её
+  // заменил общий зверинец (ctx.systems.monsters) с десятью породами.
   d.ctx.stats.hp = 2;
   d.ctx.systems.death.revive();
-  const sh = d.ctx.systems.shadows;
-  // тени живут в подземелье — без входа их список пуст
-  if (sh && !sh.list.length) sh.spawn();
-  out.shadowCount = sh ? sh.list.length : 0;
-  if (sh && sh.list.length) {
-    const s0 = sh.list[0];
+  const mon = d.ctx.systems.monsters;
+  // звери живут в подземелье — без входа их список пуст
+  if (mon && !mon.list.length) mon.spawn();
+  out.shadowCount = mon ? mon.list.length : 0;
+  if (mon && mon.list.length) {
+    const s0 = mon.list[0];
     d.ctx.player.teleport(s0.x + 0.4, s0.z, 0);
     s0.state = 'stalk';
     s0.dissolve = 0;
     let hits = 0;
     const hpStart = d.ctx.stats.hp;
     for (let i = 0; i < 200 && d.ctx.stats.hp > 0; i++) {
-      // тянем тень к игроку: она сама дойдёт и ударит
+      // тянем зверя к игроку: он сам дойдёт и ударит
       s0.x = d.ctx.player.pos.x - 0.3;
       s0.z = d.ctx.player.pos.z;
-      sh.update(1 / 60, i / 60);
+      mon.update(1 / 60, i / 60);
     }
     out.hpAfterShadowHits = d.ctx.stats.hp;
     out.shadowKilled = d.ctx.stats.hp === 0;
@@ -161,9 +164,9 @@ ok('подпись последнего сохранения видна', (res.d
 ok('камера упала (ниже 1 м)', res.camHeight < 1.0, `y=${res.camHeight}`);
 ok('камера завалилась набок', Math.abs(res.camRoll) > 0.5, `roll=${res.camRoll}`);
 ok('здоровье может упасть до нуля', res.hpCanReachZero);
-ok('теней в пещере шесть', res.shadowCount === 6, `${res.shadowCount}`);
-ok('тень бьёт игрока', res.shadowDamageTaken > 0, `−${res.shadowDamageTaken} HP`);
-ok('тень может убить игрока', res.shadowKilled);
+ok('звери в пещере есть', res.shadowCount > 0, `${res.shadowCount}`);
+ok('зверь бьёт игрока', res.shadowDamageTaken > 0, `−${res.shadowDamageTaken} HP`);
+ok('зверь может убить игрока', res.shadowKilled);
 ok('после удара тенью игрок мёртв', res.deathAfterShadow);
 ok('бой замораживается при смерти', res.battlePaused);
 ok('бой возобновляется после загрузки', res.battleResumed);
