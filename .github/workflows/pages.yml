@@ -55,14 +55,17 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin gh-pages
-          git checkout -B gh-pages origin/gh-pages
+          # ветку надо получить именно как удалённую ссылку: иначе checkout
+          # не находит origin/gh-pages и публикация молча ничего не делает
+          git fetch origin gh-pages:refs/remotes/origin/gh-pages
+          git checkout -B gh-pages refs/remotes/origin/gh-pages
           git rm -r --cached . -q || true
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           cp -r "$RUNNER_TEMP/site/." .
           git add -A
           git commit -q -m "Публичная сборка ${GITHUB_SHA::7}" || echo "изменений нет"
-          git push origin gh-pages
+          # пушить явно: так не зависит от того, как настроен checkout
+          git push origin HEAD:gh-pages
 
       - name: Итог
         run: |

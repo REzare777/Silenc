@@ -188,7 +188,8 @@ const errs = [];
 page.on('pageerror', (e) => errs.push('PAGEERROR ' + e.message));
 page.on('console', (m) => { if (m.type() === 'error') errs.push('CONSOLE ' + m.text()); });
 
-await page.goto('http://127.0.0.1:4205/?v=' + Date.now(), { waitUntil: 'domcontentloaded' });
+const SITE = process.argv[2] || 'http://127.0.0.1:4205';
+await page.goto(SITE + '/?v=' + Date.now(), { waitUntil: 'domcontentloaded' });
 await page.waitForFunction(() => window.__villageReady === true, null, { timeout: 300000 });
 await page.evaluate(() => document.getElementById('begin').click());
 await page.waitForTimeout(1500);
