@@ -268,6 +268,11 @@
   #bestiary .bLoot{font-size:11px;color:var(--ink-dim);line-height:1.55}
   #bestiary .bLoot u{text-decoration:none;letter-spacing:.08em;text-transform:uppercase;
     font-size:10px;margin-right:5px;color:#7d7466}
+  #bestiary .bCount{font-size:11px;color:var(--ink-dim);letter-spacing:.06em;margin-top:4px}
+  #bestiary .bItem.locked{opacity:.72}
+  #bestiary .bItem.locked .bTop b{color:#a2957f;font-style:italic}
+  #bestiary .bItem.locked .bTop .bState{border-color:rgba(255,255,255,.14);color:#8d8171}
+  #bestiary .bItem.locked .bDesc{color:#8d8171}
   #bestiary .bFoot{margin-top:18px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);
     font-size:11px;color:var(--ink-dim);display:flex;justify-content:space-between;align-items:center;gap:12px}
   #bestiary .bFoot kbd{font:inherit;font-size:10px;font-weight:600;color:var(--gold);
@@ -623,7 +628,7 @@
     #viewCanvas{width:100%;height:180px}
   }
 </style>
-  <script type="module" crossorigin src="./assets/index-VoLSMA-D.js"></script>
+  <script type="module" crossorigin src="./assets/index-0kQA0rPU.js"></script>
 </head>
 <body>
 <script>
@@ -961,11 +966,12 @@
       <div>
         <h2>Зверинец</h2>
         <div class="bSub">Кто водится в подземелье под скалой</div>
+        <div class="bCount" id="bestCount">Изучено 0 из 12</div>
       </div>
       <button id="bestClose" title="Закрыть">✕</button>
     </div>
     <div id="bestList"></div>
-    <div class="bFoot"><span><kbd>B</kbd> или <kbd>Esc</kbd> — закрыть</span><span>Печать держит, пока в зале живы звери</span></div>
+    <div class="bFoot"><span><kbd>B</kbd> или <kbd>Esc</kbd> — закрыть</span><span>Записи о не изученных породах продаёт Хорт</span></div>
   </div>
 </div>
 
