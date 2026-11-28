@@ -70,9 +70,21 @@ const home = await page.evaluate(() => {
   };
 });
 ok('в доме игрока пусто — только кровать',
-  home.spots.length === 1 && /кровать/i.test(home.spots[0]), home.spots.join(', '));
+  home.spots.length === 0 && home.bed, `точек-подсказок: ${home.spots.length}`);
 ok('кровать на месте — можно переночевать', home.bed);
 ok('в комнате есть потолок (нет дыры в небо)', home.topY >= 2.6, `верх мешей y=${home.topY}`);
+
+// в пустом доме не должно быть лишних точек: любая точка на кровати
+// перехватывала бы нажатие E и не давала бы переночевать
+const homeActs = await page.evaluate(() => {
+  const ctx = window.__dbg.ctx;
+  return (ctx.interactables || [])
+    .filter((i) => (i.where || 'village') === 'home10')
+    .map((i) => (i.labelFn ? i.labelFn() : i.label));
+});
+ok('в доме игрока только выход и кровать',
+  homeActs.length === 2 && homeActs.includes('Выйти из дома')
+    && homeActs.includes('Лечь и поспать'), homeActs.join(' · '));
 
 await page.waitForTimeout(600);
 await page.screenshot({ path: path.join(SHOTS, 'r71-home-inside.png') });

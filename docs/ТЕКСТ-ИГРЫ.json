@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-28T03:21:11.874Z",
-  "total": 1019,
+  "generated": "2026-11-28T03:28:58.987Z",
+  "total": 1018,
   "files": [
     {
       "file": "src/game/animals.js",
@@ -4405,17 +4405,12 @@
           "type": "string"
         },
         {
-          "line": 351,
-          "text": "Осмотреть кровать",
-          "type": "string"
-        },
-        {
-          "line": 369,
+          "line": 371,
           "text": "Открыть старый сундук",
           "type": "string"
         },
         {
-          "line": 370,
+          "line": 372,
           "text": "Осмотреть полку",
           "type": "string"
         }
